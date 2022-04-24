@@ -1,0 +1,19 @@
+[package]
+name = "base"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+actix-web = "4.0.1"
+base64 = "0.13.0"
+htmlescape = "0.3.1"
+futures = "0.3.21"
+jsonwebtoken = "8.1.0"
+ring = "0.16.20"
+log = "0.4.16"
+
+chrono = { version = "0.4.19", features = ["serde"] }
+diesel = { version = "1.4.8", features = ["sqlite", "r2d2", "chrono"] }
+serde = { version = "1.0.136", features = ["derive"] }
