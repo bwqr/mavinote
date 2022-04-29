@@ -34,6 +34,17 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(env: JNI
 }
 
 #[no_mangle]
+pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(env: JNIEnv, _: JObject, name: JString) {
+    let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
+
+    runtime::block_on(async move {
+        let conn = runtime::pool().acquire().await.unwrap();
+
+        note::add_folder(conn, name).await
+    });
+}
+
+#[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(env: JNIEnv, _: JObject, folder_id: jint) -> jni::sys::jbyteArray {
     let summaries = runtime::block_on(async move {
         let conn = runtime::pool().acquire().await.unwrap();
@@ -52,7 +63,9 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(en
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(env: JNIEnv, _: JObject, note_id: jint) -> jni::sys::jbyteArray {
     let note = runtime::block_on(async move {
-        note::note(note_id).await
+        let conn = runtime::pool().acquire().await.unwrap();
+
+        note::note(conn, note_id).await
     });
 
     match note {
@@ -69,10 +82,21 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(env: JNIEnv
 }
 
 #[no_mangle]
+pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addNote(env: JNIEnv, _: JObject, folder_id: jint) -> jint {
+    runtime::block_on(async move {
+        let conn = runtime::pool().acquire().await.unwrap();
+
+        note::add_note(conn, folder_id).await
+    })
+}
+
+#[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(env: JNIEnv, _: JObject, note_id: jint, text: JString) {
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     runtime::block_on(async move {
-        note::update_note(note_id, text).await
+        let conn = runtime::pool().acquire().await.unwrap();
+
+        note::update_note(conn, note_id, text).await
     });
 }
