@@ -1,1 +1,7 @@
--- This file should undo anything in `up.sql`
+drop table notes;
+
+drop table folders;
+
+drop table users;
+
+drop function update_timestamp;

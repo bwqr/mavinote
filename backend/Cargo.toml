@@ -3,6 +3,7 @@ members = [
     "auth",
     "base",
     "derive",
+    "note",
     "user",
 ]
 
@@ -16,6 +17,7 @@ edition = "2021"
 [dependencies]
 base = { path = "./base" }
 auth = { path = "./auth" }
+note = { path = "./note" }
 user = { path = "./user" }
 
 actix-web = "4.0.1"

@@ -25,6 +25,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(crypto.clone()))
             .wrap(Logger::default())
             .configure(auth::register)
+            .configure(note::register)
             .configure(user::register)
     })
     .bind(std::env::var("BIND_ADDRESS").expect("APP_BIND_ADDRESS is not provided in env").as_str())?
