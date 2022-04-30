@@ -14,7 +14,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.bwqr.mavinote.Screen
 
 @Composable
 fun Notes(navController: NavController, folderId: Int) {
@@ -25,7 +24,7 @@ fun Notes(navController: NavController, folderId: Int) {
     Scaffold(
         floatingActionButton = {
             FloatingActionButton(onClick = {
-                val addedNoteId = NoteViewModel().addNote(folderId)
+                val addedNoteId = NoteViewModel().createNote(folderId)
 
                 navController.navigate("note/$addedNoteId")
             }) {

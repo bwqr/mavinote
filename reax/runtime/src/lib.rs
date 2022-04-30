@@ -1,19 +1,17 @@
 use std::str::FromStr;
 use std::future::Future;
 
+use reqwest::Client;
 use sqlx::{Sqlite, Pool, sqlite::{SqliteConnectOptions, SqlitePoolOptions}};
 use once_cell::sync::OnceCell;
 use tokio::task::JoinHandle;
 
+use base::Config;
+
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static CONFIG: OnceCell<Config> = OnceCell::new();
 static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
-
-#[derive(Debug)]
-pub struct Config {
-    pub api_url: String,
-    pub storage_dir: String,
-}
+static CLIENT: OnceCell<Client> = OnceCell::new();
 
 pub fn init(config: Config) {
     ASYNC_RUNTIME
@@ -44,6 +42,8 @@ pub fn init(config: Config) {
 
     DATABASE.set(pool).expect("failed to set database");
 
+    CLIENT.set(Client::new()).expect("failed to set client");
+
     CONFIG.set(config).expect("failed to set config");
 }
 
@@ -65,4 +65,12 @@ where
 
 pub fn pool() -> &'static Pool<Sqlite> {
     DATABASE.get().unwrap()
+}
+
+pub fn client() -> &'static Client {
+    CLIENT.get().unwrap()
+}
+
+pub fn config() -> &'static Config {
+    CONFIG.get().unwrap()
 }

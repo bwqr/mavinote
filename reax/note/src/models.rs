@@ -1,13 +1,15 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 
-#[derive(FromRow, Serialize)]
+#[derive(Deserialize, FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: i32,
     pub name: String,
 }
 
-#[derive(FromRow, Serialize)]
+#[derive(Deserialize, FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct Note {
     pub id: i32,
     pub folder_id: i32,

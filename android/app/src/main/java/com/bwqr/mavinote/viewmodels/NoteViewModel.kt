@@ -29,8 +29,8 @@ class NoteViewModel {
         return Note.deserialize(BincodeDeserializer(bytes))
     }
 
-    fun addNote(folderId: Int): Int {
-        return _addNote(folderId)
+    fun createNote(folderId: Int): Int {
+        return _createNote(folderId)
     }
 
     fun updateNote(noteId: Int, text: String) {
@@ -41,6 +41,6 @@ class NoteViewModel {
     private external fun _addFolder(name: String)
     private external fun _noteSummaries(folderId: Int): ByteArray
     private external fun _note(noteId: Int): ByteArray
-    private external fun _addNote(folderId: Int): Int
+    private external fun _createNote(folderId: Int): Int
     private external fun _updateNote(noteId: Int, text: String)
 }

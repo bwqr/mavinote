@@ -37,6 +37,4 @@ fun Folders(navController: NavController) {
             }
         }
     }
-
-
 }

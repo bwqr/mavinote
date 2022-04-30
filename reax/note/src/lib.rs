@@ -1,64 +1,91 @@
 pub mod models;
 
+use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
+use reqwest::Client;
 use sqlx::{Sqlite, pool::PoolConnection, Connection};
+
+use base::Config;
 
 use models::{Folder, Note};
 
-pub async fn folders(mut conn: PoolConnection<Sqlite>) -> Vec<Folder> {
-    sqlx::query_as("select * from folders order by id")
-        .fetch_all(&mut conn)
+mod requests;
+
+pub async fn folders(client: &'static Client, config: &'static Config) -> Vec<Folder> {
+    let body = client.get(format!("{}/note/folders", config.api_url))
+        .header("Content-Type", "application/json")
+        .send()
         .await
         .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    serde_json::from_str(&body).unwrap()
 }
 
-pub async fn add_folder(mut conn: PoolConnection<Sqlite>, name: String) {
-    sqlx::query("insert into folders (name) values (?)")
-        .bind(name)
-        .execute(&mut conn)
+pub async fn create_folder(client: &'static Client, config: &'static Config, name: String) {
+    client.post(format!("{}/note/folder", config.api_url))
+        .header("Content-Type", "application/json")
+        .body(serde_json::to_string(&CreateFolderRequest { name }).unwrap())
+        .send()
+        .await
+        .unwrap()
+        .text()
         .await
         .unwrap();
 }
 
-pub async fn note_summaries(mut conn: PoolConnection<Sqlite>, folder_id: i32) -> Vec<Note> {
-    sqlx::query_as("select * from notes where folder_id = ? order by id")
-        .bind(folder_id)
-        .fetch_all(&mut conn)
+pub async fn note_summaries(client: &'static Client, config: &'static Config, folder_id: i32) -> Vec<Note> {
+    let body = client.get(format!("{}/note/folder/{}/notes", config.api_url, folder_id))
+        .header("Content-Type", "application/json")
+        .send()
         .await
         .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    serde_json::from_str(&body).unwrap()
 }
 
-pub async fn note(mut conn: PoolConnection<Sqlite>, note_id: i32) -> Option<Note> {
-    sqlx::query_as("select * from notes where id = ? order by id")
-        .bind(note_id)
-        .fetch_optional(&mut conn)
+pub async fn note(client: &'static Client, config: &'static Config, note_id: i32) -> Option<Note> {
+    let body = client.get(format!("{}/note/note/{}", config.api_url, note_id))
+        .header("Content-Type", "application/json")
+        .send()
         .await
         .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    serde_json::from_str(&body).unwrap()
 }
 
-pub async fn add_note(mut conn: PoolConnection<Sqlite>, folder_id: i32) -> i32 {
-    conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into notes (folder_id, title, text) values (?, ?, ?)")
-            .bind(folder_id)
-            .bind("Newly created note")
-            .bind("")
-            .execute(&mut *conn)
-            .await?;
-
-        sqlx::query_as::<_, (i32,)>("select id from notes order by id desc")
-            .fetch_one(conn)
-            .await
-            .map(|row| row.0)
-    }))
+pub async fn create_note(client: &'static Client, config: &'static Config, folder_id: i32) -> i32 {
+    let body = client.post(format!("{}/note/note", config.api_url))
+        .header("Content-Type", "application/json")
+        .body(serde_json::to_string(&CreateNoteRequest { folder_id, title: String::from("Newly created note"), text: String::from("") }).unwrap())
+        .send()
         .await
         .unwrap()
+        .text()
+        .await
+        .unwrap();
+
+    serde_json::from_str::<Note>(&body).unwrap().id
 }
 
-pub async fn update_note(mut conn: PoolConnection<Sqlite>, note_id: i32, text: String) {
-    sqlx::query("update notes set title = ?, text = ? where id = ?")
-        .bind(&text.as_str()[..text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0])
-        .bind(&text)
-        .bind(note_id)
-        .execute(&mut conn)
+pub async fn update_note(client: &'static Client, config: &'static Config, note_id: i32, text: String) {
+    let text = text.as_str().trim().to_string();
+    let title = text.as_str()[..text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0].replace('\n', "");
+
+    client.put(format!("{}/note/note/{note_id}", config.api_url))
+        .header("Content-Type", "application/json")
+        .body(serde_json::to_string(&UpdateNoteRequest { title, text }).unwrap())
+        .send()
+        .await
+        .unwrap()
+        .text()
         .await
         .unwrap();
 }

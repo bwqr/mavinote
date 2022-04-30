@@ -17,9 +17,6 @@ fun Note(noteId: Int) {
         NoteViewModel().note(noteId)!!
     }
 
-    var title by remember {
-        mutableStateOf(note.title)
-    }
     var text by remember {
         mutableStateOf(note.text)
     }
@@ -27,10 +24,7 @@ fun Note(noteId: Int) {
     TextField(value = text, onValueChange = { text = it })
     
     DisposableEffect(lifecycleOwner) {
-        Log.d("Note", "DisposableEffectScope is launched")
-
         val observer = LifecycleEventObserver { _, event ->
-            Log.d("Note", "LifecylceEvent observed")
             when (event) {
                 Lifecycle.Event.ON_STOP -> NoteViewModel().updateNote(note.id, text)
                 else -> {}

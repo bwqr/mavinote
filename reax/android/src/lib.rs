@@ -35,9 +35,10 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(env: JNIEnv, _: J
     let api_url = env.get_string(api_url).unwrap().to_str().unwrap().to_owned();
     let storage_dir = env.get_string(storage_dir).unwrap().to_str().unwrap().to_owned();
 
+    std::env::set_var("RUST_LOG", "debug");
     log::init(app_name);
 
-    runtime::init(runtime::Config { api_url, storage_dir });
+    runtime::init(base::Config { api_url, storage_dir });
 
     ::log::info!("reax runtime is initialized");
 }
@@ -45,9 +46,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(env: JNIEnv, _: J
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(env: JNIEnv, _: JObject) -> jni::sys::jbyteArray {
     let folders = runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::folders(conn).await
+        note::folders(runtime::client(), runtime::config()).await
     });
 
     let bytes = bincode::serialize(&folders).expect("failed to serialize val");
@@ -63,18 +62,14 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(env: J
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::add_folder(conn, name).await
+        note::create_folder(runtime::client(), runtime::config(), name).await
     });
 }
 
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(env: JNIEnv, _: JObject, folder_id: jint) -> jni::sys::jbyteArray {
     let summaries = runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::note_summaries(conn, folder_id).await
+        note::note_summaries(runtime::client(), runtime::config(), folder_id).await
     });
 
     let bytes = bincode::serialize(&summaries).expect("failed to serialize val");
@@ -88,9 +83,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(en
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(env: JNIEnv, _: JObject, note_id: jint) -> jni::sys::jbyteArray {
     let note = runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::note(conn, note_id).await
+        note::note(runtime::client(), runtime::config(), note_id).await
     });
 
     match note {
@@ -107,11 +100,9 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(env: JNIEnv
 }
 
 #[no_mangle]
-pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addNote(_: JNIEnv, _: JObject, folder_id: jint) -> jint {
+pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(_: JNIEnv, _: JObject, folder_id: jint) -> jint {
     runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::add_note(conn, folder_id).await
+        note::create_note(runtime::client(), runtime::config(), folder_id).await
     })
 }
 
@@ -120,8 +111,6 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(env: 
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     runtime::block_on(async move {
-        let conn = runtime::pool().acquire().await.unwrap();
-
-        note::update_note(conn, note_id, text).await
+        note::update_note(runtime::client(), runtime::config(), note_id, text).await
     });
 }
