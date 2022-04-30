@@ -54,8 +54,9 @@ pub async fn add_note(mut conn: PoolConnection<Sqlite>, folder_id: i32) -> i32 {
 }
 
 pub async fn update_note(mut conn: PoolConnection<Sqlite>, note_id: i32, text: String) {
-    sqlx::query("update notes set text = ? where id = ?")
-        .bind(text)
+    sqlx::query("update notes set title = ?, text = ? where id = ?")
+        .bind(&text.as_str()[..text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0])
+        .bind(&text)
         .bind(note_id)
         .execute(&mut conn)
         .await
