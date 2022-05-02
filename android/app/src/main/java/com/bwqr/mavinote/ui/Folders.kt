@@ -9,17 +9,21 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.bwqr.mavinote.Screen
+import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 
 @Composable
 fun Folders(navController: NavController) {
-    val folders = remember {
-        NoteViewModel().folders()
+    var folders by remember {
+        mutableStateOf(listOf<Folder>())
+    }
+
+    LaunchedEffect(key1 = 1) {
+        folders = NoteViewModel().folders().getOrThrow()
     }
 
     Scaffold(

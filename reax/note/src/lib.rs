@@ -2,7 +2,6 @@ pub mod models;
 
 use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::Client;
-use sqlx::{Sqlite, pool::PoolConnection, Connection};
 
 use base::Config;
 

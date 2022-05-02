@@ -1,32 +1,43 @@
 package com.bwqr.mavinote.ui
 
-import android.util.Log
-import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun Note(noteId: Int) {
     val lifecycleOwner = LocalLifecycleOwner.current
 
-    val note = remember {
-        NoteViewModel().note(noteId)!!
+    val scope = rememberCoroutineScope()
+
+    var note: Note? by remember {
+        mutableStateOf(null)
     }
 
     var text by remember {
-        mutableStateOf(note.text)
+        mutableStateOf("")
+    }
+
+    LaunchedEffect(key1 = 1) {
+        NoteViewModel().note(noteId).getOrThrow()?.let {
+            note = it
+            text = it.text
+        }
     }
 
     TextField(value = text, onValueChange = { text = it })
-    
+
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_STOP -> NoteViewModel().updateNote(note.id, text)
+                Lifecycle.Event.ON_STOP -> scope.launch {
+                    NoteViewModel().updateNote(note!!.id, text).getOrThrow()
+                }
                 else -> {}
             }
         }

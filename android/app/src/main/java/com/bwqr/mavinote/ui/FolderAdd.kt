@@ -11,9 +11,12 @@ import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.bwqr.mavinote.Screen
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.launch
 
 @Composable
 fun FolderAdd(navController: NavController) {
+    val scope = rememberCoroutineScope()
+
     var name by remember {
         mutableStateOf("")
     }
@@ -32,8 +35,10 @@ fun FolderAdd(navController: NavController) {
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
-                NoteViewModel().addFolder(name)
-                navController.navigate(Screen.Folders.route)
+                scope.launch {
+                    NoteViewModel().addFolder(name)
+                    navController.navigate(Screen.Folders.route)
+                }
             }
         ) {
             Text("Add")
