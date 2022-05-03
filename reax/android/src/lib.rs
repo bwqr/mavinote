@@ -4,13 +4,19 @@ use std::{ffi::CString, sync::{mpsc::Sender, Mutex}};
 
 use jni::{JNIEnv, objects::{JObject, JString, JValue}, sys::jint, signature::{JavaType, Primitive}};
 use once_cell::sync::OnceCell;
+use serde::Serialize;
 
 mod log;
 
-static HANDLER: OnceCell<Mutex<Sender<(i32, Vec<u8>)>>> = OnceCell::new();
+static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
 
-fn send(wait_id: i32, bytes: Vec<u8>) {
-    HANDLER.get().unwrap().lock().unwrap().send((wait_id, bytes)).unwrap();
+fn send<T: Serialize, E: Serialize>(wait_id: i32, res: Result<T, E>) {
+    let bytes = match &res {
+        Ok(value) => bincode::serialize(value).expect("failed to serialize val"),
+        Err(e) => bincode::serialize(e).expect("failed to serialize val"),
+    };
+
+    HANDLER.get().unwrap().lock().unwrap().send((wait_id, res.is_ok(), bytes)).unwrap();
 }
 
 fn capture_stderr() {
@@ -59,13 +65,13 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(env: JNIEn
         .expect("failed to set handler");
 
     let callback_class = env.get_object_class(callback).unwrap();
-    let callback_method_id = env.get_method_id(callback_class, "invoke", "(I[B)V").unwrap();
+    let callback_method_id = env.get_method_id(callback_class, "invoke", "(IZ[B)V").unwrap();
 
-    while let Ok((wait_id, bytes)) = recv.recv() {
+    while let Ok((wait_id, ok, bytes)) = recv.recv() {
         let bytes_array = env.new_byte_array(bytes.len().try_into().unwrap()).unwrap();
         env.set_byte_array_region(bytes_array, 0, bytes.iter().map(|byte| *byte as i8).collect::<Vec<i8>>().as_slice()).unwrap();
 
-        if let Err(e) = env.call_method_unchecked(callback, callback_method_id, JavaType::Primitive(Primitive::Void), &[JValue::Int(wait_id), JValue::Object(bytes_array.into())]) {
+        if let Err(e) = env.call_method_unchecked(callback, callback_method_id, JavaType::Primitive(Primitive::Void), &[JValue::Int(wait_id), JValue::Bool(ok as u8), JValue::Object(bytes_array.into())]) {
             ::log::error!("failed to call storeHandler, {:?}", e);
         }
 
@@ -80,11 +86,9 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(env: JNIEn
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(_: JNIEnv, _: JObject, wait_id: jint) {
     runtime::spawn(async move {
-        let folders = note::folders(runtime::client(), runtime::config()).await;
+        let res = note::folders(runtime::client(), runtime::config()).await;
 
-        let bytes = bincode::serialize(&folders).expect("failed to serialize val");
-
-        send(wait_id, bytes);
+        send(wait_id, res);
     });
 }
 
@@ -93,45 +97,36 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(env: J
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     runtime::spawn(async move {
-        note::create_folder(runtime::client(), runtime::config(), name).await;
+        let res = note::create_folder(runtime::client(), runtime::config(), name).await;
 
-        send(wait_id, vec![]);
+        send(wait_id, res);
     });
 }
 
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(_: JNIEnv, _: JObject, wait_id: jint, folder_id: jint) {
     runtime::spawn(async move {
-        let summaries = note::note_summaries(runtime::client(), runtime::config(), folder_id).await;
+        let res = note::note_summaries(runtime::client(), runtime::config(), folder_id).await;
 
-        let bytes = bincode::serialize(&summaries).expect("failed to serialize val");
-
-        send(wait_id, bytes);
+        send(wait_id, res);
     });
 }
 
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(_: JNIEnv, _: JObject, wait_id: jint, note_id: jint) {
     runtime::spawn(async move {
-        let note = note::note(runtime::client(), runtime::config(), note_id).await;
+        let res = note::note(runtime::client(), runtime::config(), note_id).await;
 
-        let bytes = match note {
-            None => vec![],
-            Some(note) => bincode::serialize(&note).expect("failed to serialize val")
-        };
-
-        send(wait_id, bytes);
+        send(wait_id, res);
     });
 }
 
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(_: JNIEnv, _: JObject, wait_id: jint, folder_id: jint) {
     runtime::spawn(async move {
-        let note_id = note::create_note(runtime::client(), runtime::config(), folder_id).await;
+        let res = note::create_note(runtime::client(), runtime::config(), folder_id).await;
 
-        let bytes = bincode::serialize(&note_id).expect("failed to serialize val");
-
-        send(wait_id, bytes);
+        send(wait_id, res);
     });
 }
 
@@ -140,8 +135,8 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(env: 
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     runtime::spawn(async move {
-        note::update_note(runtime::client(), runtime::config(), note_id, text).await;
+        let res = note::update_note(runtime::client(), runtime::config(), note_id, text).await;
 
-        send(wait_id, vec![]);
+        send(wait_id, res);
     });
 }
