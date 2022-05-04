@@ -9,6 +9,7 @@ pub enum Error {
 #[derive(Serialize)]
 pub enum HttpError {
     NoConnection,
+    UnexpectedResponse,
     Unauthorized,
     Unknown,
 }
