@@ -1,6 +1,5 @@
 package com.bwqr.mavinote.models
 
-import com.novi.bincode.BincodeDeserializer
 import com.novi.serde.Deserializer
 
 class TraitHelpers {

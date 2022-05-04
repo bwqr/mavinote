@@ -2,20 +2,17 @@ package com.bwqr.mavinote.ui
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.material.Text
 import androidx.compose.foundation.lazy.items
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.*
-import com.bwqr.mavinote.viewmodels.NoteViewModel
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
+import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.bwqr.mavinote.models.Note
+import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
 @Composable

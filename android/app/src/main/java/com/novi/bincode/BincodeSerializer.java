@@ -3,8 +3,8 @@
 
 package com.novi.bincode;
 
-import com.novi.serde.SerializationError;
 import com.novi.serde.BinarySerializer;
+import com.novi.serde.SerializationError;
 
 public class BincodeSerializer extends BinarySerializer {
     public BincodeSerializer() {

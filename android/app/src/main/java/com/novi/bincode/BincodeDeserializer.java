@@ -3,9 +3,9 @@
 
 package com.novi.bincode;
 
+import com.novi.serde.BinaryDeserializer;
 import com.novi.serde.DeserializationError;
 import com.novi.serde.Slice;
-import com.novi.serde.BinaryDeserializer;
 
 public class BincodeDeserializer extends BinaryDeserializer {
     public BincodeDeserializer(byte[] input) {
