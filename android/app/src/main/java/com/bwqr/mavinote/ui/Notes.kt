@@ -10,7 +10,6 @@ import androidx.compose.runtime.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
-import androidx.compose.material.Scaffold
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.mutableStateOf
@@ -21,35 +20,34 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun Notes(navController: NavController, folderId: Int) {
-    val scope = rememberCoroutineScope()
-
     var notes by remember {
         mutableStateOf(listOf<Note>())
     }
 
-    LaunchedEffect(key1 = 1) {
+    LaunchedEffect(key1 = folderId) {
         notes = NoteViewModel().notes(folderId).getOrThrow()
     }
 
-    Scaffold(
-        floatingActionButton = {
-            FloatingActionButton(onClick = {
-                scope.launch {
-                    val addedNoteId = NoteViewModel().createNote(folderId).getOrThrow()
+    LazyColumn {
+        items(notes) { note ->
+            Text(text = note.title, Modifier.clickable {
+                navController.navigate("note/${note.id}")
+            })
+        }
+    }
+}
 
-                    navController.navigate("note/$addedNoteId")
-                }
-            }) {
-                Icon(Icons.Filled.Add, contentDescription = null)
-            }
+@Composable
+fun NotesFab(navController: NavController, folderId: Int) {
+    val scope = rememberCoroutineScope()
+
+    FloatingActionButton(onClick = {
+        scope.launch {
+            val addedNoteId = NoteViewModel().createNote(folderId).getOrThrow()
+
+            navController.navigate("note/$addedNoteId")
         }
-    ) {
-        LazyColumn {
-            items(notes) { note ->
-                Text(text = note.title, Modifier.clickable {
-                    navController.navigate("note/${note.id}")
-                })
-            }
-        }
+    }) {
+        Icon(Icons.Filled.Add, contentDescription = null)
     }
 }

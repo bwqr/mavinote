@@ -2,6 +2,9 @@ package com.bwqr.mavinote.viewmodels
 
 import android.util.Log
 import com.bwqr.mavinote.AppConfig
+import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.ReaxException
+import com.novi.bincode.BincodeDeserializer
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.coroutines.Continuation
@@ -12,8 +15,12 @@ data class AsyncWait<T> constructor(
     val continuation: Continuation<Result<T>>,
     val deserializer: (bytes: ByteArray) -> T,
 ) {
-    fun resume(bytes: ByteArray) {
-        continuation.resume(Result.success(deserializer(bytes)))
+    fun handle(ok: Boolean, bytes: ByteArray) {
+        if (ok) {
+            continuation.resume(Result.success(deserializer(bytes)))
+        } else {
+            continuation.resume(Result.failure(ReaxException(Error.deserialize(BincodeDeserializer(bytes)))))
+        }
     }
 }
 
@@ -36,10 +43,10 @@ class Runtime private constructor(filesDir: String) {
         _init(AppConfig.APP_NAME, AppConfig.API_URL, filesDir)
 
         thread {
-            _initHandler { waitId: Int, bytes: ByteArray ->
+            _initHandler { waitId: Int, ok: Boolean, bytes: ByteArray ->
                 Log.d("Runtime", "received message $waitId ${bytes.size}")
+                waits[waitId]?.handle(ok, bytes)
 
-                waits[waitId]?.resume(bytes)
                 waits.remove(waitId)
             }
         }
@@ -58,5 +65,5 @@ class Runtime private constructor(filesDir: String) {
     }
 
     private external fun _init(appName: String, apiUrl: String, storageDir: String)
-    private external fun _initHandler(callback: (waitId: Int, bytes: ByteArray) -> Unit)
+    private external fun _initHandler(callback: (waitId: Int, ok: Boolean, bytes: ByteArray) -> Unit)
 }
