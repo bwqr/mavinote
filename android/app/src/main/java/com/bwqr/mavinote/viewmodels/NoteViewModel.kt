@@ -3,15 +3,14 @@ package com.bwqr.mavinote.viewmodels
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.TraitHelpers
-import com.novi.bincode.BincodeDeserializer
 import kotlin.coroutines.suspendCoroutine
 
 
 class NoteViewModel {
     suspend fun folders(): Result<List<Folder>> {
         return suspendCoroutine { cont ->
-            val waitId = Runtime.instance.wait(AsyncWait(cont) { bytes ->
-                TraitHelpers.deserializeList(bytes) { Folder.deserialize(it) }
+            val waitId = Runtime.instance.wait(AsyncWait(cont) { deserializer ->
+                TraitHelpers.deserializeList(deserializer) { Folder.deserialize(it) }
             })
 
             _folders(waitId)
@@ -28,8 +27,8 @@ class NoteViewModel {
 
     suspend fun notes(folderId: Int): Result<List<Note>> {
         return suspendCoroutine { cont ->
-            val waitId = Runtime.instance.wait(AsyncWait(cont) { bytes ->
-                TraitHelpers.deserializeList(bytes) { Note.deserialize(it) }
+            val waitId = Runtime.instance.wait(AsyncWait(cont) { deserializer ->
+                TraitHelpers.deserializeList(deserializer) { Note.deserialize(it) }
             })
 
             _noteSummaries(waitId, folderId)
@@ -38,8 +37,8 @@ class NoteViewModel {
 
     suspend fun note(noteId: Int): Result<Note?> {
         return suspendCoroutine { cont ->
-            val waitId = Runtime.instance.wait(AsyncWait(cont) { bytes ->
-                TraitHelpers.deserializeOption(bytes) { Note.deserialize(it) }
+            val waitId = Runtime.instance.wait(AsyncWait(cont) { deserializer ->
+                TraitHelpers.deserializeOption(deserializer) { Note.deserialize(it) }
             })
 
             _note(waitId, noteId)
@@ -48,8 +47,8 @@ class NoteViewModel {
 
     suspend fun createNote(folderId: Int): Result<Int> {
         return suspendCoroutine { cont ->
-            val waitId = Runtime.instance.wait(AsyncWait(cont) { bytes ->
-                BincodeDeserializer(bytes).deserialize_i32()
+            val waitId = Runtime.instance.wait(AsyncWait(cont) { deserializer ->
+                deserializer.deserialize_i32()
             })
 
             _createNote(waitId, folderId)

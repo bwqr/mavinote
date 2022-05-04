@@ -20,6 +20,7 @@ open class Error {
 
 sealed class HttpError : Error() {
     object NoConnection : HttpError()
+    object UnexpectedResponse: HttpError()
     object Unauthorized : HttpError()
     object Unknown : HttpError()
 
@@ -29,8 +30,9 @@ sealed class HttpError : Error() {
 
             return when (index) {
                 0 -> NoConnection
-                1 -> Unauthorized
-                2 -> Unknown
+                1 -> UnexpectedResponse
+                2 -> Unauthorized
+                3 -> Unknown
                 else -> throw DeserializationError("Unknown variant index for HttpError: $index")
             }
         }

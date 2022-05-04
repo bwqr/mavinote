@@ -5,8 +5,7 @@ import com.novi.serde.Deserializer
 
 class TraitHelpers {
     companion object {
-        fun<T> deserializeOption(bytes: ByteArray, deserialize: (deserializer: Deserializer) -> T): T? {
-            val deserializer = BincodeDeserializer(bytes)
+        fun<T> deserializeOption(deserializer: Deserializer, deserialize: (deserializer: Deserializer) -> T): T? {
             val tag = deserializer.deserialize_option_tag()
 
             return if (!tag) {
@@ -16,8 +15,7 @@ class TraitHelpers {
             }
         }
 
-        fun<T> deserializeList(bytes: ByteArray, deserialize: (deserializer: Deserializer) -> T): List<T> {
-            val deserializer = BincodeDeserializer(bytes)
+        fun<T> deserializeList(deserializer: Deserializer, deserialize: (deserializer: Deserializer) -> T): List<T> {
             val items = mutableListOf<T>()
 
             for (index in 0 until deserializer.deserialize_len()) {

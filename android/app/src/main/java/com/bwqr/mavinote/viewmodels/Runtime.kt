@@ -5,6 +5,7 @@ import com.bwqr.mavinote.AppConfig
 import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.ReaxException
 import com.novi.bincode.BincodeDeserializer
+import com.novi.serde.Deserializer
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
 import kotlin.coroutines.Continuation
@@ -13,11 +14,11 @@ import kotlin.random.Random
 
 data class AsyncWait<T> constructor(
     val continuation: Continuation<Result<T>>,
-    val deserializer: (bytes: ByteArray) -> T,
+    val deserialize: (deserializer: Deserializer) -> T,
 ) {
     fun handle(ok: Boolean, bytes: ByteArray) {
         if (ok) {
-            continuation.resume(Result.success(deserializer(bytes)))
+            continuation.resume(Result.success(deserialize(BincodeDeserializer(bytes))))
         } else {
             continuation.resume(Result.failure(ReaxException(Error.deserialize(BincodeDeserializer(bytes)))))
         }

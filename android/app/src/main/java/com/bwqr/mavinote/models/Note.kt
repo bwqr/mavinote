@@ -24,13 +24,4 @@ data class Note constructor(
             return note
         }
     }
-
-    fun cloneWithText(text: String): Note {
-        return Note(
-            id,
-            folderId,
-            title,
-            text
-        )
-    }
 }
