@@ -5,18 +5,11 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 enum class BusEvent {
-    NoInternetConnection
+    DisplayNoInternetWarning,
+    RequireAuthorization,
 }
 
-interface Listener {
-    suspend fun listen(): BusEvent
-}
-
-interface Emitter {
-    fun emit(event: BusEvent)
-}
-
-class Bus: Listener, Emitter {
+class Bus {
     private var continuation: Continuation<BusEvent>? = null
 
     companion object {
@@ -30,22 +23,14 @@ class Bus: Listener, Emitter {
             return singleton
         }
 
-        fun listener(): Listener {
-            return instance()
+        suspend fun listen(): BusEvent {
+            return suspendCoroutine {
+                instance().continuation = it
+            }
         }
 
-        fun emitter(): Emitter {
-            return instance()
+        fun emit(event: BusEvent) {
+            instance().continuation?.resume(event)
         }
-    }
-
-    override suspend fun listen(): BusEvent {
-        return suspendCoroutine {
-            continuation = it
-        }
-    }
-
-    override fun emit(event: BusEvent) {
-        continuation?.resume(event)
     }
 }

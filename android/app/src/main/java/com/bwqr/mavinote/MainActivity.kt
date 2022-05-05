@@ -18,13 +18,15 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.bwqr.mavinote.ui.*
+import com.bwqr.mavinote.ui.note.*
+import com.bwqr.mavinote.ui.auth.Login
 import com.bwqr.mavinote.ui.theme.MaviNoteTheme
 import com.bwqr.mavinote.viewmodels.Bus
 import com.bwqr.mavinote.viewmodels.BusEvent
 import com.bwqr.mavinote.viewmodels.Runtime
 
 sealed class Screen(val route: String) {
+    object Login : Screen("login")
     object Folders : Screen("folders")
     object FolderAdd : Screen("folder-add")
     object Notes : Screen("notes/{folderId}")
@@ -59,8 +61,9 @@ fun MainScreen() {
 
     LaunchedEffect(key1 = 1) {
         while (true) {
-            when (Bus.listener().listen()) {
-                BusEvent.NoInternetConnection -> scaffoldState.snackbarHostState.showSnackbar("Internet yok la")
+            when (Bus.listen()) {
+                BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar("Internet yok la")
+                BusEvent.RequireAuthorization -> navController.navigate(Screen.Login.route)
             }
         }
     }
@@ -78,6 +81,7 @@ fun MainScreen() {
         },
     ) {
         NavHost(navController = navController, startDestination = Screen.Folders.route) {
+            composable(Screen.Login.route) { Login(navController) }
             composable(Screen.Folders.route) { Folders(navController) }
             composable(Screen.FolderAdd.route) { FolderAdd(navController) }
             composable(

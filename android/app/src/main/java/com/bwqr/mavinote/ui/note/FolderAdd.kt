@@ -1,4 +1,4 @@
-package com.bwqr.mavinote.ui
+package com.bwqr.mavinote.ui.note
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth

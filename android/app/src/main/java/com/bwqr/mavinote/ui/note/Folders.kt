@@ -1,4 +1,4 @@
-package com.bwqr.mavinote.ui
+package com.bwqr.mavinote.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyColumn
@@ -28,7 +28,7 @@ fun Folders(navController: NavController) {
         try {
             folders = NoteViewModel().folders().getOrThrow()
         } catch (e: ReaxException) {
-            Bus.emitter().emit(BusEvent.NoInternetConnection)
+            e.handle()
         }
     }
 

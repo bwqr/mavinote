@@ -1,4 +1,4 @@
-package com.bwqr.mavinote.ui
+package com.bwqr.mavinote.ui.note
 
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
