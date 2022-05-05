@@ -7,6 +7,7 @@ pub mod models;
 pub enum Error {
     HttpError(HttpError),
     Message(String),
+    Database,
 }
 
 #[derive(Serialize)]
@@ -24,6 +25,12 @@ impl From<reqwest::Error> for Error {
         }
 
         Error::HttpError(HttpError::NoConnection)
+    }
+}
+
+impl From<sqlx::Error> for Error {
+    fn from(_: sqlx::Error) -> Self {
+        Error::Database
     }
 }
 

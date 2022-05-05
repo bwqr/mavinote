@@ -10,3 +10,8 @@ create table notes(
     text        text            not null,
     foreign key(folder_id)  references  folders(id)
 );
+
+create table store(
+    key     varchar(255)    not null    unique,
+    value   text            not null
+);

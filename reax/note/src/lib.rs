@@ -4,6 +4,7 @@ use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::{Client, StatusCode};
 
 use base::{Config, Error};
+use runtime::Store;
 
 use models::{Folder, Note};
 
@@ -13,8 +14,11 @@ pub async fn folders(
     client: &'static Client,
     config: &'static Config,
 ) -> Result<Vec<Folder>, Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     client
         .get(format!("{}/note/folders", config.api_url))
+        .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?
         .error_for_status()?
@@ -28,8 +32,11 @@ pub async fn create_folder(
     config: &'static Config,
     name: String,
 ) -> Result<(), Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     client
         .post(format!("{}/note/folder", config.api_url))
+        .header("Authorization", format!("Bearer {}", token))
         .body(serde_json::to_string(&CreateFolderRequest { name }).unwrap())
         .send()
         .await?
@@ -43,11 +50,14 @@ pub async fn note_summaries(
     config: &'static Config,
     folder_id: i32,
 ) -> Result<Vec<Note>, Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     client
         .get(format!(
             "{}/note/folder/{}/notes",
             config.api_url, folder_id
         ))
+        .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?
         .error_for_status()?
@@ -61,8 +71,11 @@ pub async fn note(
     config: &'static Config,
     note_id: i32,
 ) -> Result<Option<Note>, Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     let response = client
         .get(format!("{}/note/note/{}", config.api_url, note_id))
+        .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?;
 
@@ -78,6 +91,8 @@ pub async fn create_note(
     config: &'static Config,
     folder_id: i32,
 ) -> Result<i32, Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     let request_body = serde_json::to_string(&CreateNoteRequest {
         folder_id,
         title: "Newly created note".to_string(),
@@ -87,6 +102,7 @@ pub async fn create_note(
 
     client
         .post(format!("{}/note/note", config.api_url))
+        .header("Authorization", format!("Bearer {}", token))
         .body(request_body)
         .send()
         .await?
@@ -103,6 +119,8 @@ pub async fn update_note(
     note_id: i32,
     text: String,
 ) -> Result<(), Error> {
+    let token = Store::get("token").await?.unwrap_or("".to_string());
+
     let text = text.as_str().trim().to_string();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
     let title = text.as_str()[..ending_index].replace('\n', "");
@@ -111,6 +129,7 @@ pub async fn update_note(
 
     client
         .put(format!("{}/note/note/{note_id}", config.api_url))
+        .header("Authorization", format!("Bearer {}", token))
         .body(request_body)
         .send()
         .await?

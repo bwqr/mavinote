@@ -1,4 +1,5 @@
 use base::{Error, Config, models::Token};
+use runtime::Store;
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
@@ -26,6 +27,10 @@ pub async fn login(client: &'static Client, config: &'static Config, email: Stri
     }
 
     let token = response.json::<Token>().await?;
+
+    if let Err(e) = Store::put("token", token.token.as_str()).await {
+        log::error!("failed to set token, {:?}", e);
+    }
 
     log::debug!("received token {}", token.token);
     Ok(())

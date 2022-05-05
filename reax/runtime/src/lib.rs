@@ -8,6 +8,10 @@ use tokio::task::JoinHandle;
 
 use base::Config;
 
+pub use store::Store;
+
+mod store;
+
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static CONFIG: OnceCell<Config> = OnceCell::new();
 static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
