@@ -15,7 +15,6 @@ pub async fn folders(
 ) -> Result<Vec<Folder>, Error> {
     client
         .get(format!("{}/note/folders", config.api_url))
-        .header("Content-Type", "application/json")
         .send()
         .await?
         .error_for_status()?
@@ -31,7 +30,6 @@ pub async fn create_folder(
 ) -> Result<(), Error> {
     client
         .post(format!("{}/note/folder", config.api_url))
-        .header("Content-Type", "application/json")
         .body(serde_json::to_string(&CreateFolderRequest { name }).unwrap())
         .send()
         .await?
@@ -50,7 +48,6 @@ pub async fn note_summaries(
             "{}/note/folder/{}/notes",
             config.api_url, folder_id
         ))
-        .header("Content-Type", "application/json")
         .send()
         .await?
         .error_for_status()?
@@ -66,7 +63,6 @@ pub async fn note(
 ) -> Result<Option<Note>, Error> {
     let response = client
         .get(format!("{}/note/note/{}", config.api_url, note_id))
-        .header("Content-Type", "application/json")
         .send()
         .await?;
 
@@ -91,7 +87,6 @@ pub async fn create_note(
 
     client
         .post(format!("{}/note/note", config.api_url))
-        .header("Content-Type", "application/json")
         .body(request_body)
         .send()
         .await?
@@ -116,7 +111,6 @@ pub async fn update_note(
 
     client
         .put(format!("{}/note/note/{note_id}", config.api_url))
-        .header("Content-Type", "application/json")
         .body(request_body)
         .send()
         .await?

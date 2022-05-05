@@ -1,7 +1,7 @@
 use std::str::FromStr;
 use std::future::Future;
 
-use reqwest::Client;
+use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}};
 use sqlx::{Sqlite, Pool, sqlite::{SqliteConnectOptions, SqlitePoolOptions}};
 use once_cell::sync::OnceCell;
 use tokio::task::JoinHandle;
@@ -42,7 +42,14 @@ pub fn init(config: Config) {
 
     DATABASE.set(pool).expect("failed to set database");
 
-    CLIENT.set(Client::new()).expect("failed to set client");
+    let mut headers = HeaderMap::new();
+    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+    let client = ClientBuilder::new()
+        .default_headers(headers)
+        .build()
+        .unwrap();
+
+    CLIENT.set(client).expect("failed to set client");
 
     CONFIG.set(config).expect("failed to set config");
 }

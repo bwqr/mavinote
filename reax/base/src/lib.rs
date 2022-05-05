@@ -1,9 +1,12 @@
 use reqwest::StatusCode;
 use serde::Serialize;
 
+pub mod models;
+
 #[derive(Serialize)]
 pub enum Error {
     HttpError(HttpError),
+    Message(String),
 }
 
 #[derive(Serialize)]
