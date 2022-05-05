@@ -22,6 +22,7 @@ open class Error {
             return when (index) {
                 0 -> HttpError.deserialize(deserializer)
                 1 -> Message.deserialize(deserializer)
+                2 -> Database()
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
         }
@@ -56,3 +57,5 @@ data class Message(val message: String) : Error() {
         }
     }
 }
+
+class Database : Error()

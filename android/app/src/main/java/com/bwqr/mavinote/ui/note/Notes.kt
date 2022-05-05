@@ -12,6 +12,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.bwqr.mavinote.models.Note
+import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
@@ -22,7 +23,11 @@ fun Notes(navController: NavController, folderId: Int) {
     }
 
     LaunchedEffect(key1 = folderId) {
-        notes = NoteViewModel().notes(folderId).getOrThrow()
+        try {
+            notes = NoteViewModel().notes(folderId).getOrThrow()
+        } catch (e: ReaxException) {
+            e.handle()
+        }
     }
 
     LazyColumn {

@@ -7,6 +7,7 @@ import androidx.compose.material.OutlinedTextField
 import androidx.compose.material.Text
 import androidx.compose.runtime.*
 import androidx.navigation.NavController
+import com.bwqr.mavinote.Screen
 import com.bwqr.mavinote.models.HttpError
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.models.Message
@@ -38,7 +39,7 @@ fun Login(navController: NavController) {
                     try {
                         AuthViewModel().login(email, password).getOrThrow()
 
-                        warning = "Login is successful"
+                        navController.navigate(Screen.Folders.route)
                     } catch (e: ReaxException) {
                         if (e.error is Message) {
                             warning = e.error.message
