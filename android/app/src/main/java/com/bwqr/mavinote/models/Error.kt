@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.models
 
+import android.util.Log
 import com.bwqr.mavinote.viewmodels.Bus
 import com.bwqr.mavinote.viewmodels.BusEvent
 import com.novi.serde.DeserializationError
@@ -10,6 +11,7 @@ class ReaxException constructor(val error: Error) : Throwable() {
         when (error) {
             is HttpError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
             is HttpError.Unauthorized -> Bus.emit(BusEvent.RequireAuthorization)
+            else -> Log.e("ReaxException", "Unhandled error, $error")
         }
     }
 }
@@ -22,7 +24,7 @@ open class Error {
             return when (index) {
                 0 -> HttpError.deserialize(deserializer)
                 1 -> Message.deserialize(deserializer)
-                2 -> Database()
+                2 -> Database.deserialize(deserializer)
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
         }
@@ -58,4 +60,10 @@ data class Message(val message: String) : Error() {
     }
 }
 
-class Database : Error()
+data class Database(val message: String) : Error() {
+    companion object {
+        fun deserialize(deserializer: Deserializer): Database {
+            return Database(deserializer.deserialize_str())
+        }
+    }
+}

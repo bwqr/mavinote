@@ -10,7 +10,7 @@ pub use store::Store;
 pub enum Error {
     HttpError(HttpError),
     Message(String),
-    Database,
+    Database(String),
 }
 
 #[derive(Serialize)]
@@ -27,13 +27,21 @@ impl From<reqwest::Error> for Error {
             return Error::HttpError(HttpError::Unauthorized)
         }
 
-        Error::HttpError(HttpError::NoConnection)
+        if e.is_connect() {
+            return Error::HttpError(HttpError::NoConnection)
+        }
+
+        if e.is_decode() {
+            return Error::HttpError(HttpError::UnexpectedResponse)
+        }
+
+        Error::HttpError(HttpError::Unknown)
     }
 }
 
 impl From<sqlx::Error> for Error {
-    fn from(_: sqlx::Error) -> Self {
-        Error::Database
+    fn from(e: sqlx::Error) -> Self {
+        Error::Database(e.to_string())
     }
 }
 
