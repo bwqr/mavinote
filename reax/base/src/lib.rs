@@ -2,6 +2,9 @@ use reqwest::StatusCode;
 use serde::Serialize;
 
 pub mod models;
+mod store;
+
+pub use store::Store;
 
 #[derive(Serialize)]
 pub enum Error {

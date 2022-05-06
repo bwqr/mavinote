@@ -1,12 +1,11 @@
-use base::{Error, Config, models::Token};
-use runtime::Store;
+use base::{Error, Config, models::Token, Store};
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
 
 mod requests;
 
-pub async fn login(client: &'static Client, config: &'static Config, email: String, password: String) -> Result<(), Error> {
+pub async fn login(store: &'static Store, client: &'static Client, config: &'static Config, email: String, password: String) -> Result<(), Error> {
     let email = email.as_str().trim();
     let password = password.as_str().trim();
 
@@ -26,9 +25,12 @@ pub async fn login(client: &'static Client, config: &'static Config, email: Stri
         return Err(Error::Message("Email or password is invalid".to_string()));
     }
 
-    let token = response.json::<Token>().await?;
+    let token = response
+        .error_for_status()?
+        .json::<Token>()
+        .await?;
 
-    if let Err(e) = Store::put("token", token.token.as_str()).await {
+    if let Err(e) = store.put("token", token.token.as_str()).await {
         log::error!("failed to set token, {:?}", e);
     }
 

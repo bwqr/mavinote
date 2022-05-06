@@ -5,7 +5,7 @@ use crate::send;
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(_: JNIEnv, _: JObject, wait_id: jint) {
     runtime::spawn(async move {
-        let res = note::folders(runtime::client(), runtime::config()).await;
+        let res = note::folders(runtime::store(), runtime::client(), runtime::config()).await;
 
         send(wait_id, res);
     });
@@ -16,7 +16,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(env: J
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     runtime::spawn(async move {
-        let res = note::create_folder(runtime::client(), runtime::config(), name).await;
+        let res = note::create_folder(runtime::store(), runtime::client(), runtime::config(), name).await;
 
         send(wait_id, res);
     });
@@ -25,7 +25,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(env: J
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(_: JNIEnv, _: JObject, wait_id: jint, folder_id: jint) {
     runtime::spawn(async move {
-        let res = note::note_summaries(runtime::client(), runtime::config(), folder_id).await;
+        let res = note::note_summaries(runtime::store(), runtime::client(), runtime::config(), folder_id).await;
 
         send(wait_id, res);
     });
@@ -34,7 +34,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(_:
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(_: JNIEnv, _: JObject, wait_id: jint, note_id: jint) {
     runtime::spawn(async move {
-        let res = note::note(runtime::client(), runtime::config(), note_id).await;
+        let res = note::note(runtime::store(), runtime::client(), runtime::config(), note_id).await;
 
         send(wait_id, res);
     });
@@ -43,7 +43,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(_: JNIEnv, 
 #[no_mangle]
 pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(_: JNIEnv, _: JObject, wait_id: jint, folder_id: jint) {
     runtime::spawn(async move {
-        let res = note::create_note(runtime::client(), runtime::config(), folder_id).await;
+        let res = note::create_note(runtime::store(), runtime::client(), runtime::config(), folder_id).await;
 
         send(wait_id, res);
     });
@@ -54,7 +54,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(env: 
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     runtime::spawn(async move {
-        let res = note::update_note(runtime::client(), runtime::config(), note_id, text).await;
+        let res = note::update_note(runtime::store(), runtime::client(), runtime::config(), note_id, text).await;
 
         send(wait_id, res);
     });

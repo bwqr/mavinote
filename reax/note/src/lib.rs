@@ -3,18 +3,18 @@ pub mod models;
 use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::{Client, StatusCode};
 
-use base::{Config, Error};
-use runtime::Store;
+use base::{Config, Error, Store};
 
 use models::{Folder, Note};
 
 mod requests;
 
 pub async fn folders(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
 ) -> Result<Vec<Folder>, Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     client
         .get(format!("{}/note/folders", config.api_url))
@@ -28,11 +28,12 @@ pub async fn folders(
 }
 
 pub async fn create_folder(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
     name: String,
 ) -> Result<(), Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     client
         .post(format!("{}/note/folder", config.api_url))
@@ -46,11 +47,12 @@ pub async fn create_folder(
 }
 
 pub async fn note_summaries(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
     folder_id: i32,
 ) -> Result<Vec<Note>, Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     client
         .get(format!(
@@ -67,11 +69,12 @@ pub async fn note_summaries(
 }
 
 pub async fn note(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
     note_id: i32,
 ) -> Result<Option<Note>, Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     let response = client
         .get(format!("{}/note/note/{}", config.api_url, note_id))
@@ -83,15 +86,20 @@ pub async fn note(
         return Ok(None);
     }
 
-    response.json().await.map_err(|e| e.into())
+    response
+        .error_for_status()?
+        .json()
+        .await
+        .map_err(|e| e.into())
 }
 
 pub async fn create_note(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
     folder_id: i32,
 ) -> Result<i32, Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     let request_body = serde_json::to_string(&CreateNoteRequest {
         folder_id,
@@ -114,12 +122,13 @@ pub async fn create_note(
 }
 
 pub async fn update_note(
+    store: &'static Store,
     client: &'static Client,
     config: &'static Config,
     note_id: i32,
     text: String,
 ) -> Result<(), Error> {
-    let token = Store::get("token").await?.unwrap_or("".to_string());
+    let token = store.get("token").await?.unwrap_or("".to_string());
 
     let text = text.as_str().trim().to_string();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;

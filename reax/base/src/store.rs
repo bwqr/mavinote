@@ -1,15 +1,17 @@
-use sqlx::Row;
+use sqlx::{Row, Pool, Sqlite};
 
 #[derive(Debug)]
-pub struct Store;
+pub struct Store {
+    pool: &'static Pool<Sqlite>
+}
 
 impl Store {
-    pub fn new() -> Self {
-        Self
+    pub fn new(pool: &'static Pool<Sqlite>) -> Self {
+        Self { pool }
     }
 
-    pub async fn get(key: &str) -> Result<Option<String>, sqlx::Error> {
-        let mut conn = crate::pool().acquire().await?;
+    pub async fn get(&self, key: &str) -> Result<Option<String>, sqlx::Error> {
+        let mut conn = self.pool.acquire().await?;
 
         let row = sqlx::query("select value from store where key = ?")
             .bind(key)
@@ -23,8 +25,8 @@ impl Store {
         }
     }
 
-    pub async fn put(key: &str, value: &str) -> Result<(), sqlx::Error> {
-        let mut conn = crate::pool().acquire().await?;
+    pub async fn put(&self, key: &str, value: &str) -> Result<(), sqlx::Error> {
+        let mut conn = self.pool.acquire().await?;
 
         let res = sqlx::query("insert into store values (?, ?)")
             .bind(key)
@@ -35,13 +37,12 @@ impl Store {
 
         if let Err(sqlx::Error::Database(e)) = &res {
             if let Some("2067") = e.code().as_deref() {
-                sqlx::query("update store set value = ? where key = ?")
-                    .bind(key)
+                return sqlx::query("update store set value = ? where key = ?")
                     .bind(value)
+                    .bind(key)
                     .execute(&mut conn)
-                    .await?;
-
-                return Ok(())
+                    .await
+                    .map(|_| ())
             }
         }
 

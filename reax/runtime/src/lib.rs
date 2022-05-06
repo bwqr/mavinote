@@ -6,16 +6,13 @@ use sqlx::{Sqlite, Pool, sqlite::{SqliteConnectOptions, SqlitePoolOptions}};
 use once_cell::sync::OnceCell;
 use tokio::task::JoinHandle;
 
-use base::Config;
-
-pub use store::Store;
-
-mod store;
+use base::{Config, Store};
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static CONFIG: OnceCell<Config> = OnceCell::new();
 static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
 static CLIENT: OnceCell<Client> = OnceCell::new();
+static STORE: OnceCell<Store> = OnceCell::new();
 
 pub fn init(config: Config) {
     ASYNC_RUNTIME
@@ -46,12 +43,15 @@ pub fn init(config: Config) {
 
     DATABASE.set(pool).expect("failed to set database");
 
+    STORE.set(Store::new(DATABASE.get().unwrap())).expect("failed to set database");
+
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", HeaderValue::from_static("application/json"));
     let client = ClientBuilder::new()
         .default_headers(headers)
         .build()
         .unwrap();
+
 
     CLIENT.set(client).expect("failed to set client");
 
@@ -84,4 +84,8 @@ pub fn client() -> &'static Client {
 
 pub fn config() -> &'static Config {
     CONFIG.get().unwrap()
+}
+
+pub fn store() -> &'static Store {
+    STORE.get().unwrap()
 }

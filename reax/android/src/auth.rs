@@ -8,7 +8,7 @@ pub extern fn Java_com_bwqr_mavinote_viewmodels_AuthViewModel__1login(env: JNIEn
     let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
 
     runtime::spawn(async move {
-        let res = auth::login(runtime::client(), runtime::config(), email, password).await;
+        let res = auth::login(runtime::store(), runtime::client(), runtime::config(), email, password).await;
 
         send(wait_id, res);
     });
