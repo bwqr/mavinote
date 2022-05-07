@@ -1,4 +1,5 @@
 import Foundation
+import Serde
 
 protocol Resume {
     func handle(ok: Bool, bytes: [UInt8])
@@ -7,14 +8,26 @@ protocol Resume {
 
 class AsyncWait<T> : Resume {
     let continuation: CheckedContinuation<T, Error>
-    let deserialize: () -> T
-    init(_ continuation: CheckedContinuation<T, Error>, _ deserialize: @escaping () -> T) {
+    let deserialize: (_ deserializer: Deserializer) throws -> T
+    init(_ continuation: CheckedContinuation<T, Error>, _ deserialize: @escaping (_ deserializer: Deserializer) throws -> T) {
         self.continuation = continuation
         self.deserialize = deserialize
     }
     
     func handle(ok: Bool, bytes: [UInt8]) {
         print("received ", ok, bytes.capacity)
+        let deserializer = BincodeDeserializer.init(input: bytes)
+
+        do {
+            if ok {
+                self.continuation.resume(with: Result.success(try self.deserialize(deserializer)))
+            } else {
+                let error = try ReaxError.deserialize(deserializer)
+                self.continuation.resume(throwing: error)
+            }
+        } catch {
+            print("failed to resume continuation", error)
+        }
     }
 }
 

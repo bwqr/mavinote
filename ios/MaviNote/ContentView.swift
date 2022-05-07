@@ -13,7 +13,7 @@ struct ContentView: View {
                 do {
                     folders = try await NoteViewModel().folders()
                 } catch {
-                    print("failed to fetch folders")
+                    print("failed to fetch folders", error)
                 }
             }
         }
