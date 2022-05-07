@@ -11,6 +11,8 @@
 		AC33604D2826B805005EB968 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC33604C2826B805005EB968 /* Folder.swift */; };
 		AC3360502826B86F005EB968 /* NoteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC33604F2826B86F005EB968 /* NoteViewModel.swift */; };
 		AC3360522826BD4E005EB968 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3360512826BD4E005EB968 /* Error.swift */; };
+		AC4257762826CE930084BCB5 /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = AC4257752826CE930084BCB5 /* Serde */; };
+		AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC4257772826D2630084BCB5 /* TraitHelpers.swift */; };
 		ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB446F12826710600CCF027 /* MaviNoteApp.swift */; };
 		ACB446F42826710600CCF027 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB446F32826710600CCF027 /* ContentView.swift */; };
 		ACB446F62826710C00CCF027 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACB446F52826710C00CCF027 /* Assets.xcassets */; };
@@ -43,6 +45,8 @@
 		AC33604C2826B805005EB968 /* Folder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		AC33604F2826B86F005EB968 /* NoteViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteViewModel.swift; sourceTree = "<group>"; };
 		AC3360512826BD4E005EB968 /* Error.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
+		AC3360542826CB99005EB968 /* Serde */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Serde; sourceTree = "<group>"; };
+		AC4257772826D2630084BCB5 /* TraitHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraitHelpers.swift; sourceTree = "<group>"; };
 		ACB446EE2826710600CCF027 /* MaviNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MaviNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACB446F12826710600CCF027 /* MaviNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaviNoteApp.swift; sourceTree = "<group>"; };
 		ACB446F32826710600CCF027 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -61,6 +65,7 @@
 			isa = PBXFrameworksBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				AC4257762826CE930084BCB5 /* Serde in Frameworks */,
 				AC33604A2826765F005EB968 /* libios.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -95,6 +100,7 @@
 			children = (
 				AC33604C2826B805005EB968 /* Folder.swift */,
 				AC3360512826BD4E005EB968 /* Error.swift */,
+				AC4257772826D2630084BCB5 /* TraitHelpers.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -107,9 +113,18 @@
 			path = ViewModels;
 			sourceTree = "<group>";
 		};
+		AC3360532826CB99005EB968 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AC3360542826CB99005EB968 /* Serde */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
 		ACB446E52826710600CCF027 = {
 			isa = PBXGroup;
 			children = (
+				AC3360532826CB99005EB968 /* Packages */,
 				ACB446F02826710600CCF027 /* MaviNote */,
 				ACB447012826710C00CCF027 /* MaviNoteTests */,
 				ACB4470B2826710C00CCF027 /* MaviNoteUITests */,
@@ -183,6 +198,9 @@
 			dependencies = (
 			);
 			name = MaviNote;
+			packageProductDependencies = (
+				AC4257752826CE930084BCB5 /* Serde */,
+			);
 			productName = MaviNote;
 			productReference = ACB446EE2826710600CCF027 /* MaviNote.app */;
 			productType = "com.apple.product-type.application";
@@ -303,6 +321,7 @@
 				ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */,
 				AC3360522826BD4E005EB968 /* Error.swift in Sources */,
 				AC33604D2826B805005EB968 /* Folder.swift in Sources */,
+				AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -631,6 +650,13 @@
 			defaultConfigurationName = Release;
 		};
 /* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AC4257752826CE930084BCB5 /* Serde */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Serde;
+		};
+/* End XCSwiftPackageProductDependency section */
 	};
 	rootObject = ACB446E62826710600CCF027 /* Project object */;
 }
