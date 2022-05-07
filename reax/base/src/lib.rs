@@ -8,7 +8,7 @@ pub use store::Store;
 
 #[derive(Serialize)]
 pub enum Error {
-    HttpError(HttpError),
+    Http(HttpError),
     Message(String),
     Database(String),
 }
@@ -24,18 +24,18 @@ pub enum HttpError {
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
         if let Some(StatusCode::UNAUTHORIZED) = e.status() {
-            return Error::HttpError(HttpError::Unauthorized)
+            return Error::Http(HttpError::Unauthorized)
         }
 
         if e.is_connect() {
-            return Error::HttpError(HttpError::NoConnection)
+            return Error::Http(HttpError::NoConnection)
         }
 
         if e.is_decode() {
-            return Error::HttpError(HttpError::UnexpectedResponse)
+            return Error::Http(HttpError::UnexpectedResponse)
         }
 
-        Error::HttpError(HttpError::Unknown)
+        Error::Http(HttpError::Unknown)
     }
 }
 

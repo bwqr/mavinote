@@ -1,21 +1,10 @@
 import SwiftUI
 
 struct ContentView: View {
-    @State var folders: [Folder] = []
-    
     var body: some View {
-        List(folders) { folder in
-             Text(folder.name)
-                .padding()
-        }
-        .onAppear {
-            Task {
-                do {
-                    folders = try await NoteViewModel().folders()
-                } catch {
-                    print("failed to fetch folders", error)
-                }
-            }
+        NavigationView {
+            FoldersView()
+                .navigationTitle("Folders")
         }
     }
 }

@@ -11,6 +11,11 @@
 		AC33604D2826B805005EB968 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC33604C2826B805005EB968 /* Folder.swift */; };
 		AC3360502826B86F005EB968 /* NoteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC33604F2826B86F005EB968 /* NoteViewModel.swift */; };
 		AC3360522826BD4E005EB968 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC3360512826BD4E005EB968 /* Error.swift */; };
+		AC39D98F2826FBA100B7B6A4 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC39D98E2826FBA100B7B6A4 /* Note.swift */; };
+		AC39D99528270DF200B7B6A4 /* NoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC39D99428270DF200B7B6A4 /* NoteView.swift */; };
+		AC39D99928270F8400B7B6A4 /* FolderCreateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC39D99628270F8400B7B6A4 /* FolderCreateView.swift */; };
+		AC39D99A28270F8400B7B6A4 /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC39D99728270F8400B7B6A4 /* FoldersView.swift */; };
+		AC39D99B28270F8400B7B6A4 /* NotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC39D99828270F8400B7B6A4 /* NotesView.swift */; };
 		AC4257762826CE930084BCB5 /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = AC4257752826CE930084BCB5 /* Serde */; };
 		AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC4257772826D2630084BCB5 /* TraitHelpers.swift */; };
 		ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB446F12826710600CCF027 /* MaviNoteApp.swift */; };
@@ -46,6 +51,11 @@
 		AC33604F2826B86F005EB968 /* NoteViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NoteViewModel.swift; sourceTree = "<group>"; };
 		AC3360512826BD4E005EB968 /* Error.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		AC3360542826CB99005EB968 /* Serde */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Serde; sourceTree = "<group>"; };
+		AC39D98E2826FBA100B7B6A4 /* Note.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
+		AC39D99428270DF200B7B6A4 /* NoteView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoteView.swift; sourceTree = "<group>"; };
+		AC39D99628270F8400B7B6A4 /* FolderCreateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FolderCreateView.swift; sourceTree = "<group>"; };
+		AC39D99728270F8400B7B6A4 /* FoldersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoldersView.swift; sourceTree = "<group>"; };
+		AC39D99828270F8400B7B6A4 /* NotesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotesView.swift; sourceTree = "<group>"; };
 		AC4257772826D2630084BCB5 /* TraitHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraitHelpers.swift; sourceTree = "<group>"; };
 		ACB446EE2826710600CCF027 /* MaviNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MaviNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACB446F12826710600CCF027 /* MaviNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaviNoteApp.swift; sourceTree = "<group>"; };
@@ -101,6 +111,7 @@
 				AC33604C2826B805005EB968 /* Folder.swift */,
 				AC3360512826BD4E005EB968 /* Error.swift */,
 				AC4257772826D2630084BCB5 /* TraitHelpers.swift */,
+				AC39D98E2826FBA100B7B6A4 /* Note.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -119,6 +130,25 @@
 				AC3360542826CB99005EB968 /* Serde */,
 			);
 			name = Packages;
+			sourceTree = "<group>";
+		};
+		AC4257792826EE410084BCB5 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				AC42577A2826EE490084BCB5 /* Note */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		AC42577A2826EE490084BCB5 /* Note */ = {
+			isa = PBXGroup;
+			children = (
+				AC39D99628270F8400B7B6A4 /* FolderCreateView.swift */,
+				AC39D99728270F8400B7B6A4 /* FoldersView.swift */,
+				AC39D99828270F8400B7B6A4 /* NotesView.swift */,
+				AC39D99428270DF200B7B6A4 /* NoteView.swift */,
+			);
+			path = Note;
 			sourceTree = "<group>";
 		};
 		ACB446E52826710600CCF027 = {
@@ -146,6 +176,7 @@
 		ACB446F02826710600CCF027 /* MaviNote */ = {
 			isa = PBXGroup;
 			children = (
+				AC4257792826EE410084BCB5 /* Views */,
 				AC33604E2826B861005EB968 /* ViewModels */,
 				AC33604B2826B7EB005EB968 /* Models */,
 				ACB446F12826710600CCF027 /* MaviNoteApp.swift */,
@@ -317,10 +348,15 @@
 			files = (
 				AC3360502826B86F005EB968 /* NoteViewModel.swift in Sources */,
 				ACB446F42826710600CCF027 /* ContentView.swift in Sources */,
+				AC39D99B28270F8400B7B6A4 /* NotesView.swift in Sources */,
+				AC39D99528270DF200B7B6A4 /* NoteView.swift in Sources */,
 				ACB4471E282673E400CCF027 /* Runtime.swift in Sources */,
 				ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */,
 				AC3360522826BD4E005EB968 /* Error.swift in Sources */,
+				AC39D98F2826FBA100B7B6A4 /* Note.swift in Sources */,
 				AC33604D2826B805005EB968 /* Folder.swift in Sources */,
+				AC39D99A28270F8400B7B6A4 /* FoldersView.swift in Sources */,
+				AC39D99928270F8400B7B6A4 /* FolderCreateView.swift in Sources */,
 				AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
