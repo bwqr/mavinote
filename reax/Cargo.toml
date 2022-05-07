@@ -1,6 +1,7 @@
 [workspace]
 members = [
     "android",
+    "ios",
     "auth",
     "base",
     "note",
