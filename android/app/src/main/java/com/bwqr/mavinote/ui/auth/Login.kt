@@ -44,7 +44,7 @@ fun Login(navController: NavController) {
                         if (e.error is Message) {
                             warning = e.error.message
                         } else {
-                            Log.e("Login", "unhandled error ${e.error}")
+                            e.handle()
                         }
                     } finally {
                         inProgress = false

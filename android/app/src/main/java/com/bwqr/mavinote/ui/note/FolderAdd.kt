@@ -10,6 +10,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import com.bwqr.mavinote.Screen
+import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
@@ -36,7 +37,12 @@ fun FolderAdd(navController: NavController) {
             modifier = Modifier.fillMaxWidth(),
             onClick = {
                 scope.launch {
-                    NoteViewModel().addFolder(name)
+                    try {
+                        NoteViewModel().addFolder(name)
+                    } catch (e: ReaxException) {
+                        e.handle()
+                    }
+
                     navController.navigate(Screen.Folders.route)
                 }
             }

@@ -6,6 +6,7 @@ import androidx.compose.ui.platform.LocalLifecycleOwner
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import com.bwqr.mavinote.models.Note
+import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
@@ -36,7 +37,11 @@ fun Note(noteId: Int) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> scope.launch {
-                    NoteViewModel().updateNote(note!!.id, text).getOrThrow()
+                    try {
+                        NoteViewModel().updateNote(note!!.id, text)
+                    } catch (e: ReaxException) {
+                        e.handle()
+                    }
                 }
                 else -> {}
             }
