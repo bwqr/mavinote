@@ -19,6 +19,8 @@
 		AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC4257772826D2630084BCB5 /* TraitHelpers.swift */; };
 		AC88477B2827C59600EFA78A /* libios.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC8847792827C57500EFA78A /* libios.a */; };
 		AC88477D2827C6C100EFA78A /* Runtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC88477C2827C6C100EFA78A /* Runtime.swift */; };
+		AC8847802827C78500EFA78A /* LoginView.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC88477F2827C78500EFA78A /* LoginView.swift */; };
+		AC8847822827C79A00EFA78A /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC8847812827C79A00EFA78A /* AuthViewModel.swift */; };
 		ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB446F12826710600CCF027 /* MaviNoteApp.swift */; };
 		ACB446F42826710600CCF027 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB446F32826710600CCF027 /* ContentView.swift */; };
 		ACB446F62826710C00CCF027 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACB446F52826710C00CCF027 /* Assets.xcassets */; };
@@ -58,6 +60,8 @@
 		AC4257772826D2630084BCB5 /* TraitHelpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TraitHelpers.swift; sourceTree = "<group>"; };
 		AC8847792827C57500EFA78A /* libios.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libios.a; path = "../reax/target/x86_64-apple-ios/debug/libios.a"; sourceTree = "<group>"; };
 		AC88477C2827C6C100EFA78A /* Runtime.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Runtime.swift; sourceTree = "<group>"; };
+		AC88477F2827C78500EFA78A /* LoginView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LoginView.swift; sourceTree = "<group>"; };
+		AC8847812827C79A00EFA78A /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
 		ACB446EE2826710600CCF027 /* MaviNote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = MaviNote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACB446F12826710600CCF027 /* MaviNoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaviNoteApp.swift; sourceTree = "<group>"; };
 		ACB446F32826710600CCF027 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -121,6 +125,7 @@
 			children = (
 				AC88477C2827C6C100EFA78A /* Runtime.swift */,
 				AC33604F2826B86F005EB968 /* NoteViewModel.swift */,
+				AC8847812827C79A00EFA78A /* AuthViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -136,6 +141,7 @@
 		AC4257792826EE410084BCB5 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				AC88477E2827C77A00EFA78A /* Auth */,
 				AC42577A2826EE490084BCB5 /* Note */,
 			);
 			path = Views;
@@ -150,6 +156,14 @@
 				AC39D99428270DF200B7B6A4 /* NoteView.swift */,
 			);
 			path = Note;
+			sourceTree = "<group>";
+		};
+		AC88477E2827C77A00EFA78A /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				AC88477F2827C78500EFA78A /* LoginView.swift */,
+			);
+			path = Auth;
 			sourceTree = "<group>";
 		};
 		ACB446E52826710600CCF027 = {
@@ -356,6 +370,8 @@
 				AC39D98F2826FBA100B7B6A4 /* Note.swift in Sources */,
 				AC33604D2826B805005EB968 /* Folder.swift in Sources */,
 				AC39D99A28270F8400B7B6A4 /* FoldersView.swift in Sources */,
+				AC8847822827C79A00EFA78A /* AuthViewModel.swift in Sources */,
+				AC8847802827C78500EFA78A /* LoginView.swift in Sources */,
 				AC39D99928270F8400B7B6A4 /* FolderCreateView.swift in Sources */,
 				AC4257782826D2630084BCB5 /* TraitHelpers.swift in Sources */,
 			);

@@ -1,5 +1,3 @@
-import Foundation
-
 class NoteViewModel {
     func folders() async throws -> [Folder] {
         return try await withCheckedThrowingContinuation { continuation in
