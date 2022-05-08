@@ -31,7 +31,7 @@ class NoteViewModel {
     }
 
     func note(_ noteId: Int32) async throws -> Note? {
-        return try await withCheckedThrowingContinuation{ continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
                 try deserializeOption(deserializer) { try Note.deserialize($0) }
             })
@@ -40,8 +40,18 @@ class NoteViewModel {
         }
     }
 
+    func createNote(_ folderId: Int32) async throws -> Int32 {
+        return try await withCheckedThrowingContinuation { continuation in
+            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
+                try deserializer.deserialize_i32()
+            })
+
+            reax_note_create_note(waitId, folderId)
+        }
+    }
+
     func updateNote(_ noteId: Int32, _ text: String) async throws -> () {
-        return try await withCheckedThrowingContinuation{ continuation in
+        return try await withCheckedThrowingContinuation { continuation in
             let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
             })
 

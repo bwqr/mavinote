@@ -1,17 +1,13 @@
 import SwiftUI
 
 struct NotesView: View {
-    private let folderId: Int32
+    let folderId: Int32
     @State var notes: [Note] = []
-
-    init(_ folderId: Int32) {
-        self.folderId = folderId
-    }
 
     var body: some View {
         List(notes) { note in
             NavigationLink(destination: {
-                NoteView(noteId: note.id)
+                NoteView(folderId: folderId, noteId: note.id)
             }) {
                 Text(note.title)
             }
@@ -24,7 +20,9 @@ struct NotesView: View {
                 }
             }
         }.toolbar {
-            Button("Somehow add new note") { }
+            NavigationLink(destination: NoteView(folderId: folderId, noteId: nil)) {
+                Text("Add Note")
+            }
         }
     }
 }

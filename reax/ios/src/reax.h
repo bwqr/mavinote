@@ -7,4 +7,5 @@ void reax_note_folders(int wait_id);
 void reax_note_create_folder(int wait_id, const char * name);
 void reax_note_note_summaries(int wait_id, int folder_id);
 void reax_note_note(int wait_id, int note_id);
+void reax_note_create_note(int wait_id, int folder_id);
 void reax_note_update_note(int wait_id, int note_id, const char * text);

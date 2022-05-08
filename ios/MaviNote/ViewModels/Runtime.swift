@@ -15,15 +15,13 @@ class AsyncWait<T> : Resume {
     }
     
     func handle(ok: Bool, bytes: [UInt8]) {
-        print("received ", ok, bytes.capacity)
         let deserializer = BincodeDeserializer.init(input: bytes)
 
         do {
             if ok {
                 self.continuation.resume(with: Result.success(try self.deserialize(deserializer)))
             } else {
-                let error = try ReaxError.deserialize(deserializer)
-                self.continuation.resume(throwing: error)
+                self.continuation.resume(throwing: try ReaxError.deserialize(deserializer))
             }
         } catch {
             print("failed to resume continuation", error)

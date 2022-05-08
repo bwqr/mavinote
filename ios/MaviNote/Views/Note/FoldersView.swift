@@ -8,7 +8,7 @@ struct FoldersView: View {
         
         List(folders) { folder in
             NavigationLink(destination: {
-                NotesView(folder.id)
+                NotesView(folderId: folder.id)
                     .navigationTitle(folder.name)
             }) {
                 Text(folder.name)

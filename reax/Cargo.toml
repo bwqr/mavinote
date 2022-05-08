@@ -22,3 +22,7 @@ edition = "2021"
 opt-level = "z"
 debug = false
 debug-assertions = false
+
+[profile.release]
+opt-level = "z"
+lto = true

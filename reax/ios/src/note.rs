@@ -41,6 +41,15 @@ pub extern fn reax_note_note(wait_id: c_int, note_id: c_int) {
 }
 
 #[no_mangle]
+pub extern fn reax_note_create_note(wait_id: c_int, folder_id: c_int) {
+    runtime::spawn(async move {
+        let res = note::create_note(runtime::store(), runtime::client(), runtime::config(), folder_id).await;
+
+        send(wait_id, res);
+    });
+}
+
+#[no_mangle]
 pub extern fn reax_note_update_note(wait_id: c_int, note_id: c_int, text: * const c_char) {
     let text = unsafe { CStr::from_ptr(text).to_str().unwrap().to_string() };
 
