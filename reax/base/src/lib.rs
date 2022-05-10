@@ -6,14 +6,14 @@ mod store;
 
 pub use store::Store;
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum Error {
     Http(HttpError),
     Message(String),
     Database(String),
 }
 
-#[derive(Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub enum HttpError {
     NoConnection,
     UnexpectedResponse,

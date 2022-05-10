@@ -1,7 +1,7 @@
 use serde::{Serialize, Deserialize};
 use sqlx::FromRow;
 
-#[derive(Deserialize, FromRow, Serialize)]
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: i32,
