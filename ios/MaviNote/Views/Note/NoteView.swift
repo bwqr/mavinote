@@ -7,6 +7,7 @@ struct NoteView : View {
     
     var body: some View {
         VStack {
+            Text("Note")
             TextEditor(text: $text)
         }.onAppear {
             guard let noteId = noteId else {

@@ -9,3 +9,5 @@ void reax_note_note_summaries(int wait_id, int folder_id);
 void reax_note_note(int wait_id, int note_id);
 void reax_note_create_note(int wait_id, int folder_id);
 void reax_note_update_note(int wait_id, int note_id, const char * text);
+
+void reax_auth_login(int wait_id, const char * email, const char * password);

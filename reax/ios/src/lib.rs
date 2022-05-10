@@ -4,6 +4,7 @@ use once_cell::sync::OnceCell;
 use serde::Serialize;
 
 mod note;
+mod auth;
 
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
 

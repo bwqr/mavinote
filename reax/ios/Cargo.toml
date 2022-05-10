@@ -7,6 +7,7 @@ edition = "2021"
 
 [dependencies]
 base = { path = "../base" }
+auth = { path = "../auth" }
 note = { path = "../note" }
 runtime = { path = "../runtime" }
 
