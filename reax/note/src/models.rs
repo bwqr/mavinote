@@ -8,7 +8,7 @@ pub struct Folder {
     pub name: String,
 }
 
-#[derive(Deserialize, FromRow, Serialize)]
+#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     pub id: i32,
