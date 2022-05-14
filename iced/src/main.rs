@@ -8,7 +8,9 @@ use sqlx::{Sqlite, Pool, sqlite::{SqliteConnectOptions, SqlitePoolOptions}};
 
 use base::{Config, Store};
 
-use ui::note::folders::{Folders, Message as FoldersMessage};
+use ui::note::{folders::{Folders, Message as FoldersMessage}, note::Note};
+use ui::note::notes::{Notes, Message as NotesMessage};
+use ui::note::note::Message as NoteMessage;
 
 static CONFIG: OnceCell<Config> = OnceCell::new();
 static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
@@ -17,8 +19,7 @@ static STORE: OnceCell<Store> = OnceCell::new();
 
 mod ui;
 
-#[tokio::main]
-async fn main() -> iced::Result {
+fn main() -> iced::Result {
     std::env::set_var("RUST_LOG", "info");
     env_logger::init();
 
@@ -29,18 +30,21 @@ async fn main() -> iced::Result {
 
     let db_path = format!("sqlite:{}/app.db", config.storage_dir);
 
-    let options = SqliteConnectOptions::from_str(db_path.as_str())
-        .unwrap()
-        .create_if_missing(true);
+    let pool = iced::executor::Default::new().unwrap().block_on(async move {
+        let options = SqliteConnectOptions::from_str(db_path.as_str())
+            .unwrap()
+            .create_if_missing(true);
 
-    let pool = SqlitePoolOptions::new()
-        .max_connections(5)
-        .connect_with(options)
-        .await
-        .unwrap();
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(options)
+            .await
+            .unwrap();
 
-    sqlx::migrate!("../reax/migrations").run(&pool).await.unwrap();
+        sqlx::migrate!("../reax/migrations").run(&pool).await.unwrap();
 
+        pool
+    });
 
     DATABASE.set(pool).expect("failed to set database");
 
@@ -53,7 +57,6 @@ async fn main() -> iced::Result {
         .build()
         .unwrap();
 
-
     CLIENT.set(client).expect("failed to set client");
 
     CONFIG.set(config).expect("failed to set config");
@@ -62,7 +65,9 @@ async fn main() -> iced::Result {
 }
 
 enum Page {
-    Folders(ui::note::folders::Folders),
+    Folders(Folders),
+    Notes(Notes),
+    Note(Note),
 }
 
 struct MaviNote {
@@ -72,6 +77,8 @@ struct MaviNote {
 #[derive(Debug)]
 enum Message {
     FoldersMessage(FoldersMessage),
+    NotesMessage(NotesMessage),
+    NoteMessage(NoteMessage),
 }
 
 impl Application for MaviNote {
@@ -95,7 +102,30 @@ impl Application for MaviNote {
 
     fn update(&mut self, message: Self::Message) -> iced::Command<Self::Message> {
         match (message, &mut self.page) {
-            (Message::FoldersMessage(m), Page::Folders(folders)) => folders.update(m)
+            (Message::FoldersMessage(FoldersMessage::Navigate(folder_id)), Page::Folders(_)) => {
+                let notes = Notes::new(folder_id);
+                self.page = Page::Notes(notes.0);
+                return notes.1.map(Message::NotesMessage);
+            },
+            (Message::FoldersMessage(m), Page::Folders(folders)) => folders.update(m),
+            (Message::NotesMessage(NotesMessage::BackNavigation), Page::Notes(_)) => {
+                let folders = Folders::new();
+                self.page = Page::Folders(folders.0);
+                return folders.1.map(Message::FoldersMessage);
+            },
+            (Message::NotesMessage(NotesMessage::Navigate(folder_id, note_id)), Page::Notes(_)) => {
+                let note = Note::new(folder_id, note_id);
+                self.page = Page::Note(note.0);
+                return note.1.map(Message::NoteMessage);
+            },
+            (Message::NotesMessage(m), Page::Notes(notes)) => notes.update(m),
+            (Message::NoteMessage(NoteMessage::BackNavigation(folder_id)), Page::Note(_)) => {
+                let notes = Notes::new(folder_id);
+                self.page = Page::Notes(notes.0);
+                return notes.1.map(Message::NotesMessage);
+            },
+            (Message::NoteMessage(m), Page::Note(note)) => note.update(m),
+            _ => {},
         };
 
         Command::none()
@@ -111,7 +141,25 @@ impl Application for MaviNote {
                 );
 
                 Container::new(folders).into()
-            }
+            },
+            Page::Notes(notes) => {
+                let notes = Column::new().push(
+                    notes
+                        .view()
+                        .map(|message| Message::NotesMessage(message)),
+                );
+
+                Container::new(notes).into()
+            },
+            Page::Note(note) => {
+                let note = Column::new().push(
+                    note
+                        .view()
+                        .map(|message| Message::NoteMessage(message)),
+                );
+
+                Container::new(note).into()
+            },
         }
     }
 }
