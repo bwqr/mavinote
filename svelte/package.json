@@ -30,6 +30,6 @@
   },
   "type": "module",
   "dependencies": {
-    "wasm": "file:../wasm/pkg"
+    "mavinote-wasm": "file:../reax/wasm/pkg"
   }
 }

@@ -12,10 +12,9 @@ const config = {
         vite: {
             server: {
                 fs: {
-                    allow: ['/mnt/storage/projects/mavinote/wasm/pkg/'],
+                    allow: ['../reax/wasm/pkg'],
                 },
             },
-
         },
     },
 };

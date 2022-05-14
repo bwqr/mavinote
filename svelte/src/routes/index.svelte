@@ -1,7 +1,11 @@
 <script lang="ts">
-    import init, { greet } from 'wasm';
+    import init, { greet } from 'mavinote-wasm';
+    import { onMount } from 'svelte';
 
-    init().then(res => console.log(greet())).catch(e => console.error('error', e));
+    onMount(async () => {
+        await init();
+        console.log(greet());
+    });
 </script>
 
 <div>
