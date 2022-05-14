@@ -17,10 +17,12 @@ data class AsyncWait<T> constructor(
     val deserialize: (deserializer: Deserializer) -> T,
 ) {
     fun handle(ok: Boolean, bytes: ByteArray) {
+        val deserializer = BincodeDeserializer(bytes)
+
         if (ok) {
-            continuation.resume(Result.success(deserialize(BincodeDeserializer(bytes))))
+            continuation.resume(Result.success(deserialize(deserializer)))
         } else {
-            continuation.resume(Result.failure(ReaxException(Error.deserialize(BincodeDeserializer(bytes)))))
+            continuation.resume(Result.failure(ReaxException(Error.deserialize(deserializer))))
         }
     }
 }
