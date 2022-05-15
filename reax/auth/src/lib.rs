@@ -1,11 +1,11 @@
-use base::{Error, Config, models::Token, Store};
+use base::{Error, Config, models::Token, Store, Data};
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
 
 mod requests;
 
-pub async fn login(store: &'static Store, client: &'static Client, config: &'static Config, email: String, password: String) -> Result<(), Error> {
+pub async fn login(store: Data<Store>, client: Data<Client>, config: Data<Config>, email: String, password: String) -> Result<(), Error> {
     let email = email.as_str().trim();
     let password = password.as_str().trim();
 

@@ -1,3 +1,5 @@
+use std::{ops::Deref, sync::Arc};
+
 use reqwest::StatusCode;
 use serde::Serialize;
 
@@ -6,11 +8,32 @@ mod store;
 
 pub use store::Store;
 
+pub struct Data<T>(Arc<T>);
+
+impl<T> Data<T> {
+    pub fn new(value: T) -> Self {
+        Data(Arc::new(value))
+    }
+}
+
+impl<T> Deref for Data<T> {
+    type Target = T;
+
+    fn deref(&self) -> &Self::Target {
+        &self.0
+    }
+}
+
+impl<T> Clone for Data<T> {
+    fn clone(&self) -> Self {
+        Data(Arc::clone(&self.0))
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
     Http(HttpError),
     Message(String),
-    Database(String),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -27,6 +50,7 @@ impl From<reqwest::Error> for Error {
             return Error::Http(HttpError::Unauthorized)
         }
 
+        #[cfg(not(target_arch = "wasm32"))]
         if e.is_connect() {
             return Error::Http(HttpError::NoConnection)
         }
@@ -36,12 +60,6 @@ impl From<reqwest::Error> for Error {
         }
 
         Error::Http(HttpError::Unknown)
-    }
-}
-
-impl From<sqlx::Error> for Error {
-    fn from(e: sqlx::Error) -> Self {
-        Error::Database(e.to_string())
     }
 }
 

@@ -3,16 +3,16 @@ pub mod models;
 use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::{Client, StatusCode};
 
-use base::{Config, Error, Store};
+use base::{Config, Error, Store, Data};
 
 use models::{Folder, Note};
 
 mod requests;
 
 pub async fn folders(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
 ) -> Result<Vec<Folder>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
 
@@ -28,9 +28,9 @@ pub async fn folders(
 }
 
 pub async fn create_folder(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
     name: String,
 ) -> Result<(), Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -47,9 +47,9 @@ pub async fn create_folder(
 }
 
 pub async fn note_summaries(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
     folder_id: i32,
 ) -> Result<Vec<Note>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -69,9 +69,9 @@ pub async fn note_summaries(
 }
 
 pub async fn note(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
     note_id: i32,
 ) -> Result<Option<Note>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -94,9 +94,9 @@ pub async fn note(
 }
 
 pub async fn create_note(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
     folder_id: i32,
 ) -> Result<i32, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -122,9 +122,9 @@ pub async fn create_note(
 }
 
 pub async fn update_note(
-    store: &'static Store,
-    client: &'static Client,
-    config: &'static Config,
+    store: Data<Store>,
+    client: Data<Client>,
+    config: Data<Config>,
     note_id: i32,
     text: String,
 ) -> Result<(), Error> {
