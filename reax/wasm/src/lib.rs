@@ -8,9 +8,14 @@ use reqwest::{
 };
 use wasm_bindgen::prelude::*;
 
+mod log;
+
+
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
+
+    log::init();
 
     runtime::init();
     runtime::put(Store);
@@ -28,6 +33,8 @@ pub fn main() -> Result<(), JsValue> {
         api_url: "http://127.0.0.1:8050/api".to_string(),
         storage_dir: "".to_string(),
     });
+
+    ::log::info!("reax runtime is initialized");
 
     Ok(())
 }

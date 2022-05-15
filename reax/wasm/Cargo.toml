@@ -13,6 +13,8 @@ base = { path = "../base" }
 note = { path = "../note" }
 runtime = { path = "../runtime" }
 
+log = "0.4.16"
+
 wasm-bindgen = "0.2.80"
 wasm-bindgen-futures = "0.4.30"
 console_error_panic_hook = "0.1.7"
