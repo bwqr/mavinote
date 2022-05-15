@@ -1,5 +1,5 @@
 [package]
-name = "wasm"
+name = "mavinote-wasm"
 version = "0.1.0"
 edition = "2021"
 
@@ -9,4 +9,14 @@ crate-type = ["rlib", "cdylib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+base = { path = "../base" }
+note = { path = "../note" }
+
 wasm-bindgen = "0.2.80"
+wasm-bindgen-futures = "0.4.30"
+console_error_panic_hook = "0.1.7"
+
+once_cell = "1.10.0"
+serde_json = "1.0.79"
+
+reqwest = { version = "0.11.10", features = ["rustls-tls"], default-features = false }
