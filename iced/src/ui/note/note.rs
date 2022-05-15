@@ -1,6 +1,10 @@
-use base::Error;
-use iced::{button::State as ButtonState, text_input::State as TextInputState, Command, Element, Text, Column, Button, TextInput};
+use base::{Config, Error, Store};
+use iced::{
+    button::State as ButtonState, text_input::State as TextInputState, Button, Column, Command,
+    Text, TextInput,
+};
 use note::models::Note as NoteModel;
+use reqwest::Client;
 
 #[derive(Clone, Debug)]
 pub enum Message {
@@ -25,7 +29,15 @@ impl Note {
                 note_input: TextInputState::new(),
                 back_button: ButtonState::new(),
             },
-            Command::perform(note::note(crate::store(), crate::client(), crate::config(), note_id), Message::NoteLoaded)
+            Command::perform(
+                note::note(
+                    runtime::get::<Store>().unwrap(),
+                    runtime::get::<Client>().unwrap(),
+                    runtime::get::<Config>().unwrap(),
+                    note_id,
+                ),
+                Message::NoteLoaded,
+            ),
         )
     }
 
@@ -43,13 +55,20 @@ impl Note {
         if let Some(note) = &self.note {
             column = column
                 .push(Text::new(note.title.as_str()))
-                .push(TextInput::new(&mut self.note_input, "Note", note.text.as_str(), Message::NoteUpdated))
+                .push(TextInput::new(
+                    &mut self.note_input,
+                    "Note",
+                    note.text.as_str(),
+                    Message::NoteUpdated,
+                ))
         } else {
-            column = column
-                .push(Text::new("Note could not be found"))
+            column = column.push(Text::new("Note could not be found"))
         };
 
-        column = column.push(Button::new(&mut self.back_button, Text::new("Back")).on_press(Message::BackNavigation(self.folder_id)));
+        column = column.push(
+            Button::new(&mut self.back_button, Text::new("Back"))
+                .on_press(Message::BackNavigation(self.folder_id)),
+        );
 
         column.into()
     }

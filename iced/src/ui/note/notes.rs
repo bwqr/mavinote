@@ -1,12 +1,13 @@
-use base::Error;
-use iced::{button::State, Command, Element, Column, Button, Text};
+use base::{Error, Store, Config};
+use iced::{button::State, Button, Column, Command, Element, Text};
 use note::models::Note;
+use reqwest::Client;
 
 #[derive(Clone, Debug)]
 pub enum Message {
     BackNavigation,
     Navigate(i32, i32),
-    NotesLoaded(Result<Vec<Note>, Error>)
+    NotesLoaded(Result<Vec<Note>, Error>),
 }
 
 pub struct Notes {
@@ -21,7 +22,15 @@ impl Notes {
                 notes: Vec::new(),
                 back_button: State::new(),
             },
-            Command::perform(note::note_summaries(crate::store(), crate::client(), crate::config(), folder_id), Message::NotesLoaded)
+            Command::perform(
+                note::note_summaries(
+                    runtime::get::<Store>().unwrap(),
+                    runtime::get::<Client>().unwrap(),
+                    runtime::get::<Config>().unwrap(),
+                    folder_id,
+                ),
+                Message::NotesLoaded,
+            ),
         )
     }
 
@@ -29,25 +38,31 @@ impl Notes {
         match message {
             Message::BackNavigation => log::error!("BackNavigation should be handled by parent"),
             Message::Navigate(..) => log::error!("Navigate should be handled by parent"),
-            Message::NotesLoaded(Ok(notes)) => self.notes = notes.into_iter().map(|note| (note, State::new())).collect(),
+            Message::NotesLoaded(Ok(notes)) => {
+                self.notes = notes.into_iter().map(|note| (note, State::new())).collect()
+            }
             Message::NotesLoaded(Err(e)) => log::error!("failed to fetch folders, {:?}", e),
         }
     }
 
     pub fn view(&mut self) -> iced::Element<Message> {
-        let notes: Element<_> = self.notes
+        let notes: Element<_> = self
+            .notes
             .iter_mut()
             .fold(Column::new().spacing(20), |column, note| {
                 column.push(
                     Button::new(&mut note.1, Text::new(note.0.title.as_str()))
-                        .on_press(Message::Navigate(note.0.folder_id, note.0.id))
+                        .on_press(Message::Navigate(note.0.folder_id, note.0.id)),
                 )
             })
             .into();
 
         Column::new()
             .push(notes)
-            .push(Button::new(&mut self.back_button, Text::new("Back")).on_press(Message::BackNavigation))
+            .push(
+                Button::new(&mut self.back_button, Text::new("Back"))
+                    .on_press(Message::BackNavigation),
+            )
             .into()
     }
 }
