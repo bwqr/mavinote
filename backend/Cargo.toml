@@ -21,6 +21,7 @@ note = { path = "./note" }
 user = { path = "./user" }
 
 actix-web = "4.0.1"
+actix-cors = "0.6.1"
 dotenv = "0.15.0"
 env_logger = "0.9.0"
 log = "0.4.16"

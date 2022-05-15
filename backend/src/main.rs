@@ -1,4 +1,5 @@
-use actix_web::{HttpServer, App, middleware::Logger, web::Data};
+use actix_cors::Cors;
+use actix_web::{HttpServer, App, middleware::Logger, web::Data, http::header};
 use diesel::{r2d2::{Pool as DieselPool, ConnectionManager}, PgConnection};
 
 use base::{types::Pool, crypto::Crypto};
@@ -20,7 +21,15 @@ async fn main() -> std::io::Result<()> {
     let crypto = Crypto::new(std::env::var("SECRET_KEY").expect("SECRET_KEY is not provided in env").as_str());
 
     HttpServer::new(move || {
+        let cors = Cors::default()
+            .allowed_origin("http://127.0.0.1:3000")
+            .allow_any_method()
+            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
+            .allowed_header("enctype")
+            .max_age(60);
+
         App::new()
+            .wrap(cors)
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(crypto.clone()))
             .wrap(Logger::default())
