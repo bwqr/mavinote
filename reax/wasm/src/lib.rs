@@ -3,13 +3,13 @@ use std::panic;
 use base::{Config, Store};
 
 use reqwest::{
-    header::{HeaderMap, HeaderValue},
-    Client, ClientBuilder,
+    header::{HeaderMap, HeaderValue}, ClientBuilder,
 };
 use wasm_bindgen::prelude::*;
 
 mod log;
-
+pub mod auth;
+pub mod note;
 
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
@@ -40,78 +40,12 @@ pub fn main() -> Result<(), JsValue> {
 }
 
 #[wasm_bindgen]
-pub async fn folders() -> Result<String, String> {
-    note::folders(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-    )
-    .await
-    .map(|f| serde_json::to_string(&f).unwrap())
-    .map_err(|e| serde_json::to_string(&e).unwrap())
+extern "C" {
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn setItem(key: &str, value: &str);
 }
 
 #[wasm_bindgen]
-pub async fn notes(folder_id: i32) -> Result<String, String> {
-    note::note_summaries(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-        folder_id,
-    )
-    .await
-    .map(|f| serde_json::to_string(&f).unwrap())
-    .map_err(|e| serde_json::to_string(&e).unwrap())
-}
-
-#[wasm_bindgen]
-pub async fn note(note_id: i32) -> Result<String, String> {
-    note::note(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-        note_id,
-    )
-    .await
-    .map(|f| serde_json::to_string(&f).unwrap())
-    .map_err(|e| serde_json::to_string(&e).unwrap())
-}
-
-#[wasm_bindgen]
-pub async fn create_folder(name: String) -> Result<(), String> {
-    note::create_folder(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-        name,
-    )
-    .await
-    .map_err(|e| serde_json::to_string(&e).unwrap())?;
-
-    Ok(())
-}
-
-#[wasm_bindgen]
-pub async fn create_note(folder_id: i32) -> Result<i32, String> {
-    note::create_note(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-        folder_id,
-    )
-    .await
-    .map_err(|e| serde_json::to_string(&e).unwrap())
-}
-
-#[wasm_bindgen]
-pub async fn update_note(note_id: i32, text: String) -> Result<(), String> {
-    note::update_note(
-        runtime::get::<Store>().unwrap(),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
-        note_id,
-        text,
-    )
-    .await
-    .map_err(|e| serde_json::to_string(&e).unwrap())
+pub fn set_local(key: String, value: String) {
+    setItem(key.as_str(), value.as_str());
 }

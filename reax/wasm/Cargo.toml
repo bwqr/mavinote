@@ -10,6 +10,7 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 base = { path = "../base" }
+auth = { path = "../auth" }
 note = { path = "../note" }
 runtime = { path = "../runtime" }
 

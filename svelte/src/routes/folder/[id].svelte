@@ -1,8 +1,9 @@
 <script lang="ts">
-    import init, { notes as fetchNotes, create_note as createNote } from 'mavinote-wasm';
+    import { notes as fetchNotes, create_note as createNote } from 'mavinote-wasm';
+    import init from '$lib/wasm';
     import { onMount } from 'svelte';
     import { page } from '$app/stores';
-import { goto } from '$app/navigation';
+    import { goto } from '$app/navigation';
 
     let notes: any[] = [];
     let inProgress = false;
@@ -24,9 +25,9 @@ import { goto } from '$app/navigation';
         inProgress = true;
 
         createNote(parseInt($page.params.id))
-            .then(noteId => goto(`/note/${noteId}`))
+            .then((noteId) => goto(`/note/${noteId}`))
             .catch((e: any) => console.error('failed to create note', e))
-            .finally(() => inProgress = false);
+            .finally(() => (inProgress = false));
     }
 </script>
 

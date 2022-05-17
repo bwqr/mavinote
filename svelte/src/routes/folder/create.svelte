@@ -1,5 +1,6 @@
 <script lang="ts">
-    import init, { create_folder as createFolder } from 'mavinote-wasm';
+    import init from '$lib/wasm';
+    import { note_create_folder as createFolder } from 'mavinote-wasm';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
 
@@ -20,16 +21,12 @@
             .catch((e: any) => console.error('failed to create folder', e))
             .finally(() => (inProgress = false));
     }
-
-    function updateName(event: Event) {
-        name = (event.target as HTMLInputElement).value;
-    }
 </script>
 
 <div>
     <h1>Notes</h1>
     <form on:submit|preventDefault={create}>
-        <input type="text" placeholder="Name" value={name} on:change={updateName} />
+        <input type="text" placeholder="Name" bind:value={name} />
         <button type="submit">Create</button>
     </form>
 </div>
