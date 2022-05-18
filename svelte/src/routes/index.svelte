@@ -1,8 +1,8 @@
 <script lang="ts">
     import init from '$lib/wasm';
-    import type { Folder } from '../models';
+    import type { Folder } from '$lib/models';
     import { onMount } from 'svelte';
-    import * as noteStore from '../stores/note';
+    import * as noteStore from '$lib/stores/note';
 
     let folders: Folder[] = [];
 

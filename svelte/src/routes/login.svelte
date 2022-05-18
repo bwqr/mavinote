@@ -1,9 +1,9 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-    import init from '../lib/wasm';
+    import init from '$lib/wasm';
 
-    import * as authStore from '../stores/auth';
+    import * as authStore from '$lib/stores/auth';
 
     let email = '';
     let password = '';

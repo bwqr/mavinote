@@ -1,6 +1,6 @@
 <script lang="ts">
     import init from '$lib/wasm';
-    import { note_create_folder as createFolder } from 'mavinote-wasm';
+    import * as noteStore from '$lib/stores/note';
     import { onMount } from 'svelte';
     import { goto } from '$app/navigation';
 
@@ -16,9 +16,9 @@
 
         inProgress = true;
 
-        createFolder(name)
+        noteStore
+            .createFolder(name)
             .then(() => goto('/'))
-            .catch((e: any) => console.error('failed to create folder', e))
             .finally(() => (inProgress = false));
     }
 </script>

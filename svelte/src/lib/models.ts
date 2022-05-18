@@ -3,6 +3,13 @@ export interface Folder {
     name: String;
 }
 
+export interface Note {
+    id: number;
+    folderId: number;
+    title: string;
+    text: string;
+}
+
 export class ReaxError {
     static deserialize(obj: Record<string, any> | string): ReaxError {
         if (typeof obj !== 'object') {
