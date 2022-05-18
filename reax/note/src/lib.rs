@@ -10,7 +10,7 @@ use models::{Folder, Note};
 mod requests;
 
 pub async fn folders(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
 ) -> Result<Vec<Folder>, Error> {
@@ -28,7 +28,7 @@ pub async fn folders(
 }
 
 pub async fn create_folder(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
     name: String,
@@ -47,7 +47,7 @@ pub async fn create_folder(
 }
 
 pub async fn note_summaries(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
     folder_id: i32,
@@ -69,7 +69,7 @@ pub async fn note_summaries(
 }
 
 pub async fn note(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
     note_id: i32,
@@ -94,7 +94,7 @@ pub async fn note(
 }
 
 pub async fn create_note(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
     folder_id: i32,
@@ -122,7 +122,7 @@ pub async fn create_note(
 }
 
 pub async fn update_note(
-    store: Data<Store>,
+    store: Data<dyn Store>,
     client: Data<Client>,
     config: Data<Config>,
     note_id: i32,

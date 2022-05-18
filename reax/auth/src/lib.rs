@@ -5,7 +5,7 @@ use crate::requests::Login;
 
 mod requests;
 
-pub async fn login(store: Data<Store>, client: Data<Client>, config: Data<Config>, email: String, password: String) -> Result<(), Error> {
+pub async fn login(store: Data<dyn Store>, client: Data<Client>, config: Data<Config>, email: String, password: String) -> Result<(), Error> {
     let email = email.as_str().trim();
     let password = password.as_str().trim();
 

@@ -1,12 +1,7 @@
-#[derive(Debug)]
-pub struct Store;
+use std::{pin::Pin, future::Future};
 
-impl Store {
-    pub async fn get(&self, key: &str) -> Result<Option<String>, crate::Error> {
-        Ok(Some("Hello".to_string()))
-    }
+pub trait Store where Self: Sync + Send {
+    fn get<'a>(&'a self, key: &'a str) -> Pin<Box<dyn Future<Output = Result<Option<String>, crate::Error>> + Send + 'a>>;
 
-    pub async fn put(&self, key: &str, value: &str) -> Result<(), crate::Error> {
-        Ok(())
-    }
+    fn put<'a>(&'a self, key: &'a str, value: &'a str) -> Pin<Box<dyn Future<Output = Result<(), crate::Error>> + Send + 'a>>;
 }

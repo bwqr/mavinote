@@ -11,6 +11,24 @@ mod log;
 pub mod auth;
 pub mod note;
 
+pub struct LocalStorage;
+
+impl Store for LocalStorage {
+    fn get<'a>(&'a self, key: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<String>, base::Error>> + Send + 'a>> {
+        Box::pin(async move {
+            Ok(getItem(key))
+        })
+    }
+
+    fn put<'a>(&'a self, key: &'a str, value: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), base::Error>> + Send + 'a>> {
+        Box::pin(async move {
+            setItem(key, value);
+            Ok(())
+        })
+    }
+}
+
+
 #[wasm_bindgen(start)]
 pub fn main() -> Result<(), JsValue> {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
@@ -18,7 +36,7 @@ pub fn main() -> Result<(), JsValue> {
     log::init();
 
     runtime::init();
-    runtime::put(Store);
+    runtime::put(LocalStorage);
 
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", HeaderValue::from_static("application/json"));
@@ -41,6 +59,9 @@ pub fn main() -> Result<(), JsValue> {
 
 #[wasm_bindgen]
 extern "C" {
+    #[wasm_bindgen(js_namespace = localStorage)]
+    fn getItem(key: &str) -> Option<String>;
+
     #[wasm_bindgen(js_namespace = localStorage)]
     fn setItem(key: &str, value: &str);
 }
