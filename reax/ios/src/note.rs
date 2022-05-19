@@ -1,6 +1,6 @@
 use std::{
     ffi::CStr,
-    os::raw::{c_char, c_int},
+    os::raw::{c_char, c_int}, sync::Arc,
 };
 
 use base::{Config, Store};
@@ -12,9 +12,9 @@ use crate::send;
 pub extern "C" fn reax_note_folders(wait_id: c_int) {
     crate::spawn(async move {
         let res = note::folders(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
         )
         .await;
 
@@ -28,9 +28,9 @@ pub extern "C" fn reax_note_create_folder(wait_id: c_int, name: *const c_char) {
 
     crate::spawn(async move {
         let res = note::create_folder(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             name,
         )
         .await;
@@ -43,9 +43,9 @@ pub extern "C" fn reax_note_create_folder(wait_id: c_int, name: *const c_char) {
 pub extern "C" fn reax_note_note_summaries(wait_id: c_int, folder_id: c_int) {
     crate::spawn(async move {
         let res = note::note_summaries(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             folder_id,
         )
         .await;
@@ -58,9 +58,9 @@ pub extern "C" fn reax_note_note_summaries(wait_id: c_int, folder_id: c_int) {
 pub extern "C" fn reax_note_note(wait_id: c_int, note_id: c_int) {
     crate::spawn(async move {
         let res = note::note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             note_id,
         )
         .await;
@@ -73,9 +73,9 @@ pub extern "C" fn reax_note_note(wait_id: c_int, note_id: c_int) {
 pub extern "C" fn reax_note_create_note(wait_id: c_int, folder_id: c_int) {
     crate::spawn(async move {
         let res = note::create_note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             folder_id,
         )
         .await;
@@ -90,9 +90,9 @@ pub extern "C" fn reax_note_update_note(wait_id: c_int, note_id: c_int, text: *c
 
     crate::spawn(async move {
         let res = note::update_note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             note_id,
             text,
         )

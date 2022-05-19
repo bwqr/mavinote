@@ -1,9 +1,10 @@
-use std::{os::raw::{c_char, c_int, c_uchar}, ffi::{CStr, c_void}, sync::{Mutex, mpsc::Sender}, future::Future};
+use std::{os::raw::{c_char, c_int, c_uchar}, ffi::{CStr, c_void}, sync::{Mutex, mpsc::Sender, Arc}, future::Future, str::FromStr};
 
 use base::{Store, Config};
 use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 use tokio::task::JoinHandle;
 
 mod note;
@@ -55,14 +56,31 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
         .build()
         .unwrap();
 
-    runtime::put::<Client>(client);
+    runtime::put::<Arc<Client>>(Arc::new(client));
 
-    runtime::put::<Store>(Store);
+    let db_path = format!("sqlite:{}/app.db", storage_dir);
+    let pool = ASYNC_RUNTIME.get().unwrap().block_on(async move {
+        let options = SqliteConnectOptions::from_str(db_path.as_str())
+            .unwrap()
+            .create_if_missing(true);
 
-    runtime::put::<Config>(Config {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(options)
+            .await
+            .unwrap();
+
+        sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+        pool
+    });
+
+    runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
+
+    runtime::put::<Arc<Config>>(Arc::new(Config {
         api_url,
         storage_dir,
-    });
+    }));
 
     ::log::info!("reax runtime is initialized");
 }
