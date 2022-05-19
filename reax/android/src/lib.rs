@@ -1,8 +1,9 @@
 #![allow(non_snake_case)]
 
 use std::{
+    str::FromStr,
     ffi::CString,
-    sync::{mpsc::Sender, Mutex}, future::Future,
+    sync::{mpsc::Sender, Mutex, Arc}, future::Future,
 };
 
 use base::{Config, Store};
@@ -15,6 +16,7 @@ use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
 use tokio::task::JoinHandle;
+use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
 
 mod auth;
 mod log;
@@ -117,14 +119,31 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         .build()
         .unwrap();
 
-    runtime::put::<Client>(client);
+    runtime::put::<Arc<Client>>(Arc::new(client));
 
-    runtime::put::<Store>(Store);
+    let db_path = format!("sqlite:{}/app.db", storage_dir);
+    let pool = ASYNC_RUNTIME.get().unwrap().block_on(async move {
+        let options = SqliteConnectOptions::from_str(db_path.as_str())
+            .unwrap()
+            .create_if_missing(true);
 
-    runtime::put::<Config>(Config {
+        let pool = SqlitePoolOptions::new()
+            .max_connections(5)
+            .connect_with(options)
+            .await
+            .unwrap();
+
+        sqlx::migrate!("../migrations").run(&pool).await.unwrap();
+
+        pool
+    });
+
+    runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
+
+    runtime::put::<Arc<Config>>(Arc::new(Config {
         api_url,
         storage_dir,
-    });
+    }));
 
     ::log::info!("reax runtime is initialized");
 }

@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use base::{Store, Config};
 use jni::{
     objects::{JObject, JString},
@@ -26,9 +28,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AuthViewModel__1login(
 
     crate::spawn(async move {
         let res = auth::login(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             email,
             password,
         )

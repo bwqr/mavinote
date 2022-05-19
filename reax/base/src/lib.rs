@@ -10,6 +10,7 @@ pub use store::Store;
 pub enum Error {
     Http(HttpError),
     Message(String),
+    Database,
 }
 
 #[derive(Clone, Debug, Serialize)]

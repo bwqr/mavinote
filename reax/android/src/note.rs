@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use base::{Config, Store};
 use jni::{
     objects::{JObject, JString},
@@ -16,9 +18,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
 ) {
     crate::spawn(async move {
         let res = note::folders(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
         )
         .await;
 
@@ -37,9 +39,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
 
     crate::spawn(async move {
         let res = note::create_folder(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             name,
         )
         .await;
@@ -57,9 +59,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummarie
 ) {
     crate::spawn(async move {
         let res = note::note_summaries(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             folder_id,
         )
         .await;
@@ -77,9 +79,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
 ) {
     crate::spawn(async move {
         let res = note::note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             note_id,
         )
         .await;
@@ -97,9 +99,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
 ) {
     crate::spawn(async move {
         let res = note::create_note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             folder_id,
         )
         .await;
@@ -120,9 +122,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
 
     crate::spawn(async move {
         let res = note::update_note(
-            runtime::get::<Store>().unwrap(),
-            runtime::get::<Client>().unwrap(),
-            runtime::get::<Config>().unwrap(),
+            runtime::get::<Arc<dyn Store>>().unwrap(),
+            runtime::get::<Arc<Client>>().unwrap(),
+            runtime::get::<Arc<Config>>().unwrap(),
             note_id,
             text,
         )
