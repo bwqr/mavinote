@@ -1,17 +1,15 @@
 use std::sync::Arc;
 
-use base::{Store, Config, Data};
+use base::{Store, Config};
 use reqwest::Client;
 use wasm_bindgen::prelude::*;
-
-use crate::LocalStorage;
 
 #[wasm_bindgen]
 pub async fn note_folders() -> Result<String, String> {
     note::folders(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
     )
     .await
     .map(|f| serde_json::to_string(&f).unwrap())
@@ -21,9 +19,9 @@ pub async fn note_folders() -> Result<String, String> {
 #[wasm_bindgen]
 pub async fn note_notes(folder_id: i32) -> Result<String, String> {
     note::note_summaries(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         folder_id,
     )
     .await
@@ -34,9 +32,9 @@ pub async fn note_notes(folder_id: i32) -> Result<String, String> {
 #[wasm_bindgen]
 pub async fn note_note(note_id: i32) -> Result<String, String> {
     note::note(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         note_id,
     )
     .await
@@ -47,9 +45,9 @@ pub async fn note_note(note_id: i32) -> Result<String, String> {
 #[wasm_bindgen]
 pub async fn note_create_folder(name: String) -> Result<(), String> {
     note::create_folder(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         name,
     )
     .await
@@ -61,9 +59,9 @@ pub async fn note_create_folder(name: String) -> Result<(), String> {
 #[wasm_bindgen]
 pub async fn note_create_note(folder_id: i32) -> Result<i32, String> {
     note::create_note(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         folder_id,
     )
     .await
@@ -73,9 +71,9 @@ pub async fn note_create_note(folder_id: i32) -> Result<i32, String> {
 #[wasm_bindgen]
 pub async fn note_update_note(note_id: i32, text: String) -> Result<(), String> {
     note::update_note(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         note_id,
         text,
     )

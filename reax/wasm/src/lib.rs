@@ -1,4 +1,4 @@
-use std::panic;
+use std::{panic, sync::Arc};
 
 use base::{Config, Store};
 
@@ -36,7 +36,7 @@ pub fn main() -> Result<(), JsValue> {
     log::init();
 
     runtime::init();
-    runtime::put(LocalStorage);
+    runtime::put::<Arc<dyn Store>>(Arc::new(LocalStorage));
 
     let mut headers = HeaderMap::new();
     headers.insert("Content-Type", HeaderValue::from_static("application/json"));
@@ -45,12 +45,12 @@ pub fn main() -> Result<(), JsValue> {
         .build()
         .unwrap();
 
-    runtime::put(client);
+    runtime::put(Arc::new(client));
 
-    runtime::put(Config {
+    runtime::put(Arc::new(Config {
         api_url: "http://127.0.0.1:8050/api".to_string(),
         storage_dir: "".to_string(),
-    });
+    }));
 
     ::log::info!("reax runtime is initialized");
 

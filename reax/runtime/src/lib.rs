@@ -1,7 +1,6 @@
-use std::sync::{RwLock};
+use std::sync::RwLock;
 
 use anymap::any::Any;
-use base::Data;
 use once_cell::sync::OnceCell;
 
 struct Runtime {
@@ -19,12 +18,12 @@ pub fn init() {
         .unwrap();
 }
 
-pub fn get<T: Send + Sync + 'static>() -> Option<Data<T>> {
+pub fn get<T: Clone + Send + Sync + 'static>() -> Option<T> {
     let runtime = RUNTIME.get().unwrap().read().unwrap();
 
-    runtime.types.get::<Data<T>>().map(|value| (*value).clone())
+    runtime.types.get::<T>().map(|value| value.clone())
 }
 
 pub fn put<T: Send + Sync + 'static>(value: T) {
-    RUNTIME.get().unwrap().write().unwrap().types.insert(Data::new(value));
+    RUNTIME.get().unwrap().write().unwrap().types.insert(value);
 }

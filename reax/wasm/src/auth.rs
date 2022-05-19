@@ -1,15 +1,15 @@
-use base::{Store, Config, Data};
+use std::sync::Arc;
+
+use base::{Store, Config};
 use reqwest::Client;
 use wasm_bindgen::prelude::*;
-
-use crate::LocalStorage;
 
 #[wasm_bindgen]
 pub async fn auth_login(email: String, password: String) -> Result<(), String> {
     auth::login(
-        Data::from_arc(runtime::get::<LocalStorage>().unwrap().into_inner()),
-        runtime::get::<Client>().unwrap(),
-        runtime::get::<Config>().unwrap(),
+        runtime::get::<Arc<dyn Store>>().unwrap(),
+        runtime::get::<Arc<Client>>().unwrap(),
+        runtime::get::<Arc<Config>>().unwrap(),
         email,
         password,
     )

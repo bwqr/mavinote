@@ -1,5 +1,3 @@
-use std::{ops::Deref, sync::Arc};
-
 use reqwest::StatusCode;
 use serde::Serialize;
 
@@ -7,38 +5,6 @@ pub mod models;
 mod store;
 
 pub use store::Store;
-
-pub struct Data<T: ?Sized>(Arc<T>);
-
-impl<T> Data<T> {
-    pub fn new(value: T) -> Self {
-        Data(Arc::new(value))
-    }
-
-    pub fn into_inner(self) -> Arc<T> {
-        self.0
-    }
-}
-
-impl<T: ?Sized> Data<T> {
-    pub fn from_arc(value: Arc<T>) -> Self {
-        Data(value)
-    }
-}
-
-impl<T: ?Sized> Deref for Data<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.0
-    }
-}
-
-impl<T> Clone for Data<T> {
-    fn clone(&self) -> Self {
-        Data(Arc::clone(&self.0))
-    }
-}
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {

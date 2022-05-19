@@ -1,11 +1,13 @@
-use base::{Error, Config, models::Token, Store, Data};
+use std::sync::Arc;
+
+use base::{Error, Config, models::Token, Store};
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
 
 mod requests;
 
-pub async fn login(store: Data<dyn Store>, client: Data<Client>, config: Data<Config>, email: String, password: String) -> Result<(), Error> {
+pub async fn login(store: Arc<dyn Store>, client: Arc<Client>, config: Arc<Config>, email: String, password: String) -> Result<(), Error> {
     let email = email.as_str().trim();
     let password = password.as_str().trim();
 

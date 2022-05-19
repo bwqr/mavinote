@@ -1,18 +1,20 @@
 pub mod models;
 
+use std::sync::Arc;
+
 use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::{Client, StatusCode};
 
-use base::{Config, Error, Store, Data};
+use base::{Config, Error, Store};
 
 use models::{Folder, Note};
 
 mod requests;
 
 pub async fn folders(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
 ) -> Result<Vec<Folder>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
 
@@ -28,9 +30,9 @@ pub async fn folders(
 }
 
 pub async fn create_folder(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
     name: String,
 ) -> Result<(), Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -47,9 +49,9 @@ pub async fn create_folder(
 }
 
 pub async fn note_summaries(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
     folder_id: i32,
 ) -> Result<Vec<Note>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -69,9 +71,9 @@ pub async fn note_summaries(
 }
 
 pub async fn note(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
     note_id: i32,
 ) -> Result<Option<Note>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -94,9 +96,9 @@ pub async fn note(
 }
 
 pub async fn create_note(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
     folder_id: i32,
 ) -> Result<i32, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
@@ -122,9 +124,9 @@ pub async fn create_note(
 }
 
 pub async fn update_note(
-    store: Data<dyn Store>,
-    client: Data<Client>,
-    config: Data<Config>,
+    store: Arc<dyn Store>,
+    client: Arc<Client>,
+    config: Arc<Config>,
     note_id: i32,
     text: String,
 ) -> Result<(), Error> {
