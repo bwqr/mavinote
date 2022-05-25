@@ -4,18 +4,31 @@ use std::sync::Arc;
 
 use requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest};
 use reqwest::{Client, StatusCode};
+use once_cell::sync::OnceCell;
+use tokio::sync::watch::channel;
 
-use base::{Config, Error, Store};
+use base::{Config, Error, Store, State};
 
 use models::{Folder, Note};
 
 mod requests;
 
-pub async fn folders(
-    store: Arc<dyn Store>,
-    client: Arc<Client>,
-    config: Arc<Config>,
-) -> Result<Vec<Folder>, Error> {
+type Sender<T> = tokio::sync::watch::Sender<State<T, Error>>;
+type Receiver<T> = tokio::sync::watch::Receiver<State<T, Error>>;
+
+static FOLDERS: OnceCell<Sender<Vec<Folder>>> = OnceCell::new();
+static NOTES: OnceCell<Sender<Vec<Note>>> = OnceCell::new();
+
+pub fn init() {
+    FOLDERS.set(channel(State::default()).0).unwrap();
+    NOTES.set(channel(State::default()).0).unwrap();
+}
+
+pub async fn fetch_folders() -> Result<Vec<Folder>, Error> {
+    let store = runtime::get::<Arc<dyn Store>>().unwrap();
+    let client = runtime::get::<Arc<Client>>().unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
     let token = store.get("token").await?.unwrap_or("".to_string());
 
     client
@@ -27,6 +40,21 @@ pub async fn folders(
         .json()
         .await
         .map_err(|e| e.into())
+}
+
+pub async fn folders() -> Receiver<Vec<Folder>> {
+    let sender = FOLDERS.get().unwrap();
+    let load = match *sender.borrow() {
+        State::Initial | State::Err(_) => true,
+        _ => false,
+    };
+
+    if load {
+        sender.send_replace(State::Loading);
+        sender.send_replace(fetch_folders().await.into());
+    }
+
+    sender.subscribe()
 }
 
 pub async fn create_folder(
@@ -48,26 +76,8 @@ pub async fn create_folder(
         .map_err(|e| e.into())
 }
 
-pub async fn note_summaries(
-    store: Arc<dyn Store>,
-    client: Arc<Client>,
-    config: Arc<Config>,
-    folder_id: i32,
-) -> Result<Vec<Note>, Error> {
-    let token = store.get("token").await?.unwrap_or("".to_string());
-
-    client
-        .get(format!(
-            "{}/note/folder/{}/notes",
-            config.api_url, folder_id
-        ))
-        .header("Authorization", format!("Bearer {}", token))
-        .send()
-        .await?
-        .error_for_status()?
-        .json()
-        .await
-        .map_err(|e| e.into())
+pub fn notes(folder_id: i32) -> Receiver<Vec<Note>> {
+    NOTES.get().unwrap().subscribe()
 }
 
 pub async fn note(

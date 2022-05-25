@@ -21,7 +21,6 @@ edition = "2021"
 
 
 [profile.dev]
-opt-level = "z"
 debug = false
 
 [profile.release]

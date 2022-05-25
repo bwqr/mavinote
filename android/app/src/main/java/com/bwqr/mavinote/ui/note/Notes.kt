@@ -14,6 +14,9 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @Composable
@@ -23,11 +26,15 @@ fun Notes(navController: NavController, folderId: Int) {
     }
 
     LaunchedEffect(key1 = folderId) {
-        try {
-            notes = NoteViewModel().notes(folderId).getOrThrow()
-        } catch (e: ReaxException) {
-            e.handle()
-        }
+        NoteViewModel()
+            .notes(folderId)
+            .onEach { notes = it }
+            .catch {
+                when (val cause = it.cause) {
+                    is ReaxException -> cause.handle()
+                }
+            }
+            .launchIn(this)
     }
 
     LazyColumn {
@@ -45,7 +52,7 @@ fun NotesFab(navController: NavController, folderId: Int) {
 
     FloatingActionButton(onClick = {
         scope.launch {
-            val addedNoteId = NoteViewModel().createNote(folderId).getOrThrow()
+            val addedNoteId = NoteViewModel().createNote(folderId)
 
             navController.navigate("note/$addedNoteId")
         }

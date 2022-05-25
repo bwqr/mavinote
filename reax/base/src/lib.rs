@@ -6,6 +6,29 @@ mod store;
 
 pub use store::Store;
 
+#[derive(Clone, Debug)]
+pub enum State<T, E> {
+    Ok(T),
+    Err(E),
+    Loading,
+    Initial,
+}
+
+impl<T, E> Default for State<T, E> {
+    fn default() -> Self {
+        Self::Initial
+    }
+}
+
+impl<T, E> From<Result<T, E>> for State<T, E> {
+    fn from(res: Result<T, E>) -> Self {
+        match res {
+            Ok(ok) => Self::Ok(ok),
+            Err(e) => Self::Err(e),
+        }
+    }
+}
+
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
     Http(HttpError),

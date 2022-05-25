@@ -25,9 +25,13 @@ fun Note(noteId: Int) {
     }
 
     LaunchedEffect(key1 = 1) {
-        NoteViewModel().note(noteId).getOrThrow()?.let {
-            note = it
-            text = it.text
+        try {
+            NoteViewModel().note(noteId)?.let {
+                note = it
+                text = it.text
+            }
+        } catch (e: ReaxException) {
+            e.handle()
         }
     }
 

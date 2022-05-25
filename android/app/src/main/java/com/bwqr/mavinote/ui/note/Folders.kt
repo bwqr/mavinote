@@ -14,9 +14,10 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.Screen
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.ReaxException
-import com.bwqr.mavinote.viewmodels.Bus
-import com.bwqr.mavinote.viewmodels.BusEvent
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 @Composable
 fun Folders(navController: NavController) {
@@ -25,11 +26,15 @@ fun Folders(navController: NavController) {
     }
 
     LaunchedEffect(key1 = 1) {
-        try {
-            folders = NoteViewModel().folders().getOrThrow()
-        } catch (e: ReaxException) {
-            e.handle()
-        }
+        NoteViewModel()
+            .folders()
+            .onEach { folders = it }
+            .catch {
+                when (val cause = it.cause) {
+                    is ReaxException -> cause.handle()
+                }
+            }
+            .launchIn(this)
     }
 
     LazyColumn {
@@ -39,8 +44,6 @@ fun Folders(navController: NavController) {
             })
         }
     }
-
-
 }
 
 @Composable

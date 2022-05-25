@@ -1,15 +1,24 @@
 package com.bwqr.mavinote.viewmodels
 
-import kotlin.coroutines.suspendCoroutine
+import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 class AuthViewModel {
-    suspend fun login(email: String, password: String): Result<Unit> {
-        return suspendCoroutine { cont ->
-            val waitId = Runtime.instance.wait(AsyncWait(cont) { })
+    suspend fun login(email: String, password: String) {
+        return suspendCancellableCoroutine { cont ->
+            val onceId = Runtime.instance.startOnce(Once(
+                onNext = { cont.resume(Unit) },
+                onError = { cont.resumeWithException(it) },
+                onStart = { _login(it, email, password) }
+            ))
 
-            _login(waitId, email, password)
+            cont.invokeOnCancellation {
+                Runtime.instance.abortOnce(onceId)
+            }
         }
+
     }
 
-    private external fun _login(waitId: Int, email: String, password: String)
+    private external fun _login(onceId: Int, email: String, password: String): Long
 }

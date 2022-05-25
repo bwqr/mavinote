@@ -10,13 +10,13 @@ use base::{Config, Store};
 use jni::{
     objects::{JObject, JString, JValue},
     signature::{JavaType, Primitive},
-    JNIEnv,
+    JNIEnv, sys::jlong,
 };
 use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
 use tokio::task::JoinHandle;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
 mod auth;
 mod log;
@@ -24,19 +24,36 @@ mod note;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
+static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
 
-pub(crate) fn send<T: Serialize, E: Serialize>(wait_id: i32, res: Result<T, E>) {
-    let bytes = match &res {
-        Ok(value) => bincode::serialize(value).expect("failed to serialize val"),
-        Err(e) => bincode::serialize(e).expect("failed to serialize val"),
-    };
+#[derive(Serialize)]
+enum Message<T: Serialize> {
+    Ok(T),
+    Err(base::Error),
+    Complete,
+}
+
+pub(crate) fn send_stream<T: Serialize>(stream_id: i32, message: Message<T>) {
+    let bytes = bincode::serialize(&message).expect("failed to searialize message");
 
     HANDLER
         .get()
         .unwrap()
         .lock()
         .unwrap()
-        .send((wait_id, res.is_ok(), bytes))
+        .send((stream_id, true, bytes))
+        .unwrap();
+}
+
+pub(crate) fn send_once<T: Serialize>(once_id: i32, message: Result<T, base::Error>) {
+    let bytes = bincode::serialize(&message).expect("failed to searialize message");
+
+    HANDLER
+        .get()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .send((once_id, false, bytes))
         .unwrap();
 }
 
@@ -137,6 +154,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
 
         pool
     });
+    DATABASE.set(pool.clone()).unwrap();
 
     runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
 
@@ -144,6 +162,8 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         api_url,
         storage_dir,
     }));
+
+    note::init();
 
     ::log::info!("reax runtime is initialized");
 }
@@ -165,7 +185,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(
         .get_method_id(callback_class, "invoke", "(IZ[B)V")
         .unwrap();
 
-    while let Ok((wait_id, ok, bytes)) = recv.recv() {
+    while let Ok((wait_id, is_stream, bytes)) = recv.recv() {
         let bytes_array = env.new_byte_array(bytes.len().try_into().unwrap()).unwrap();
         env.set_byte_array_region(
             bytes_array,
@@ -184,7 +204,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(
             JavaType::Primitive(Primitive::Void),
             &[
                 JValue::Int(wait_id),
-                JValue::Bool(ok as u8),
+                JValue::Bool(is_stream as u8),
                 JValue::Object(bytes_array.into()),
             ],
         ) {
@@ -197,4 +217,17 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(
             env.exception_clear().unwrap();
         }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1abort(
+    _: JNIEnv,
+    _: JObject,
+    pointer: jlong,
+) {
+    let handle = unsafe { Box::from_raw(pointer as * mut tokio::task::JoinHandle<()>) };
+
+    ::log::debug!("received abort, {:p}", handle);
+
+    handle.abort();
 }

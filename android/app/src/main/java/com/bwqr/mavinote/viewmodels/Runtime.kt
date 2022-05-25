@@ -6,29 +6,76 @@ import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.ReaxException
 import com.novi.bincode.BincodeDeserializer
 import com.novi.serde.Deserializer
+import kotlinx.coroutines.CancellableContinuation
 import java.util.concurrent.ConcurrentHashMap
 import kotlin.concurrent.thread
-import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
 
-data class AsyncWait<T> constructor(
-    val continuation: Continuation<Result<T>>,
-    val deserialize: (deserializer: Deserializer) -> T,
+data class Stream constructor(
+    val onNext: (deserializer: Deserializer) -> Unit,
+    val onError: (error: ReaxException) -> Unit,
+    val onComplete: () -> Unit,
+    val onStart: (Int) -> Long,
+    private var joinHandle: Long? = null
 ) {
-    fun handle(ok: Boolean, bytes: ByteArray) {
+    fun handle(bytes: ByteArray) {
         val deserializer = BincodeDeserializer(bytes)
 
-        if (ok) {
-            continuation.resume(Result.success(deserialize(deserializer)))
-        } else {
-            continuation.resume(Result.failure(ReaxException(Error.deserialize(deserializer))))
+        when (deserializer.deserialize_variant_index()) {
+            0 -> onNext(deserializer)
+            1 -> onError(ReaxException(Error.deserialize(deserializer)))
+            2 -> onComplete()
         }
+    }
+
+    fun start(streamId: Int) {
+        if (joinHandle != null) {
+            Log.e("Stream", "Stream started more than once")
+            return
+        }
+
+        joinHandle = onStart(streamId)
+    }
+
+    fun joinHandle(): Long? {
+        return joinHandle
+    }
+}
+
+data class Once constructor(
+    val onNext: (deserializer: Deserializer) -> Unit,
+    val onError: (error: ReaxException) -> Unit,
+    val onStart: (onceId: Int) -> Long,
+    private var joinHandle: Long? = null
+) {
+    fun handle(bytes: ByteArray) {
+        val deserializer = BincodeDeserializer(bytes)
+
+        when (deserializer.deserialize_variant_index()) {
+            0 -> onNext(deserializer)
+            1 -> onError(ReaxException(Error.deserialize(deserializer)))
+        }
+    }
+
+    fun start(onceId: Int) {
+        if (joinHandle != null) {
+            Log.e("Once", "Once started more than once")
+            return
+        }
+
+        joinHandle = onStart(onceId)
+    }
+
+    fun joinHandle(): Long? {
+        return joinHandle
     }
 }
 
 class Runtime private constructor(filesDir: String) {
-    private var waits: ConcurrentHashMap<Int, AsyncWait<*>> = ConcurrentHashMap()
+    private var streams: ConcurrentHashMap<Int, Stream> = ConcurrentHashMap()
+    private var onces: ConcurrentHashMap<Int, Once> = ConcurrentHashMap()
 
     companion object {
         lateinit var instance: Runtime
@@ -46,27 +93,57 @@ class Runtime private constructor(filesDir: String) {
         _init(AppConfig.APP_NAME, AppConfig.API_URL, filesDir)
 
         thread {
-            _initHandler { waitId: Int, ok: Boolean, bytes: ByteArray ->
-                Log.d("Runtime", "received message $waitId ${bytes.size}")
-                waits[waitId]?.handle(ok, bytes)
+            _initHandler { id, isStream, bytes ->
+                Log.d("Runtime", "received message $id $isStream ${bytes.size}")
 
-                waits.remove(waitId)
+                if (isStream) {
+                    streams[id]?.handle(bytes)
+                } else {
+                    onces[id]?.handle(bytes)
+                }
             }
         }
     }
 
-    fun<T> wait(asyncWait: AsyncWait<T>): Int {
-        var waitId = Random.nextInt()
+    fun startOnce(once: Once): Int {
+        var onceId = Random.nextInt()
 
-        while (waits.contains(waitId)) {
-            waitId = Random.nextInt()
+        while (onces.contains(onceId)) {
+            onceId = Random.nextInt()
         }
 
-        waits[waitId] = asyncWait
+        onces[onceId] = once
 
-        return waitId
+        once.start(onceId)
+
+        return onceId
+    }
+
+    fun startStream(stream: Stream): Int {
+        var streamId = Random.nextInt()
+
+        while (streams.contains(streamId)) {
+            streamId = Random.nextInt()
+        }
+
+        streams[streamId] = stream
+
+        stream.start(streamId)
+
+        return streamId
+    }
+
+    fun abortStream(streamId: Int) {
+        streams[streamId]?.let { stream -> stream.joinHandle()?.let { _abort(it) } }
+        streams.remove(streamId)
+    }
+
+    fun abortOnce(onceId: Int) {
+        onces[onceId]?.let { once -> once.joinHandle()?.let { _abort(it) } }
+        onces.remove(onceId)
     }
 
     private external fun _init(appName: String, apiUrl: String, storageDir: String)
-    private external fun _initHandler(callback: (waitId: Int, ok: Boolean, bytes: ByteArray) -> Unit)
+    private external fun _initHandler(callback: (streamId: Int, isStream: Boolean, bytes: ByteArray) -> Unit)
+    private external fun _abort(joinHandle: Long)
 }
