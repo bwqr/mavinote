@@ -2,6 +2,7 @@ use reqwest::StatusCode;
 use serde::Serialize;
 
 pub mod models;
+pub mod observable_map;
 mod store;
 
 pub use store::Store;

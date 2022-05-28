@@ -17,7 +17,6 @@ class AuthViewModel {
                 Runtime.instance.abortOnce(onceId)
             }
         }
-
     }
 
     private external fun _login(onceId: Int, email: String, password: String): Long

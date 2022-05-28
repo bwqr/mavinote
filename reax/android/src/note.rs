@@ -1,18 +1,11 @@
-use std::sync::Arc;
-
-use base::{Config, Store, State, Error};
+use base::{State, Error};
 use jni::{
     objects::{JObject, JString},
     sys::{jint, jlong},
     JNIEnv,
 };
-use reqwest::Client;
 
 use crate::{send_stream, send_once, spawn, Message};
-
-pub fn init() {
-    note::init();
-}
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
@@ -53,13 +46,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::create_folder(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            name,
-        )
-        .await;
+        let res = note::create_folder(name).await;
 
         send_once(once_id, res);
     });
@@ -75,16 +62,16 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummarie
     folder_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let mut rx = note::notes(folder_id);
+        let mut rx = note::notes(folder_id).await;
 
-        match &*rx.borrow() {
+        match &*rx.inner().borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
             State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
             _ => {},
         };
 
-        while rx.changed().await.is_ok() {
-            if let State::Ok(ok) = &*rx.borrow() {
+        while rx.inner().changed().await.is_ok() {
+            if let State::Ok(ok) = &*rx.inner().borrow() {
                 send_stream(stream_id, Message::Ok(ok.clone()));
             }
         }
@@ -103,13 +90,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
     note_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            note_id,
-        )
-        .await;
+        let res = note::note(note_id).await;
 
         send_once(once_id, res);
     });
@@ -125,13 +106,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
     folder_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::create_note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            folder_id,
-        )
-        .await;
+        let res = note::create_note(folder_id).await;
 
         send_once(once_id, res);
     });
@@ -145,19 +120,13 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
     _: JObject,
     once_id: jint,
     note_id: jint,
+    folder_id: jint,
     text: JString,
 ) -> jlong {
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::update_note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            note_id,
-            text,
-        )
-        .await;
+        let res = note::update_note(note_id, folder_id, text).await;
 
         send_once(once_id, res);
     });

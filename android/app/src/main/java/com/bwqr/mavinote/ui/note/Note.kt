@@ -8,13 +8,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 @Composable
 fun Note(noteId: Int) {
     val lifecycleOwner = LocalLifecycleOwner.current
-
-    val scope = rememberCoroutineScope()
 
     var note: Note? by remember {
         mutableStateOf(null)
@@ -40,9 +39,9 @@ fun Note(noteId: Int) {
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
-                Lifecycle.Event.ON_STOP -> scope.launch {
+                Lifecycle.Event.ON_STOP -> GlobalScope.launch {
                     try {
-                        NoteViewModel().updateNote(note!!.id, text)
+                        NoteViewModel().updateNote(note!!.id, note!!.folderId, text)
                     } catch (e: ReaxException) {
                         e.handle()
                     }

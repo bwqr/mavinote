@@ -79,7 +79,7 @@ fn capture_stderr() {
 
         loop {
             libc::fgets(&mut buff as *mut i8, 256, file);
-            log::__android_log_write(2, tag.as_ptr(), buff.as_ptr());
+            log::__android_log_write(6, tag.as_ptr(), buff.as_ptr());
         }
     });
 }
@@ -163,7 +163,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         storage_dir,
     }));
 
-    note::init();
+    ::note::init();
 
     ::log::info!("reax runtime is initialized");
 }

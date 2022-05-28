@@ -8,4 +8,4 @@ edition = "2021"
 [dependencies]
 base = { path = "../base" }
 
-sqlx = { version = "0.5.13", features = [ "runtime-tokio-rustls", "sqlite" ] }
+sqlx = { version = "0.5.13", features = ["runtime-tokio-rustls", "sqlite"] }

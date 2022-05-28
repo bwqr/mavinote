@@ -30,17 +30,15 @@ class NoteViewModel {
         }
     }
 
-    suspend fun addFolder(name: String) {
-        return suspendCancellableCoroutine { cont ->
-            val onceId = Runtime.instance.startOnce(Once(
-                onNext = { cont.resume(Unit) },
-                onError = { cont.resumeWithException(it) },
-                onStart = { _addFolder(it, name) }
-            ))
+    suspend fun addFolder(name: String): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _addFolder(it, name) }
+        ))
 
-            cont.invokeOnCancellation {
-                Runtime.instance.abortOnce(onceId)
-            }
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
         }
     }
 
@@ -61,49 +59,43 @@ class NoteViewModel {
         }
     }
 
-    suspend fun note(noteId: Int): Note? {
-        return suspendCancellableCoroutine { cont ->
-            val onceId = Runtime.instance.startOnce(Once(
-                onNext = { deserializer ->
-                    cont.resume(TraitHelpers.deserializeOption(deserializer) {
-                        Note.deserialize(it)
-                    })
-                },
-                onError = { cont.resumeWithException(it) },
-                onStart = { _note(it, noteId) }
-            ))
+    suspend fun note(noteId: Int): Note? = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { deserializer ->
+                cont.resume(TraitHelpers.deserializeOption(deserializer) {
+                    Note.deserialize(it)
+                })
+            },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _note(it, noteId) }
+        ))
 
-            cont.invokeOnCancellation {
-                Runtime.instance.abortOnce(onceId)
-            }
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
         }
     }
 
-    suspend fun createNote(folderId: Int): Int {
-        return suspendCancellableCoroutine { cont ->
-            val onceId = Runtime.instance.startOnce(Once(
-                onNext = { cont.resume(it.deserialize_i32()) },
-                onError = { cont.resumeWithException(it) },
-                onStart = { _createNote(it, folderId) }
-            ))
+    suspend fun createNote(folderId: Int): Int = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(it.deserialize_i32()) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _createNote(it, folderId) }
+        ))
 
-            cont.invokeOnCancellation {
-                Runtime.instance.abortOnce(onceId)
-            }
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
         }
     }
 
-    suspend fun updateNote(noteId: Int, text: String) {
-        return suspendCancellableCoroutine { cont ->
-            val onceId = Runtime.instance.startOnce(Once(
-                onNext = { cont.resume(Unit) },
-                onError = { cont.resumeWithException(it) },
-                onStart = { _updateNote(it, noteId, text) }
-            ))
+    suspend fun updateNote(noteId: Int, folderId: Int, text: String): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _updateNote(it, noteId, folderId, text) }
+        ))
 
-            cont.invokeOnCancellation {
-                Runtime.instance.abortOnce(onceId)
-            }
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
         }
     }
 
@@ -112,5 +104,5 @@ class NoteViewModel {
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
     private external fun _note(onceId: Int, noteId: Int): Long
     private external fun _createNote(onceId: Int, folderId: Int): Long
-    private external fun _updateNote(onceId: Int, noteId: Int, text: String): Long
+    private external fun _updateNote(onceId: Int, noteId: Int, folderId: Int, text: String): Long
 }
