@@ -1,103 +1,105 @@
 use std::{
     ffi::CStr,
-    os::raw::{c_char, c_int}, sync::Arc,
+    os::raw::{c_char, c_int},
 };
 
-use base::{Config, Store};
-use reqwest::Client;
+use base::{State, Error};
+use tokio::task::JoinHandle;
 
-use crate::send;
+use crate::{spawn, send_stream, Message, send_once};
 
 #[no_mangle]
-pub extern "C" fn reax_note_folders(wait_id: c_int) {
-    crate::spawn(async move {
-        let res = note::folders(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-        )
-        .await;
+pub extern "C" fn reax_note_folders(stream_id: c_int) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let mut rx = note::folders().await;
 
-        send(wait_id, res);
+        match &*rx.borrow() {
+            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+            _ => {},
+        };
+
+        while rx.changed().await.is_ok() {
+            match &*rx.borrow() {
+                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+                State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+                _ => {},
+            };
+        }
+
+        send_stream::<Vec<note::models::Folder>>(stream_id, Message::Complete);
     });
+
+    Box::into_raw(Box::new(handle))
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_create_folder(wait_id: c_int, name: *const c_char) {
+pub extern "C" fn reax_note_create_folder(once_id: c_int, name: *const c_char) -> * mut JoinHandle<()>  {
     let name = unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() };
 
-    crate::spawn(async move {
-        let res = note::create_folder(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            name,
-        )
-        .await;
+    let handle = spawn(async move {
+        let res = note::create_folder(name).await;
 
-        send(wait_id, res);
+        send_once(once_id, res);
     });
+
+    Box::into_raw(Box::new(handle))
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_note_summaries(wait_id: c_int, folder_id: c_int) {
-    crate::spawn(async move {
-        let res = note::note_summaries(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            folder_id,
-        )
-        .await;
+pub extern "C" fn reax_note_note_summaries(stream_id: c_int, folder_id: c_int) -> * mut JoinHandle<()>  {
+    let handle = spawn(async move {
+        let mut rx = note::notes(folder_id).await;
 
-        send(wait_id, res);
+        match &*rx.inner().borrow() {
+            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+            _ => {},
+        };
+
+        while rx.inner().changed().await.is_ok() {
+            if let State::Ok(ok) = &*rx.inner().borrow() {
+                send_stream(stream_id, Message::Ok(ok.clone()));
+            }
+        }
+
+        send_stream::<Vec<note::models::Note>>(stream_id, Message::Complete);
     });
+
+    Box::into_raw(Box::new(handle))
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_note(wait_id: c_int, note_id: c_int) {
-    crate::spawn(async move {
-        let res = note::note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            note_id,
-        )
-        .await;
+pub extern "C" fn reax_note_note(once_id: c_int, note_id: c_int) -> * mut JoinHandle<()>  {
+    let handle = spawn(async move {
+        let res = note::note(note_id).await;
 
-        send(wait_id, res);
+        send_once(once_id, res);
     });
+
+    Box::into_raw(Box::new(handle))
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_create_note(wait_id: c_int, folder_id: c_int) {
-    crate::spawn(async move {
-        let res = note::create_note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            folder_id,
-        )
-        .await;
+pub extern "C" fn reax_note_create_note(once_id: c_int, folder_id: c_int) -> * mut JoinHandle<()>  {
+    let handle = spawn(async move {
+        let res = note::create_note(folder_id).await;
 
-        send(wait_id, res);
+        send_once(once_id, res);
     });
+
+    Box::into_raw(Box::new(handle))
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_update_note(wait_id: c_int, note_id: c_int, text: *const c_char) {
+pub extern "C" fn reax_note_update_note(once_id: c_int, note_id: c_int, folder_id: c_int, text: *const c_char) -> * mut JoinHandle<()>  {
     let text = unsafe { CStr::from_ptr(text).to_str().unwrap().to_string() };
 
-    crate::spawn(async move {
-        let res = note::update_note(
-            runtime::get::<Arc<dyn Store>>().unwrap(),
-            runtime::get::<Arc<Client>>().unwrap(),
-            runtime::get::<Arc<Config>>().unwrap(),
-            note_id,
-            text,
-        )
-        .await;
+    let handle = spawn(async move {
+        let res = note::update_note(note_id, folder_id, text).await;
 
-        send(wait_id, res);
+        send_once(once_id, res);
     });
+
+    Box::into_raw(Box::new(handle))
 }

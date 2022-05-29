@@ -1,59 +1,76 @@
 class NoteViewModel {
-    func folders() async throws -> [Folder] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-                try deserializeList(deserializer) { try Folder.deserialize($0) }
-            })
+    func folders() -> AsyncStream<Result<[Folder], ReaxError>> {
+        return AsyncStream { continuation in
+             let streamId = Runtime.instance().startStream(Stream(
+                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Folder.deserialize($0) })) },
+                onError: { continuation.yield(Result.failure($0))},
+                onComplete: { continuation.finish() },
+                onStart: { reax_note_folders($0)}
+            ))
 
-            reax_note_folders(waitId)
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
         }
     }
 
     func createFolder(_ name: String) async throws -> () {
         return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-            })
-
-            reax_note_create_folder(waitId, name)
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_create_folder($0, name) }
+            ))
         }
     }
 
-    func noteSummaries(_ folderId: Int32) async throws -> [Note] {
-        return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-                try deserializeList(deserializer) { try Note.deserialize($0) }
-            })
+    func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], ReaxError>> {
+        return AsyncStream { continuation in
+            let streamId = Runtime.instance().startStream(Stream(
+                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Note.deserialize($0) })) },
+                onError: { continuation.yield(Result.failure($0)) },
+                onComplete: { continuation.finish() },
+                onStart: { reax_note_note_summaries($0, folderId) }
+            ))
 
-            reax_note_note_summaries(waitId, folderId)
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
         }
     }
 
-    func note(_ noteId: Int32) async throws -> Note? {
-        return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-                try deserializeOption(deserializer) { try Note.deserialize($0) }
-            })
+    func note(_ noteId: Int32) -> AsyncStream<Result<Note?, Error>> {
+        return AsyncStream { continuation in
+             let streamId = Runtime.instance().startStream(Stream(
+                onNext: { continuation.yield(Result.success(try Note.deserialize($0))) },
+                onError: { continuation.yield(Result.failure($0)) },
+                onComplete: { continuation.finish() },
+                onStart: {reax_note_note($0, noteId)}
+            ))
 
-            reax_note_note(waitId, noteId)
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
         }
     }
 
     func createNote(_ folderId: Int32) async throws -> Int32 {
         return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-                try deserializer.deserialize_i32()
-            })
-
-            reax_note_create_note(waitId, folderId)
+            Runtime.instance().startOnce(Once(
+                onNext: { continuation.resume(returning: try $0.deserialize_i32()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_create_note($0, folderId) }
+            ))
         }
     }
 
-    func updateNote(_ noteId: Int32, _ text: String) async throws -> () {
+    func updateNote(_ noteId: Int32, _ folderId: Int32, _ text: String) async throws -> () {
         return try await withCheckedThrowingContinuation { continuation in
-            let waitId = Runtime.instance().wait(resume: AsyncWait(continuation) { deserializer in
-            })
-
-            reax_note_update_note(waitId, noteId, text)
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_update_note($0, noteId, folderId, text) }
+            ))
         }
     }
 }

@@ -5,15 +5,16 @@ use std::{
 
 use base::{Store, Config};
 use reqwest::Client;
+use tokio::task::JoinHandle;
 
-use crate::send;
+use crate::send_once;
 
 #[no_mangle]
-pub extern "C" fn reax_auth_login(wait_id: c_int, email: *const c_char, password: *const c_char) {
+pub extern "C" fn reax_auth_login(once_id: c_int, email: *const c_char, password: *const c_char) -> * mut JoinHandle<()> {
     let email = unsafe { CStr::from_ptr(email).to_str().unwrap().to_string() };
     let password = unsafe { CStr::from_ptr(password).to_str().unwrap().to_string() };
 
-    crate::spawn(async move {
+    let handle = crate::spawn(async move {
         let res = auth::login(
             runtime::get::<Arc<dyn Store>>().unwrap(),
             runtime::get::<Arc<Client>>().unwrap(),
@@ -23,6 +24,8 @@ pub extern "C" fn reax_auth_login(wait_id: c_int, email: *const c_char, password
         )
         .await;
 
-        send(wait_id, res);
+        send_once(once_id, res);
     });
+
+    Box::into_raw(Box::new(handle))
 }

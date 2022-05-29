@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct FoldersView: View {
+    @State var task: Task<(), Never>?
     @State var folderCreateActive = false
     @State var folders: [Folder] = []
     @EnvironmentObject var appState: AppState
@@ -23,13 +24,20 @@ struct FoldersView: View {
         .navigationBarBackButtonHidden(true)
         .navigationBarTitle("Folders")
         .onAppear {
-            Task {
-                do {
-                    folders = try await NoteViewModel().folders()
-                } catch {
-                    appState.navigate(Screen.Login)
-                    print("failed to fetch folders", error)
+            task = Task {
+                let stream = NoteViewModel().folders()
+
+                for await result in stream {
+                    switch result {
+                    case .success(let f): folders = f
+                    case .failure(_): appState.navigate(Screen.Login)
+                    }
                 }
+            }
+        }
+        .onDisappear {
+            if let task = task {
+                task.cancel()
             }
         }
     }

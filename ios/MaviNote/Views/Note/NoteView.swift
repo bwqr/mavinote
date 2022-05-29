@@ -3,40 +3,49 @@ import SwiftUI
 struct NoteView : View {
     let folderId: Int32
     var noteId: Int32?
+    @State var task: Task<(), Never>?
     @State var text = ""
-    
+    @EnvironmentObject var appState: AppState
+
     var body: some View {
         VStack {
             Text("Note")
-            TextEditor(text: $text)
+            TextField("Your note goes here", text: $text)
         }.onAppear {
             guard let noteId = noteId else {
                 return
             }
 
-            Task {
-                do {
-                    if let note = try await NoteViewModel().note(noteId) {
-                        text = note.text
+            task = Task {
+                let stream = NoteViewModel().note(noteId)
+
+                for await result in stream {
+                    switch result {
+                    case .success(let n): if let n = n {
+                        text = n.text
                     }
-                } catch {
-                    print("failed to fetch note", error)
+                    case .failure(_): appState.navigate(Screen.Login)
+                    }
                 }
             }
         }.onDisappear {
-            Task {
-                do {
-                    var noteId = noteId
+            if let task = task {
+                task.cancel()
 
-                    if noteId == nil {
-                        noteId = try await NoteViewModel().createNote(folderId)
-                    }
+                Task {
+                    do {
+                        var noteId = noteId
 
-                    if let noteId = noteId {
-                        try await NoteViewModel().updateNote(noteId, text)
+                        if noteId == nil {
+                            noteId = try await NoteViewModel().createNote(folderId)
+                        }
+
+                        if let noteId = noteId {
+                            try await NoteViewModel().updateNote(noteId, folderId, text)
+                        }
+                    } catch {
+                        print("failed to update or create note", error)
                     }
-                } catch {
-                    print("failed to update or create note", error)
                 }
             }
         }

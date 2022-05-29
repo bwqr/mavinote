@@ -4,7 +4,7 @@ use base::{Store, Config};
 use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
-use sqlx::sqlite::{SqliteConnectOptions, SqlitePoolOptions};
+use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 use tokio::task::JoinHandle;
 
 mod note;
@@ -12,15 +12,39 @@ mod auth;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
+static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
 
-pub(crate) fn send<T: Serialize, E: Serialize>(wait_id: i32, res: Result<T, E>) {
-    let bytes = match &res {
-        Ok(value) => bincode::serialize(value).expect("failed to serialize val"),
-        Err(e) => bincode::serialize(e).expect("failed to serialize val"),
-    };
-
-    HANDLER.get().unwrap().lock().unwrap().send((wait_id, res.is_ok(), bytes)).unwrap();
+#[derive(Serialize)]
+enum Message<T: Serialize> {
+    Ok(T),
+    Err(base::Error),
+    Complete,
 }
+
+pub(crate) fn send_stream<T: Serialize>(stream_id: i32, message: Message<T>) {
+    let bytes = bincode::serialize(&message).expect("failed to searialize message");
+
+    HANDLER
+        .get()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .send((stream_id, true, bytes))
+        .unwrap();
+}
+
+pub(crate) fn send_once<T: Serialize>(once_id: i32, message: Result<T, base::Error>) {
+    let bytes = bincode::serialize(&message).expect("failed to searialize message");
+
+    HANDLER
+        .get()
+        .unwrap()
+        .lock()
+        .unwrap()
+        .send((once_id, false, bytes))
+        .unwrap();
+}
+
 
 pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
 where
@@ -74,6 +98,7 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
 
         pool
     });
+    DATABASE.set(pool.clone()).unwrap();
 
     runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
 
@@ -81,6 +106,8 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
         api_url,
         storage_dir,
     }));
+
+    ::note::init();
 
     ::log::info!("reax runtime is initialized");
 }
@@ -97,4 +124,13 @@ pub extern fn reax_init_handler(ptr: *const c_void, f: unsafe extern fn(c_int, c
     while let Ok((wait_id, ok, bytes)) = recv.recv() {
         unsafe { f(wait_id, ok as c_uchar, bytes.as_ptr() as *const c_uchar, bytes.len() as c_int, ptr) }
     }
+}
+
+#[no_mangle]
+pub extern "C" fn reax_abort(pointer: * mut c_void) {
+    let handle = unsafe { Box::from_raw(pointer as * mut tokio::task::JoinHandle<()>) };
+
+    ::log::debug!("received abort, {:p}", handle);
+
+    handle.abort();
 }

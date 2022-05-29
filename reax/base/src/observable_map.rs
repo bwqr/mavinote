@@ -41,8 +41,8 @@ impl<T> ObservableMap<T> {
         log::debug!("inserted key {key}");
     }
 
-    pub fn update(&self, key: i32, mut value: T) {
-        self.update_modify(key, |old| std::mem::swap(old, &mut value));
+    pub fn update(&self, key: i32, value: T) {
+        self.update_modify(key, |old| *old = value);
     }
 
     pub fn update_modify<F: FnOnce(&mut T) -> ()>(&self, key: i32, func: F) {

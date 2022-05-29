@@ -140,7 +140,7 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
     })
     .unwrap();
 
-    client
+    let note = client
         .post(format!("{}/note/note", config.api_url))
         .header("Authorization", format!("Bearer {}", token))
         .body(request_body)
@@ -148,9 +148,16 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
         .await?
         .error_for_status()?
         .json::<Note>()
-        .await
-        .map(|note| note.id)
-        .map_err(|e| e.into())
+        .await?;
+    let note_id = note.id;
+
+    NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
+        if let State::Ok(notes) = state {
+            notes.push(note);
+        }
+    });
+
+    Ok(note_id)
 }
 
 pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(), Error> {
