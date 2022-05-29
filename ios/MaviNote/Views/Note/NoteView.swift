@@ -17,35 +17,32 @@ struct NoteView : View {
             }
 
             task = Task {
-                let stream = NoteViewModel().note(noteId)
-
-                for await result in stream {
-                    switch result {
-                    case .success(let n): if let n = n {
-                        text = n.text
+                do {
+                    if let note = try await NoteViewModel().note(noteId) {
+                        text = note.text
                     }
-                    case .failure(_): appState.navigate(Screen.Login)
-                    }
+                } catch {
+                    print("failed to fetch note", error)
                 }
             }
         }.onDisappear {
             if let task = task {
                 task.cancel()
+            }
 
-                Task {
-                    do {
-                        var noteId = noteId
+            Task {
+                do {
+                    var noteId = noteId
 
-                        if noteId == nil {
-                            noteId = try await NoteViewModel().createNote(folderId)
-                        }
-
-                        if let noteId = noteId {
-                            try await NoteViewModel().updateNote(noteId, folderId, text)
-                        }
-                    } catch {
-                        print("failed to update or create note", error)
+                    if noteId == nil {
+                        noteId = try await NoteViewModel().createNote(folderId)
                     }
+
+                    if let noteId = noteId {
+                        try await NoteViewModel().updateNote(noteId, folderId, text)
+                    }
+                } catch {
+                    print("failed to update or create note", error)
                 }
             }
         }

@@ -20,7 +20,7 @@ struct NotesView: View {
                 for await result in stream {
                     switch result {
                     case .success(let n): notes = n
-                    case .failure(_): appState.navigate(Screen.Login)
+                    case .failure(let error): debugPrint("failed to fetch note summaries", error)
                     }
                 }
             }

@@ -165,7 +165,6 @@ pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(
     let client = runtime::get::<Arc<Client>>().unwrap();
     let config = runtime::get::<Arc<Config>>().unwrap();
 
-    tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     let token = store.get("token").await?.unwrap_or("".to_string());
 
     let text = text.as_str().trim().to_string();

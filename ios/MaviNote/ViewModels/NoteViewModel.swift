@@ -39,18 +39,15 @@ class NoteViewModel {
         }
     }
 
-    func note(_ noteId: Int32) -> AsyncStream<Result<Note?, Error>> {
-        return AsyncStream { continuation in
-             let streamId = Runtime.instance().startStream(Stream(
-                onNext: { continuation.yield(Result.success(try Note.deserialize($0))) },
-                onError: { continuation.yield(Result.failure($0)) },
-                onComplete: { continuation.finish() },
+    func note(_ noteId: Int32) async throws -> Note? {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { continuation.resume(returning: try deserializeOption($0) {
+                    try Note.deserialize($0)
+                }) },
+                onError: { continuation.resume(throwing: $0)},
                 onStart: {reax_note_note($0, noteId)}
             ))
-
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
         }
     }
 

@@ -59,7 +59,7 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
     let api_url = unsafe { CStr::from_ptr(api_url).to_str().unwrap().to_string() };
     let storage_dir = unsafe { CStr::from_ptr(storage_dir).to_str().unwrap().to_string() };
 
-    std::env::set_var("RUST_LOG", "debug");
+    std::env::set_var("RUST_LOG", "debug,sqlx=warn");
     env_logger::init();
 
     ASYNC_RUNTIME
