@@ -8,6 +8,25 @@ use jni::{
 use crate::{send_stream, send_once, spawn, Message};
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
+    _: JNIEnv,
+    _: JObject,
+    stream_id: jint
+) -> jlong {
+    let handle = spawn(async move {
+        let mut rx = note::active_syncs();
+
+        while rx.changed().await.is_ok() {
+            send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
+        }
+
+        send_stream::<i32>(stream_id, Message::Complete);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
     _: JNIEnv,
     _: JObject,

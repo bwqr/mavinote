@@ -115,7 +115,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         .unwrap()
         .to_owned();
 
-    std::env::set_var("RUST_LOG", "debug");
     log::init(app_name);
 
     ASYNC_RUNTIME

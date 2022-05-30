@@ -4,12 +4,8 @@ import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Surface
-import androidx.compose.material.rememberScaffoldState
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.material.*
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.navigation.NavType
@@ -23,7 +19,10 @@ import com.bwqr.mavinote.ui.auth.Login
 import com.bwqr.mavinote.ui.theme.MaviNoteTheme
 import com.bwqr.mavinote.viewmodels.Bus
 import com.bwqr.mavinote.viewmodels.BusEvent
+import com.bwqr.mavinote.viewmodels.NoteViewModel
 import com.bwqr.mavinote.viewmodels.Runtime
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.onEach
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -58,8 +57,13 @@ fun MainScreen() {
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
     val scaffoldState = rememberScaffoldState()
+    var syncing by remember {
+        mutableStateOf(false)
+    }
 
     LaunchedEffect(key1 = 1) {
+        NoteViewModel().activeSyncs().onEach { syncing = it > 0 }.launchIn(this)
+
         while (true) {
             when (Bus.listen()) {
                 BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar("Internet yok la")
@@ -79,6 +83,9 @@ fun MainScreen() {
                 )
             }
         },
+        bottomBar = {
+            Text(text = "Syncing $syncing")
+        }
     ) {
         NavHost(navController = navController, startDestination = Screen.Folders.route) {
             composable(Screen.Login.route) { Login(navController) }

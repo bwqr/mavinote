@@ -13,6 +13,21 @@ import kotlin.coroutines.resumeWithException
 
 
 class NoteViewModel {
+    fun activeSyncs(): Flow<Int> = callbackFlow {
+        val streamId = Runtime.instance.startStream(Stream(
+            onNext = { deserializer ->
+                trySend(deserializer.deserialize_i32())
+            },
+            onError = { cancel("", it) },
+            onStart = { _activeSyncs(it) },
+            onComplete = { channel.close() }
+        ))
+
+        awaitClose {
+            Runtime.instance.abortStream(streamId)
+        }
+    }
+
     fun folders(): Flow<List<Folder>> = callbackFlow {
         val streamId = Runtime.instance.startStream(Stream(
             onNext = { deserializer ->
@@ -99,6 +114,7 @@ class NoteViewModel {
         }
     }
 
+    private external fun _activeSyncs(streamId: Int): Long
     private external fun _folders(streamId: Int): Long
     private external fun _addFolder(onceId: Int, name: String): Long
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
