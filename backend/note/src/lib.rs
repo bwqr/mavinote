@@ -4,6 +4,7 @@ use base::middlewares::auth_user::AuthUser;
 mod handlers;
 mod models;
 mod requests;
+mod responses;
 
 pub fn register(config: &mut ServiceConfig) {
     config.service(

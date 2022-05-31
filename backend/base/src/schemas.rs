@@ -1,4 +1,13 @@
 table! {
+    commits (id) {
+        id -> Int4,
+        note_id -> Int4,
+        text -> Text,
+        created_at -> Timestamp,
+    }
+}
+
+table! {
     folders (id) {
         id -> Int4,
         user_id -> Int4,
@@ -11,10 +20,8 @@ table! {
     notes (id) {
         id -> Int4,
         folder_id -> Int4,
-        title -> Varchar,
-        text -> Text,
+        title -> Nullable<Varchar>,
         created_at -> Timestamp,
-        updated_at -> Timestamp,
     }
 }
 
@@ -28,7 +35,12 @@ table! {
     }
 }
 
+joinable!(commits -> notes (note_id));
+joinable!(folders -> users (user_id));
+joinable!(notes -> folders (folder_id));
+
 allow_tables_to_appear_in_same_query!(
+    commits,
     folders,
     notes,
     users,
