@@ -3,14 +3,16 @@ pub mod models;
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
+use sqlx::{Pool, Sqlite};
 use tokio::sync::watch::{channel, Sender};
 
 use base::{Error, State, observable_map::{ObservableMap, Receiver}};
 
 use models::{Folder, Note};
 
-pub(crate) mod requests;
-
+mod requests;
+mod responses;
+mod storage;
 
 static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
@@ -26,6 +28,36 @@ pub fn active_syncs() -> tokio::sync::watch::Receiver<i32> {
     ACTIVE_SYNCS.get().unwrap().subscribe()
 }
 
+pub async fn sync() -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let folders = requests::fetch_folders().await?;
+
+    for f in folders {
+        let folder = storage::fetch_folder(&mut conn, f.id).await?;
+
+        if let Some(folder) = folder {
+            let commits = requests::fetch_commits(folder.id).await?;
+
+            for commit in commits {
+                let note = storage::fetch_note(&mut conn, commit.note_id)
+                    .await?;
+
+                if let Some(note) = note {
+                    log::debug!("note {} needs to sync", note.id);
+                } else {
+                    log::debug!("note {} needs to be created", commit.note_id);
+                }
+            }
+        } else {
+            storage::create_folder(&mut conn, f).await?;
+            FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
+        }
+    }
+
+    Ok(())
+}
+
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
     let sender = FOLDERS.get().unwrap();
     let load = match *sender.borrow() {
@@ -35,7 +67,9 @@ pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>
 
     if load {
         sender.send_replace(State::Loading);
-        sender.send_replace(requests::fetch_folders().await.into());
+
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+        sender.send_replace(storage::fetch_folders(&mut conn).await.into());
     }
 
     sender.subscribe()
@@ -58,7 +92,9 @@ pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
 
     if !notes_map.contains_key(folder_id) {
         notes_map.insert(folder_id, State::Loading);
-        notes_map.update(folder_id, requests::fetch_notes(folder_id).await.into());
+
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+        notes_map.update(folder_id, storage::fetch_notes(&mut conn, folder_id).await.into());
     }
 
     notes_map.subscribe(folder_id).unwrap()
@@ -69,6 +105,8 @@ pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
 }
 
 pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
+    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs += 1; });
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
     let note = requests::create_note(folder_id).await?;
     let note_id = note.id;
 
@@ -78,10 +116,15 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
         }
     });
 
+    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs -= 1; });
+
     Ok(note_id)
 }
 
 pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(), Error> {
+    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs += 1; });
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
+
     let text = text.as_str().trim().to_string();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
     let title = text.as_str()[..ending_index].replace('\n', "");
@@ -91,11 +134,13 @@ pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(
     NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
         if let State::Ok(notes) = state {
             if let Some(mut note) = notes.iter_mut().find(|n| n.id == note_id) {
-                note.text = title;
-                note.title=  text;
+                note.text = text;
+                note.title = Some(title);
             }
         }
     });
+
+    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs -= 1; });
 
     Ok(())
 }

@@ -17,17 +17,16 @@ impl FileStore {
 impl Store for FileStore {
     fn get<'a>(&'a self, key: &'a str) -> Pin<Box<dyn Future<Output = Result<Option<String>, Error>> + Send + 'a>> {
         Box::pin(async move {
-            let mut conn = self.pool.acquire().await.map_err(|_| Error::Database)?;
+            let mut conn = self.pool.acquire().await?;
 
             let row = sqlx::query("select value from store where key = ?")
                 .bind(key)
                 .fetch_optional(&mut conn)
-                .await
-                .map_err(|_| Error::Database)?;
+                .await?;
 
             if let Some(row) = row {
                 row.try_get("value")
-                    .map_err(|_| Error::Database)
+                    .map_err(|e| e.into())
             } else {
                 Ok(None)
             }
@@ -36,7 +35,7 @@ impl Store for FileStore {
 
     fn put<'a>(&'a self, key: &'a str, value: &'a str) -> Pin<Box<dyn Future<Output = Result<(), base::Error>> + Send + 'a>> {
         Box::pin(async move {
-            let mut conn = self.pool.acquire().await.map_err(|_| Error::Database)?;
+            let mut conn = self.pool.acquire().await?;
 
             let res = sqlx::query("insert into store values (?, ?)")
                 .bind(key)
@@ -53,12 +52,12 @@ impl Store for FileStore {
                         .execute(&mut conn)
                         .await
                         .map(|_| ())
-                        .map_err(|_| Error::Database)
+                        .map_err(|e| e.into())
                 }
             }
 
             res
-                .map_err(|_| Error::Database)
+                .map_err(|e| e.into())
         })
     }
 }

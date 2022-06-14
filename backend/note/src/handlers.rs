@@ -37,8 +37,8 @@ pub async fn create_folder(
     Ok(Json(folder))
 }
 
-#[get("folder/{folder_id}/notes")]
-pub async fn fetch_notes(
+#[get("folder/{folder_id}/commits")]
+pub async fn fetch_commits(
     pool: Data<Pool>,
     folder_id: Path<i32>,
 ) -> Result<Json<Vec<CommitResponse>>, HttpError> {
@@ -55,8 +55,8 @@ pub async fn fetch_notes(
     .into_iter()
     .filter(|commit: &(i32, Option<i32>)| commit.1.is_some())
     .map(|commit| CommitResponse {
+        commit_id: commit.1.unwrap(),
         note_id: commit.0,
-        commit_id: commit.1.unwrap().to_string(),
     })
     .collect();
 
@@ -139,7 +139,7 @@ pub async fn update_note(
             ))
             .get_result::<Commit>(&pool.get().unwrap())
             .map(|commit| CommitResponse {
-                commit_id: commit.id.to_string(),
+                commit_id: commit.id,
                 note_id,
             })
             .map_err(|e| e.into())

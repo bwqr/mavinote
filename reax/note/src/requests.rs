@@ -4,7 +4,7 @@ use base::{Error, Store, Config};
 use reqwest::{Client, StatusCode};
 use serde::Serialize;
 
-use crate::models::{Folder, Note};
+use crate::{models::{Folder, Note}, responses::Commit};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -64,7 +64,7 @@ pub async fn create_folder(name: String) -> Result<Folder, Error> {
         .map_err(|e| e.into())
 }
 
-pub async fn fetch_notes(folder_id: i32) -> Result<Vec<Note>, Error> {
+pub async fn fetch_commits(folder_id: i32) -> Result<Vec<Commit>, Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let client = runtime::get::<Arc<Client>>().unwrap();
     let config = runtime::get::<Arc<Config>>().unwrap();
@@ -72,7 +72,7 @@ pub async fn fetch_notes(folder_id: i32) -> Result<Vec<Note>, Error> {
     let token = store.get("token").await?.unwrap_or("".to_string());
 
     client
-        .get(format!("{}/note/folder/{}/notes", config.api_url, folder_id))
+        .get(format!("{}/note/folder/{}/commits", config.api_url, folder_id))
         .header("Authorization", format!("Bearer {}", token))
         .send()
         .await?

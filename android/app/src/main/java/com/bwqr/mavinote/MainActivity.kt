@@ -1,6 +1,7 @@
 package com.bwqr.mavinote
 
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.fillMaxSize
@@ -14,6 +15,7 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.ui.auth.Login
 import com.bwqr.mavinote.ui.theme.MaviNoteTheme
@@ -23,6 +25,7 @@ import com.bwqr.mavinote.viewmodels.NoteViewModel
 import com.bwqr.mavinote.viewmodels.Runtime
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -62,6 +65,13 @@ fun MainScreen() {
     }
 
     LaunchedEffect(key1 = 1) {
+        try {
+            NoteViewModel().sync()
+        } catch (e: ReaxException) {
+            e.handle()
+            Log.e("MainActivity", "Failed to sync $e")
+        }
+
         NoteViewModel().activeSyncs().onEach { syncing = it > 0 }.launchIn(this)
 
         while (true) {

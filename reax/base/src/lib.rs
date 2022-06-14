@@ -34,7 +34,7 @@ impl<T, E> From<Result<T, E>> for State<T, E> {
 pub enum Error {
     Http(HttpError),
     Message(String),
-    Database,
+    Database(String),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -61,6 +61,13 @@ impl From<reqwest::Error> for Error {
         }
 
         Error::Http(HttpError::Unknown)
+    }
+}
+
+#[cfg(feature = "sqlx")]
+impl From<sqlx::Error> for Error {
+    fn from(e: sqlx::Error) -> Self {
+        Error::Database(e.to_string())
     }
 }
 

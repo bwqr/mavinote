@@ -13,6 +13,18 @@ import kotlin.coroutines.resumeWithException
 
 
 class NoteViewModel {
+    suspend fun sync(): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _sync(it) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
     fun activeSyncs(): Flow<Int> = callbackFlow {
         val streamId = Runtime.instance.startStream(Stream(
             onNext = { deserializer ->
@@ -114,6 +126,7 @@ class NoteViewModel {
         }
     }
 
+    private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _folders(streamId: Int): Long
     private external fun _addFolder(onceId: Int, name: String): Long

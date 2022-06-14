@@ -24,7 +24,6 @@ mod note;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
-static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
 
 #[derive(Serialize)]
 enum Message<T: Serialize> {
@@ -79,7 +78,7 @@ fn capture_stderr() {
 
         loop {
             libc::fgets(&mut buff as *mut i8, 256, file);
-            log::__android_log_write(6, tag.as_ptr(), buff.as_ptr());
+            log::__android_log_write(5, tag.as_ptr(), buff.as_ptr());
         }
     });
 }
@@ -153,7 +152,8 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
 
         pool
     });
-    DATABASE.set(pool.clone()).unwrap();
+
+    runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
 
     runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
 
