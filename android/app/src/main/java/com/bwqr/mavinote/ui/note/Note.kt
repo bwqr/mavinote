@@ -1,5 +1,7 @@
 package com.bwqr.mavinote.ui.note
 
+import androidx.compose.foundation.layout.Column
+import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -34,7 +36,13 @@ fun Note(noteId: Int) {
         }
     }
 
-    TextField(value = text, onValueChange = { text = it })
+    Column {
+        note?.let {
+            Text(text = it.title ?: "New Note")
+        }
+
+        TextField(value = text, onValueChange = { text = it })
+    }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->

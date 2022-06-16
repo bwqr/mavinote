@@ -33,6 +33,10 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
+        if record.metadata().target().starts_with("sqlx") {
+            return;
+        }
+
         let level: i32 = match record.level() {
             log::Level::Trace => LogPriority::Verbose,
             log::Level::Debug => LogPriority::Debug,
@@ -41,15 +45,10 @@ impl Log for Logger {
             log::Level::Error => LogPriority::Error,
         } as i32;
 
-        let message = if let Some(s) = record.args().as_str() {
-            CString::new(s)
-        } else {
-            CString::new(record.args().to_string())
-        }
-            .unwrap();
+        let c_str = CString::new(record.args().to_string()).unwrap();
 
         unsafe {
-            __android_log_write(level, self.tag.as_ptr(), message.as_ptr());
+            __android_log_write(level, self.tag.as_ptr(),c_str.as_ptr());
         }
     }
 

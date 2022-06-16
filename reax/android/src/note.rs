@@ -31,6 +31,8 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
     let handle = spawn(async move {
         let mut rx = note::active_syncs();
 
+        send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
+
         while rx.changed().await.is_ok() {
             send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
         }

@@ -43,3 +43,30 @@ pub async fn fetch_note(conn: &mut PoolConnection<Sqlite>, note_id: i32) -> Resu
         .await
         .map_err(|e| e.into())
 }
+
+pub async fn create_note(conn: &mut PoolConnection<Sqlite>, note: &Note) -> Result<(), Error> {
+    sqlx::query("insert into notes (id, folder_id, title, text, commit_id, state) values(?, ?, ?, ?, ?, ?)")
+        .bind(note.id)
+        .bind(note.folder_id)
+        .bind(note.title.as_ref())
+        .bind(note.text.as_str())
+        .bind(note.commit_id)
+        .bind(&note.state)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+}
+
+pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note: &Note) -> Result<(), Error> {
+    sqlx::query("update notes set title=?, text=?, commit_id=?, state=? where id=?")
+        .bind(note.title.as_ref())
+        .bind(note.text.as_str())
+        .bind(note.commit_id)
+        .bind(&note.state)
+        .bind(note.id)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+}

@@ -4,7 +4,7 @@ use base::{Error, Store, Config};
 use reqwest::{Client, StatusCode};
 use serde::Serialize;
 
-use crate::{models::{Folder, Note}, responses::Commit};
+use crate::{models::Folder, responses::{Commit, Note}};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -82,7 +82,7 @@ pub async fn fetch_commits(folder_id: i32) -> Result<Vec<Commit>, Error> {
         .map_err(|e| e.into())
 }
 
-pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
+pub async fn fetch_note(note_id: i32) -> Result<Option<Note>, Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let client = runtime::get::<Arc<Client>>().unwrap();
     let config = runtime::get::<Arc<Config>>().unwrap();

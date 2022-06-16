@@ -1,12 +1,15 @@
 package com.bwqr.mavinote.models
 
+import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
 data class Note constructor(
     val id: Int,
     val folderId: Int,
-    val title: String,
+    val title: String?,
     val text: String,
+    val commitId: Int,
+    val state: NoteState
 ) {
     companion object {
         fun deserialize(deserializer: Deserializer): Note {
@@ -15,13 +18,34 @@ data class Note constructor(
             val note = Note(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
+                TraitHelpers.deserializeOption(deserializer) { it.deserialize_str() },
                 deserializer.deserialize_str(),
-                deserializer.deserialize_str(),
+                deserializer.deserialize_i32(),
+                NoteState.deserialize(deserializer)
             )
 
             deserializer.decrease_container_depth()
 
             return note
+        }
+    }
+}
+
+enum class NoteState {
+    Clean,
+    Modified,
+    Deleted;
+
+    companion object {
+        fun deserialize(deserializer: Deserializer): NoteState {
+            val index = deserializer.deserialize_variant_index()
+
+            return when (index) {
+                0 -> Clean
+                1 -> Modified
+                2 -> Deleted
+                else -> throw DeserializationError("Unknown variant index for NoteState: $index")
+            }
         }
     }
 }

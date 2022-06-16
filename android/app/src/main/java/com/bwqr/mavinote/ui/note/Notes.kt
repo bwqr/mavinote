@@ -39,7 +39,7 @@ fun Notes(navController: NavController, folderId: Int) {
 
     LazyColumn {
         items(notes) { note ->
-            Text(text = note.title, Modifier.clickable {
+            Text(text = note.title ?: "New Note", Modifier.clickable {
                 navController.navigate("note/${note.id}")
             })
         }

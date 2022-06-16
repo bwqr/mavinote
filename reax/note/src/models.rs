@@ -19,7 +19,7 @@ pub struct Note {
     pub state: NoteState,
 }
 
-#[derive(Clone, Debug, Deserialize, Serialize, Type)]
+#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Type)]
 pub enum NoteState {
     Clean,
     Modified,

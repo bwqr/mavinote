@@ -25,7 +25,6 @@ import com.bwqr.mavinote.viewmodels.NoteViewModel
 import com.bwqr.mavinote.viewmodels.Runtime
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.launch
 
 sealed class Screen(val route: String) {
     object Login : Screen("login")
@@ -65,18 +64,21 @@ fun MainScreen() {
     }
 
     LaunchedEffect(key1 = 1) {
+        NoteViewModel().activeSyncs().onEach {
+            syncing = it > 0
+        }.launchIn(this)
+
         try {
             NoteViewModel().sync()
         } catch (e: ReaxException) {
             e.handle()
-            Log.e("MainActivity", "Failed to sync $e")
         }
-
-        NoteViewModel().activeSyncs().onEach { syncing = it > 0 }.launchIn(this)
 
         while (true) {
             when (Bus.listen()) {
-                BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar("Internet yok la")
+                BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
+                    "Internet yok la"
+                )
                 BusEvent.RequireAuthorization -> navController.navigate(Screen.Login.route)
             }
         }
