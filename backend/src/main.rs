@@ -1,8 +1,10 @@
+use actix::Actor;
 use actix_cors::Cors;
 use actix_web::{HttpServer, App, middleware::Logger, web::Data, http::header};
 use diesel::{r2d2::{Pool as DieselPool, ConnectionManager}, PgConnection};
 
 use base::{types::Pool, crypto::Crypto};
+use notify::{SessionManager, Server};
 
 fn setup_database() -> Pool {
     let conn_info = std::env::var("DATABASE_URL").expect("DATABASE_URL is not provided in env");
@@ -20,6 +22,8 @@ async fn main() -> std::io::Result<()> {
     let pool = setup_database();
     let crypto = Crypto::new(std::env::var("SECRET_KEY").expect("SECRET_KEY is not provided in env").as_str());
 
+    let session_manager = SessionManager::new(Server::new().start()).start();
+
     HttpServer::new(move || {
         let cors = Cors::default()
             .allowed_origin("http://127.0.0.1:3000")
@@ -32,9 +36,11 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(crypto.clone()))
+            .app_data(Data::new(session_manager.clone()))
             .wrap(Logger::default())
             .configure(auth::register)
             .configure(note::register)
+            .configure(notify::register)
             .configure(user::register)
     })
     .bind(std::env::var("BIND_ADDRESS").expect("APP_BIND_ADDRESS is not provided in env").as_str())?
