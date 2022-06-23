@@ -21,6 +21,6 @@ pub struct CreateNoteRequest {
 #[derive(Deserialize, Sanitize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNoteRequest {
-    pub title: String,
+    pub title: Option<String>,
     pub text: String,
 }
