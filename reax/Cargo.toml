@@ -2,12 +2,13 @@
 members = [
     "android",
     "ios",
+    "wasm",
     "auth",
     "base",
     "note",
+    "notify",
     "runtime",
     "util",
-    "wasm",
 ]
 
 [package]

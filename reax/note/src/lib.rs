@@ -35,76 +35,85 @@ pub fn active_syncs() -> tokio::sync::watch::Receiver<i32> {
     ACTIVE_SYNCS.get().unwrap().subscribe()
 }
 
-pub async fn sync() -> Result<(), Error> {
-    start_sync();
-
+pub async fn try_sync() -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
     let folders = requests::fetch_folders().await?;
 
-    for f in folders {
-        tokio::time::sleep(std::time::Duration::from_secs(3)).await;
+    for folder in folders {
 
-        let folder = storage::fetch_folder(&mut conn, f.id).await?;
+        if let None = storage::fetch_folder(&mut conn, folder.id).await? {
+            storage::create_folder(&mut conn, &folder).await?;
+        }
 
-        if let Some(folder) = folder {
-            let commits = requests::fetch_commits(folder.id).await?;
+        let commits = requests::fetch_commits(folder.id).await?;
 
-            for commit in commits {
-                let note = storage::fetch_note(&mut conn, commit.note_id)
-                    .await?;
+        for commit in commits {
+            let note = storage::fetch_note(&mut conn, commit.note_id)
+                .await?;
 
-                match note {
-                    Some(note) => {
-                        if note.state == NoteState::Clean && note.commit_id < commit.commit_id {
-                            log::debug!("note {} needs to be pulled", note.id);
-                            if let Some(note) = requests::fetch_note(commit.note_id).await? {
-                                let note = note.into();
-
-                                storage::update_note(&mut conn, &note).await?;
-
-                                NOTES_MAP.get().unwrap().update_modify(folder.id, |state| {
-                                    if let State::Ok(notes) = state {
-                                        if let Some(n) = &mut notes.iter_mut().find(|n| n.id == note.id) {
-                                            **n = note;
-                                        }
-                                    }
-                                });
-                            }
-                        } else if note.state != NoteState::Clean && note.commit_id == commit.commit_id {
-                            log::debug!("note {} needs to be pushed", note.id);
-                        } else if note.state != NoteState::Clean && note.commit_id < commit.commit_id {
-                            log::debug!("note {} needs to be synced", note.id);
-                        } else {
-                            log::debug!("note {} is up to date", note.id);
-                        }
-                    },
-                    None => {
-                        log::debug!("note {} needs to be created", commit.note_id);
-
+            match note {
+                Some(note) => {
+                    if note.state == NoteState::Clean && note.commit_id < commit.commit_id {
+                        log::debug!("note {} needs to be pulled", note.id);
                         if let Some(note) = requests::fetch_note(commit.note_id).await? {
                             let note = note.into();
 
-                            storage::create_note(&mut conn, &note).await?;
+                            storage::replace_note(&mut conn, &note).await?;
 
                             NOTES_MAP.get().unwrap().update_modify(folder.id, |state| {
                                 if let State::Ok(notes) = state {
-                                    notes.push(note);
+                                    if let Some(n) = &mut notes.iter_mut().find(|n| n.id == note.id) {
+                                        **n = note;
+                                    }
                                 }
                             });
                         }
+                    } else if note.state != NoteState::Clean && note.commit_id == commit.commit_id {
+                        log::debug!("note {} needs to be pushed", note.id);
+                        let commit = requests::update_note(note.id, note.title.as_ref().map(|t| t.as_str()), note.text.as_str()).await?;
+                        let mut note = note.clone();
+                        note.state = NoteState::Clean;
+                        note.commit_id = commit.commit_id;
+                        storage::replace_note(&mut conn, &note).await?;
+                    } else if note.state != NoteState::Clean && note.commit_id < commit.commit_id {
+                        log::debug!("note {} needs to be synced", note.id);
+                    } else {
+                        log::debug!("note {} is up to date", note.id);
+                    }
+                },
+                None => {
+                    log::debug!("note {} needs to be created", commit.note_id);
+
+                    if let Some(note) = requests::fetch_note(commit.note_id).await? {
+                        let note = note.into();
+
+                        storage::create_note(&mut conn, &note).await?;
+
+                        NOTES_MAP.get().unwrap().update_modify(folder.id, |state| {
+                            if let State::Ok(notes) = state {
+                                notes.push(note);
+                            }
+                        });
                     }
                 }
             }
-        } else {
-            storage::create_folder(&mut conn, f).await?;
-            FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
         }
     }
 
-    end_sync();
+    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
 
     Ok(())
+}
+
+pub async fn sync() -> Result<(), Error> {
+    start_sync();
+    let res = try_sync().await;
+    end_sync();
+
+    res
 }
 
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
@@ -181,7 +190,10 @@ pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
     let title = text.as_str()[..ending_index].replace('\n', "");
 
-    requests::update_note(note_id, &title, &text).await?;
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    storage::update_note(&mut conn, note_id, Some(text.as_str()), title.as_str()).await?;
+
+    let req_res = requests::update_note(note_id, Some(title.as_str()), &text).await;
 
     NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
         if let State::Ok(notes) = state {
@@ -194,5 +206,5 @@ pub async fn update_note(note_id: i32, folder_id: i32, text: String) -> Result<(
 
     end_sync();
 
-    Ok(())
+    req_res.map(|_| ())
 }

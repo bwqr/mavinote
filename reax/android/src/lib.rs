@@ -21,6 +21,7 @@ use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 mod auth;
 mod log;
 mod note;
+mod notify;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
@@ -87,21 +88,21 @@ fn capture_stderr() {
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
     env: JNIEnv,
     _: JObject,
-    app_name: JString,
     api_url: JString,
+    notify_url: JString,
     storage_dir: JString,
 ) {
     capture_stderr();
 
-    let app_name = env
-        .get_string(app_name)
+    let api_url = env
+        .get_string(api_url)
         .unwrap()
         .to_str()
         .unwrap()
         .to_owned();
 
-    let api_url = env
-        .get_string(api_url)
+    let notify_url = env
+        .get_string(notify_url)
         .unwrap()
         .to_str()
         .unwrap()
@@ -114,7 +115,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         .unwrap()
         .to_owned();
 
-    log::init(app_name);
+    log::init();
 
     ASYNC_RUNTIME
         .set(
@@ -163,7 +164,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
     }));
 
     ::note::init();
-
+    ::notify::init(notify_url);
     ::log::info!("reax runtime is initialized");
 }
 

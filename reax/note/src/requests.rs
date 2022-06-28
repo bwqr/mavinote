@@ -23,7 +23,7 @@ struct CreateNoteRequest<'a> {
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
 struct UpdateNoteRequest<'a> {
-    pub title: &'a str,
+    pub title: Option<&'a str>,
     pub text: &'a str,
 }
 
@@ -132,7 +132,7 @@ pub async fn create_note(folder_id: i32) -> Result<Note, Error> {
         .map_err(|e| e.into())
 }
 
-pub async fn update_note(note_id: i32, title: &str, text: &str) -> Result<(), Error> {
+pub async fn update_note(note_id: i32, title: Option<&str>, text: &str) -> Result<Commit, Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let client = runtime::get::<Arc<Client>>().unwrap();
     let config = runtime::get::<Arc<Config>>().unwrap();
@@ -147,7 +147,8 @@ pub async fn update_note(note_id: i32, title: &str, text: &str) -> Result<(), Er
         .body(serde_json::to_string(&request).unwrap())
         .send()
         .await?
-        .error_for_status()?;
-
-    Ok(())
+        .error_for_status()?
+        .json()
+        .await
+        .map_err(|e| e.into())
 }

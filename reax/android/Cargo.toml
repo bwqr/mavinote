@@ -9,6 +9,7 @@ edition = "2021"
 auth = { path = "../auth" }
 base = { path = "../base" }
 note = { path = "../note" }
+notify = { path = "../notify" }
 util = { path = "../util" }
 runtime = { path = "../runtime" }
 

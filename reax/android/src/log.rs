@@ -16,9 +16,7 @@ enum LogPriority {
     Silent,
 }
 
-struct Logger {
-    tag: CString,
-}
+struct Logger;
 
 impl Logger {
     fn init(self) {
@@ -33,10 +31,6 @@ impl Log for Logger {
     }
 
     fn log(&self, record: &log::Record) {
-        if record.metadata().target().starts_with("sqlx") {
-            return;
-        }
-
         let level: i32 = match record.level() {
             log::Level::Trace => LogPriority::Verbose,
             log::Level::Debug => LogPriority::Debug,
@@ -45,10 +39,17 @@ impl Log for Logger {
             log::Level::Error => LogPriority::Error,
         } as i32;
 
-        let c_str = CString::new(record.args().to_string()).unwrap();
+
+        let tag = CString::new(record.metadata().target()).unwrap();
+
+        let c_str = if record.metadata().target().starts_with("sqlx") {
+            CString::new(record.args().to_string().replace("\n", "")).unwrap()
+        } else {
+            CString::new(record.args().to_string()).unwrap()
+        };
 
         unsafe {
-            __android_log_write(level, self.tag.as_ptr(),c_str.as_ptr());
+            __android_log_write(level, tag.as_ptr() as *const i8,c_str.as_ptr());
         }
     }
 
@@ -56,10 +57,8 @@ impl Log for Logger {
     }
 }
 
-pub fn init(tag: String) {
-    Logger {
-        tag: CString::new(tag.as_bytes()).unwrap(),
-    }.init();
+pub fn init() {
+    Logger.init();
 }
 
 #[link(name = "log")]
