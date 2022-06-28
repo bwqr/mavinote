@@ -17,7 +17,7 @@ import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.text.input.ImeAction
 import androidx.navigation.NavController
-import com.bwqr.mavinote.Screen
+import com.bwqr.mavinote.MainScreens
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.models.Message
 import com.bwqr.mavinote.viewmodels.AuthViewModel
@@ -79,7 +79,7 @@ fun Login(navController: NavController) {
                     try {
                         AuthViewModel().login(email, password)
 
-                        navController.navigate(Screen.Folders.route)
+                        navController.navigate(MainScreens.BackgroundFeatures.route)
                     } catch (e: ReaxException) {
                         if (e.error is Message) {
                             warning = e.error.message

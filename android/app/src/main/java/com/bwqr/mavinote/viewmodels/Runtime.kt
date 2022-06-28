@@ -87,11 +87,11 @@ class Runtime private constructor(filesDir: String) {
     init {
         System.loadLibrary("reax")
 
-        _init(AppConfig.APP_NAME, AppConfig.API_URL, filesDir)
+        _init(AppConfig.API_URL, AppConfig.NOTIFY_URL, filesDir)
 
         thread {
             _initHandler { id, isStream, bytes ->
-                Log.d("Runtime", "received message $id $isStream ${bytes.size}")
+                Log.d("Runtime", "received message with id:$id isStream:$isStream byteLength:${bytes.size}")
 
                 if (isStream) {
                     streams[id]?.handle(bytes)
@@ -140,7 +140,7 @@ class Runtime private constructor(filesDir: String) {
         onces.remove(onceId)
     }
 
-    private external fun _init(appName: String, apiUrl: String, storageDir: String)
+    private external fun _init(apiUrl: String, notifyUrl: String, storageDir: String)
     private external fun _initHandler(callback: (streamId: Int, isStream: Boolean, bytes: ByteArray) -> Unit)
     private external fun _abort(joinHandle: Long)
 }

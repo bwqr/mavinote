@@ -11,10 +11,10 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.bwqr.mavinote.Screen
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import com.bwqr.mavinote.ui.NoteScreens
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -48,7 +48,7 @@ fun Folders(navController: NavController) {
 
 @Composable
 fun FolderFab(navController: NavController) {
-    FloatingActionButton(onClick = { navController.navigate(Screen.FolderAdd.route) }) {
+    FloatingActionButton(onClick = { navController.navigate(NoteScreens.FolderAdd.route) }) {
         Icon(Icons.Filled.Add, contentDescription = null)
     }
 }

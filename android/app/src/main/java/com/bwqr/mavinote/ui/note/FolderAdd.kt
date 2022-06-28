@@ -9,9 +9,9 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
-import com.bwqr.mavinote.Screen
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import com.bwqr.mavinote.ui.NoteScreens
 import kotlinx.coroutines.launch
 
 @Composable
@@ -43,7 +43,7 @@ fun FolderAdd(navController: NavController) {
                         e.handle()
                     }
 
-                    navController.navigate(Screen.Folders.route)
+                    navController.navigate(NoteScreens.Folders.route)
                 }
             }
         ) {
