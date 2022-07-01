@@ -1,6 +1,6 @@
 use std::{collections::HashSet, time::{Duration, Instant}};
 
-use actix::{Actor, Context, Message, Handler, MessageResponse, Addr, StreamHandler, AsyncContext, WrapFuture, ActorFutureExt, fut, ContextFutureSpawner, ActorContext, Running};
+use actix::prelude::*;
 use actix_web_actors::ws::{WebsocketContext, Message as WebsocketMessage, ProtocolError};
 
 use crate::server::Server;
@@ -132,6 +132,14 @@ impl StreamHandler<Result<WebsocketMessage, ProtocolError>> for Session {
     }
 }
 
+impl Handler<messages::SendMessage> for Session {
+    type Result = <messages::SendMessage as actix::Message>::Result;
+
+    fn handle(&mut self, msg: messages::SendMessage, ctx: &mut Self::Context) -> Self::Result {
+        ctx.text(msg.message);
+    }
+}
+
 pub mod messages {
     use super::{Message, Session};
 
@@ -149,6 +157,14 @@ pub mod messages {
     }
 
     impl Message for RemoveSession {
+        type Result = ();
+    }
+
+    pub struct SendMessage {
+        pub message: String,
+    }
+
+    impl Message for SendMessage {
         type Result = ();
     }
 }

@@ -22,7 +22,8 @@ async fn main() -> std::io::Result<()> {
     let pool = setup_database();
     let crypto = Crypto::new(std::env::var("SECRET_KEY").expect("SECRET_KEY is not provided in env").as_str());
 
-    let session_manager = SessionManager::new(Server::new().start()).start();
+    let notify_server = Server::new().start();
+    let session_manager = SessionManager::new(notify_server.clone()).start();
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -36,6 +37,7 @@ async fn main() -> std::io::Result<()> {
             .wrap(cors)
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(crypto.clone()))
+            .app_data(Data::new(notify_server.clone()))
             .app_data(Data::new(session_manager.clone()))
             .wrap(Logger::default())
             .configure(auth::register)

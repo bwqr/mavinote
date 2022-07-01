@@ -42,6 +42,18 @@ impl Handler<messages::Disconnect> for Server {
     }
 }
 
+impl Handler<messages::SendMessage> for Server {
+    type Result = <messages::SendMessage as actix::Message>::Result;
+
+    fn handle(&mut self, msg: messages::SendMessage, _: &mut Self::Context) -> Self::Result {
+        if let Some(sessions) = self.users.get_mut(&msg.user_id) {
+            for session in sessions.iter() {
+                session.1.do_send(crate::session::messages::SendMessage { message: msg.message.clone() });
+            }
+        }
+    }
+}
+
 pub mod messages {
     use super::{Addr, Message, Session};
 
@@ -61,6 +73,15 @@ pub mod messages {
     }
 
     impl Message for Disconnect {
+        type Result = ();
+    }
+
+    pub struct SendMessage {
+        pub user_id: i32,
+        pub message: String,
+    }
+
+    impl Message for SendMessage {
         type Result = ();
     }
 }

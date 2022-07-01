@@ -1,5 +1,3 @@
-pub mod models;
-
 use std::sync::Arc;
 
 use once_cell::sync::OnceCell;
@@ -10,9 +8,11 @@ use base::{Error, State, observable_map::{ObservableMap, Receiver}};
 
 use models::{Folder, Note, NoteState};
 
+pub mod models;
 mod requests;
 mod responses;
 mod storage;
+mod sync;
 
 static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
