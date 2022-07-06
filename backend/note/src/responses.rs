@@ -1,6 +1,6 @@
 use serde::Serialize;
 
-use crate::models::{Note as NoteModel, Commit as CommitModel};
+use crate::models::{Note as NoteModel, Commit as CommitModel, State};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -10,6 +10,7 @@ pub struct Note {
     pub commit_id: i32,
     pub title: Option<String>,
     pub text: String,
+    pub state: State,
 }
 
 impl From<(NoteModel, CommitModel)> for Note {
@@ -20,6 +21,7 @@ impl From<(NoteModel, CommitModel)> for Note {
             commit_id: models.1.id,
             title: models.0.title,
             text: models.1.text,
+            state: models.0.state,
         }
     }
 }
@@ -29,4 +31,5 @@ impl From<(NoteModel, CommitModel)> for Note {
 pub struct Commit {
     pub commit_id: i32,
     pub note_id: i32,
+    pub state: State,
 }

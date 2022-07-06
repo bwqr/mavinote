@@ -1,20 +1,24 @@
 use actix_web::{
     get, post, put,
-    web::{block, Data, Json, Path}, http::StatusCode,
+    web::{block, Data, Json, Path}, http::StatusCode, delete,
 };
 use diesel::prelude::*;
 
-use base::{sanitize::Sanitized, schemas, types::Pool, HttpError};
+use base::{sanitize::Sanitized, schemas::{folders, notes, commits}, types::Pool, HttpError};
+use user::models::User;
 
 use crate::{
-    models::{Folder, Note, Commit},
+    models::{Folder, Note, Commit, State},
     requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest},
     responses::{Commit as CommitResponse, Note as NoteResponse}
 };
 
 #[get("folders")]
-pub async fn fetch_folders(pool: Data<Pool>) -> Result<Json<Vec<Folder>>, HttpError> {
-    let folders = block(move || schemas::folders::table.load(&pool.get().unwrap())).await??;
+pub async fn fetch_folders(pool: Data<Pool>, user: User) -> Result<Json<Vec<Folder>>, HttpError> {
+    let folders = block(move ||
+        folders::table.filter(folders::user_id.eq(user.id))
+            .load(&pool.get().unwrap())
+    ).await??;
 
     Ok(Json(folders))
 }
@@ -23,12 +27,13 @@ pub async fn fetch_folders(pool: Data<Pool>) -> Result<Json<Vec<Folder>>, HttpEr
 pub async fn create_folder(
     pool: Data<Pool>,
     request: Sanitized<Json<CreateFolderRequest>>,
+    user: User,
 ) -> Result<Json<Folder>, HttpError> {
     let folder = block(move || {
-        diesel::insert_into(schemas::folders::table)
+        diesel::insert_into(folders::table)
             .values((
-                schemas::folders::user_id.eq(1),
-                schemas::folders::name.eq(&request.name),
+                folders::user_id.eq(user.id),
+                folders::name.eq(&request.name),
             ))
             .get_result(&pool.get().unwrap())
     })
@@ -37,26 +42,76 @@ pub async fn create_folder(
     Ok(Json(folder))
 }
 
+#[delete("folder/{folder_id}")]
+pub async fn delete_folder(
+    pool: Data<Pool>,
+    folder_id: Path<i32>,
+    user: User,
+) -> Result<&'static str, HttpError> {
+    block(move || {
+        let conn = pool.get().unwrap(); 
+
+        let folder_id = folders::table
+            .filter(folders::id.eq(folder_id.into_inner()))
+            .filter(folders::user_id.eq(user.id))
+            .filter(folders::state.eq(State::Clean))
+            .select(folders::id)
+            .first::<i32>(&conn)?;
+
+        let note_ids = notes::table
+            .filter(notes::folder_id.eq(folder_id))
+            .select(notes::id)
+            .load::<i32>(&conn)?;
+
+        diesel::update(folders::table.filter(folders::id.eq(folder_id)))
+            .set((
+                folders::state.eq(State::Deleted),
+                folders::name.eq(""),
+            ))
+            .execute(&conn)?;
+
+        diesel::delete(notes::table.filter(notes::folder_id.eq(folder_id)))
+            .execute(&conn)?;
+
+        diesel::delete(commits::table.filter(commits::note_id.eq_any(note_ids)))
+            .execute(&conn)
+    })
+        .await??;
+
+    Ok("")
+}
+
 #[get("folder/{folder_id}/commits")]
 pub async fn fetch_commits(
     pool: Data<Pool>,
     folder_id: Path<i32>,
+    user: User,
 ) -> Result<Json<Vec<CommitResponse>>, HttpError> {
     let commits = block(move || {
-        schemas::notes::table
-            .filter(schemas::notes::folder_id.eq(folder_id.into_inner()))
-            .left_join(schemas::commits::table)
-            .order((schemas::notes::id.desc(), schemas::commits::id.desc()))
-            .select((schemas::notes::id, schemas::commits::id.nullable()))
-            .distinct_on(schemas::notes::id)
-            .load(&pool.get().unwrap())
+        let conn = pool.get().unwrap();
+
+        let folder_id = folders::table
+            .filter(folders::id.eq(folder_id.into_inner()))
+            .filter(folders::user_id.eq(user.id))
+            .filter(folders::state.eq(State::Clean))
+            .select(folders::id)
+            .first::<i32>(&conn)?;
+
+        notes::table
+            .filter(notes::folder_id.eq(folder_id))
+            .left_join(commits::table)
+            .order((notes::id.desc(), commits::id.desc()))
+            .select((notes::id, notes::state, commits::id.nullable()))
+            .distinct_on(notes::id)
+            .load(&conn)
     })
     .await??
     .into_iter()
-    .filter(|commit: &(i32, Option<i32>)| commit.1.is_some())
+    .filter(|commit: &(i32, State, Option<i32>)| commit.2.is_some())
     .map(|commit| CommitResponse {
-        commit_id: commit.1.unwrap(),
         note_id: commit.0,
+        state: commit.1,
+        commit_id: commit.2.unwrap(),
     })
     .collect();
 
@@ -64,13 +119,15 @@ pub async fn fetch_commits(
 }
 
 #[get("note/{note_id}")]
-pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>) -> Result<Json<NoteResponse>, HttpError> {
+pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>, user: User) -> Result<Json<NoteResponse>, HttpError> {
     let note_and_commit = block(move || {
-        schemas::notes::table
-            .filter(schemas::notes::id.eq(note_id.into_inner()))
-            .left_join(schemas::commits::table)
-            .order(schemas::commits::id.desc())
-            .select((schemas::notes::all_columns, schemas::commits::all_columns.nullable()))
+        notes::table
+            .filter(notes::id.eq(note_id.into_inner()))
+            .filter(folders::user_id.eq(user.id))
+            .inner_join(folders::table)
+            .left_join(commits::table)
+            .order(commits::id.desc())
+            .select((notes::all_columns, commits::all_columns.nullable()))
             .first::<(Note, Option<Commit>)>(&pool.get().unwrap())
     })
     .await??;
@@ -93,21 +150,31 @@ pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>) -> Result<Json<Not
 pub async fn create_note(
     pool: Data<Pool>,
     request: Sanitized<Json<CreateNoteRequest>>,
+    user: User,
 ) -> Result<Json<NoteResponse>, HttpError> {
     let note = block(move || -> Result<NoteResponse, HttpError> {
-        let note = diesel::insert_into(schemas::notes::table)
-            .values((
-                schemas::notes::folder_id.eq(request.folder_id),
-                schemas::notes::title.eq(&request.title),
-            ))
-            .get_result::<Note>(&pool.get().unwrap())?;
+        let conn = pool.get().unwrap();
 
-        let note_commit = diesel::insert_into(schemas::commits::table)
+        let folder_id = folders::table
+            .filter(folders::id.eq(request.folder_id))
+            .filter(folders::user_id.eq(user.id))
+            .filter(folders::state.eq(State::Clean))
+            .select(folders::id)
+            .first::<i32>(&conn)?;
+
+        let note = diesel::insert_into(notes::table)
             .values((
-                schemas::commits::note_id.eq(note.id),
-                schemas::commits::text.eq(&request.text),
+                notes::folder_id.eq(folder_id),
+                notes::title.eq(&request.title),
             ))
-            .get_result(&pool.get().unwrap())?;
+            .get_result::<Note>(&conn)?;
+
+        let note_commit = diesel::insert_into(commits::table)
+            .values((
+                commits::note_id.eq(note.id),
+                commits::text.eq(&request.text),
+            ))
+            .get_result(&conn)?;
 
         Ok(NoteResponse::from((note, note_commit)))
     })
@@ -121,25 +188,32 @@ pub async fn update_note(
     pool: Data<Pool>,
     note_id: Path<i32>,
     request: Sanitized<Json<UpdateNoteRequest>>,
+    user: User,
 ) -> Result<Json<CommitResponse>, HttpError> {
     let commit = block(move || -> Result<CommitResponse, HttpError> {
-        let note_id = note_id.into_inner();
+        let conn = pool.get().unwrap();
 
-        diesel::update(schemas::notes::table)
-            .filter(schemas::notes::id.eq(note_id))
-            .set((
-                schemas::notes::title.eq(&request.title),
-            ))
-            .execute(&pool.get().unwrap())?;
+        let note_id = notes::table
+            .filter(notes::id.eq(note_id.into_inner()))
+            .filter(folders::user_id.eq(user.id))
+            .inner_join(folders::table)
+            .select(notes::id)
+            .first::<i32>(&conn)?;
 
-        diesel::insert_into(schemas::commits::table)
+        diesel::update(notes::table)
+            .filter(notes::id.eq(note_id))
+            .set(notes::title.eq(&request.title))
+            .execute(&conn)?;
+
+        diesel::insert_into(commits::table)
             .values((
-                schemas::commits::note_id.eq(note_id),
-                schemas::commits::text.eq(&request.text),
+                commits::note_id.eq(note_id),
+                commits::text.eq(&request.text),
             ))
-            .get_result::<Commit>(&pool.get().unwrap())
+            .get_result::<Commit>(&conn)
             .map(|commit| CommitResponse {
                 commit_id: commit.id,
+                state: State::Clean,
                 note_id,
             })
             .map_err(|e| e.into())

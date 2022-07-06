@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 base = { path = "../base" }
 derive = { path = "../derive" }
+user = { path = "../user" }
 
 actix-web = "4.0.1"
 

@@ -98,6 +98,14 @@ impl From<diesel::result::Error> for HttpError {
     fn from(e: diesel::result::Error) -> Self {
         log::error!("db error, {:?}", e);
 
+        if let diesel::result::Error::NotFound = e {
+            return HttpError {
+                code: StatusCode::NOT_FOUND,
+                error: "itemNotFound",
+                message: None,
+            }
+        };
+
         HttpError {
             code: StatusCode::INTERNAL_SERVER_ERROR,
             error: "dbError",

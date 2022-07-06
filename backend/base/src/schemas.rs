@@ -12,6 +12,7 @@ table! {
         id -> Int4,
         user_id -> Int4,
         name -> Varchar,
+        state -> Varchar,
         created_at -> Timestamp,
     }
 }
@@ -21,6 +22,7 @@ table! {
         id -> Int4,
         folder_id -> Int4,
         title -> Nullable<Varchar>,
+        state -> Varchar,
         created_at -> Timestamp,
     }
 }

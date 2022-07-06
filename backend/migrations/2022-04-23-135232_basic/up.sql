@@ -20,6 +20,7 @@ create table folders(
     id      serial  primary key not null,
     user_id int             not null,
     name    varchar(255)    not null,
+    state   varchar(8)      not null default 'Clean' check (state in ('Clean', 'Deleted')),
     created_at  timestamp   not null default current_timestamp,
     constraint  fk_folders_user_id foreign key (user_id) references users (id) on delete no action on update no action
 );
@@ -28,7 +29,8 @@ create table notes(
     id      serial  primary key not null,
     folder_id   int             not null,
     title       varchar(255)    default null,
-    created_at  timestamp   not null default current_timestamp,
+    state       varchar(8)      not null default 'Clean' check (state in ('Clean', 'Deleted')),
+    created_at  timestamp       not null default current_timestamp,
     constraint  fk_notes_folder_id foreign key (folder_id) references folders (id) on delete cascade on update no action
 );
 
