@@ -63,17 +63,20 @@ pub async fn delete_folder(
             .select(notes::id)
             .load::<i32>(&conn)?;
 
-        diesel::update(folders::table.filter(folders::id.eq(folder_id)))
+        diesel::update(folders::table)
+            .filter(folders::id.eq(folder_id))
             .set((
                 folders::state.eq(State::Deleted),
                 folders::name.eq(""),
             ))
             .execute(&conn)?;
 
-        diesel::delete(notes::table.filter(notes::folder_id.eq(folder_id)))
+        diesel::delete(notes::table)
+            .filter(notes::folder_id.eq(folder_id))
             .execute(&conn)?;
 
-        diesel::delete(commits::table.filter(commits::note_id.eq_any(note_ids)))
+        diesel::delete(commits::table)
+            .filter(commits::note_id.eq_any(note_ids))
             .execute(&conn)
     })
         .await??;
@@ -123,6 +126,7 @@ pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>, user: User) -> Res
     let note_and_commit = block(move || {
         notes::table
             .filter(notes::id.eq(note_id.into_inner()))
+            .filter(notes::state.eq(State::Clean.as_str()))
             .filter(folders::user_id.eq(user.id))
             .inner_join(folders::table)
             .left_join(commits::table)
@@ -195,6 +199,7 @@ pub async fn update_note(
 
         let note_id = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
+            .filter(notes::state.eq(State::Clean.as_str()))
             .filter(folders::user_id.eq(user.id))
             .inner_join(folders::table)
             .select(notes::id)
@@ -221,4 +226,38 @@ pub async fn update_note(
     .await??;
 
     Ok(Json(commit))
+}
+
+#[delete("note/{note_id}")]
+pub async fn delete_note(
+    pool: Data<Pool>,
+    note_id: Path<i32>,
+    user: User,
+) -> Result<&'static str, HttpError> {
+    block(move || {
+        let conn = pool.get().unwrap();
+
+        let note_id = notes::table
+            .filter(notes::id.eq(note_id.into_inner()))
+            .filter(notes::state.eq(State::Clean.as_str()))
+            .filter(folders::user_id.eq(user.id))
+            .inner_join(folders::table)
+            .select(notes::id)
+            .first::<i32>(&conn)?;
+
+        diesel::update(notes::table)
+            .filter(notes::id.eq(note_id))
+            .set((
+                notes::state.eq(State::Deleted),
+                notes::title.eq(None as Option<State>),
+            ))
+            .execute(&conn)?;
+
+        diesel::delete(commits::table)
+            .filter(commits::note_id.eq(note_id))
+            .execute(&conn)
+    })
+    .await??;
+
+    Ok("")
 }

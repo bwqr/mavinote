@@ -43,7 +43,7 @@ pub enum State {
 }
 
 impl State {
-    fn as_str(&self) -> &'static str {
+    pub fn as_str(&self) -> &'static str {
         match self {
             State::Clean => "Clean",
             State::Deleted => "Deleted",
@@ -95,6 +95,7 @@ where
 }
 
 impl AppearsOnTable<base::schemas::folders::table> for State {}
+impl AppearsOnTable<base::schemas::notes::table> for State {}
 
 impl NonAggregate for State {}
 
