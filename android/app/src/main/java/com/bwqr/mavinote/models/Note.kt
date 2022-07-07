@@ -9,7 +9,7 @@ data class Note constructor(
     val title: String?,
     val text: String,
     val commitId: Int,
-    val state: NoteState
+    val state: State
 ) {
     companion object {
         fun deserialize(deserializer: Deserializer): Note {
@@ -21,7 +21,7 @@ data class Note constructor(
                 TraitHelpers.deserializeOption(deserializer) { it.deserialize_str() },
                 deserializer.deserialize_str(),
                 deserializer.deserialize_i32(),
-                NoteState.deserialize(deserializer)
+                State.deserialize(deserializer)
             )
 
             deserializer.decrease_container_depth()
@@ -31,20 +31,20 @@ data class Note constructor(
     }
 }
 
-enum class NoteState {
+enum class State {
     Clean,
     Modified,
     Deleted;
 
     companion object {
-        fun deserialize(deserializer: Deserializer): NoteState {
+        fun deserialize(deserializer: Deserializer): State {
             val index = deserializer.deserialize_variant_index()
 
             return when (index) {
                 0 -> Clean
                 1 -> Modified
                 2 -> Deleted
-                else -> throw DeserializationError("Unknown variant index for NoteState: $index")
+                else -> throw DeserializationError("Unknown variant index for State: $index")
             }
         }
     }

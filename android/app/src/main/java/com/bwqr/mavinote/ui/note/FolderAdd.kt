@@ -17,6 +17,9 @@ import kotlinx.coroutines.launch
 @Composable
 fun FolderAdd(navController: NavController) {
     val scope = rememberCoroutineScope()
+    var inProgress by remember {
+        mutableStateOf(false)
+    }
 
     var name by remember {
         mutableStateOf("")
@@ -36,14 +39,22 @@ fun FolderAdd(navController: NavController) {
         Button(
             modifier = Modifier.fillMaxWidth(),
             onClick = {
+                if (inProgress) {
+                    return@Button
+                }
+
+                inProgress = true
+
                 scope.launch {
                     try {
                         NoteViewModel().addFolder(name)
+
+                        navController.navigate(NoteScreens.Folders.route)
                     } catch (e: ReaxException) {
                         e.handle()
+                    } finally {
+                        inProgress = false
                     }
-
-                    navController.navigate(NoteScreens.Folders.route)
                 }
             }
         ) {

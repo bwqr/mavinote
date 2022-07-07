@@ -1,6 +1,8 @@
 create table folders(
     id      integer primary key autoincrement,
-    name    varchar(255)    not null
+    name    varchar(255)    not null,
+    state   varchar(8)      not null,
+    check(state in ('Clean', 'Modified', 'Deleted'))
 );
 
 create table notes(

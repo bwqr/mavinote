@@ -6,7 +6,7 @@ use tokio::sync::watch::{channel, Sender};
 
 use base::{Error, State, observable_map::{ObservableMap, Receiver}};
 
-use models::{Folder, Note, NoteState};
+use models::{Folder, Note, State as ModelState};
 
 pub mod models;
 mod requests;
@@ -43,7 +43,6 @@ pub async fn try_sync() -> Result<(), Error> {
     let folders = requests::fetch_folders().await?;
 
     for folder in folders {
-
         if let None = storage::fetch_folder(&mut conn, folder.id).await? {
             storage::create_folder(&mut conn, &folder).await?;
         }
@@ -56,11 +55,9 @@ pub async fn try_sync() -> Result<(), Error> {
 
             match note {
                 Some(note) => {
-                    if note.state == NoteState::Clean && note.commit_id < commit.commit_id {
+                    if note.state == ModelState::Clean && note.commit_id < commit.commit_id {
                         log::debug!("note {} needs to be pulled", note.id);
                         if let Some(note) = requests::fetch_note(commit.note_id).await? {
-                            let note = note.into();
-
                             storage::replace_note(&mut conn, &note).await?;
 
                             NOTES_MAP.get().unwrap().update_modify(folder.id, |state| {
@@ -71,14 +68,14 @@ pub async fn try_sync() -> Result<(), Error> {
                                 }
                             });
                         }
-                    } else if note.state != NoteState::Clean && note.commit_id == commit.commit_id {
+                    } else if note.state != ModelState::Clean && note.commit_id == commit.commit_id {
                         log::debug!("note {} needs to be pushed", note.id);
                         let commit = requests::update_note(note.id, note.title.as_ref().map(|t| t.as_str()), note.text.as_str()).await?;
                         let mut note = note.clone();
-                        note.state = NoteState::Clean;
+                        note.state = ModelState::Clean;
                         note.commit_id = commit.commit_id;
                         storage::replace_note(&mut conn, &note).await?;
-                    } else if note.state != NoteState::Clean && note.commit_id < commit.commit_id {
+                    } else if note.state != ModelState::Clean && note.commit_id < commit.commit_id {
                         log::debug!("note {} needs to be synced", note.id);
                     } else {
                         log::debug!("note {} is up to date", note.id);

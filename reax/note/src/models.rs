@@ -6,6 +6,7 @@ use sqlx::{FromRow, Type};
 pub struct Folder {
     pub id: i32,
     pub name: String,
+    pub state: State,
 }
 
 #[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
@@ -16,11 +17,11 @@ pub struct Note {
     pub title: Option<String>,
     pub text: String,
     pub commit_id: i32,
-    pub state: NoteState,
+    pub state: State,
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Type)]
-pub enum NoteState {
+pub enum State {
     Clean,
     Modified,
     Deleted,

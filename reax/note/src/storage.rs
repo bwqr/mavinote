@@ -1,7 +1,7 @@
 use base::Error;
 use sqlx::{Sqlite, pool::PoolConnection};
 
-use crate::models::{Folder, Note, NoteState};
+use crate::models::{Folder, Note, State};
 
 pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {
     sqlx::query_as("select * from folders order by id")
@@ -19,9 +19,10 @@ pub async fn fetch_folder(conn: &mut PoolConnection<Sqlite>, folder_id: i32) -> 
 }
 
 pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, folder: &Folder) -> Result<(), Error> {
-    sqlx::query("insert into folders (id, name) values(?, ?)")
+    sqlx::query("insert into folders (id, name, state) values(?, ?, ?)")
         .bind(folder.id)
         .bind(folder.name.as_str())
+        .bind(&folder.state)
         .execute(conn)
         .await
         .map(|_| ())
@@ -75,7 +76,7 @@ pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: i32, title:
     sqlx::query("update notes set title=?, text=?, state=? where id=?")
         .bind(title.as_ref())
         .bind(text)
-        .bind(NoteState::Modified)
+        .bind(State::Modified)
         .bind(note_id)
         .execute(conn)
         .await

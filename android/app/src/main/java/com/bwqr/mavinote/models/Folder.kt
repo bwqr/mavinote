@@ -5,6 +5,7 @@ import com.novi.serde.Deserializer
 data class Folder constructor(
     val id: Int,
     val name: String,
+    val state: State
 ) {
     companion object {
         fun deserialize(deserializer: Deserializer): Folder {
@@ -13,6 +14,7 @@ data class Folder constructor(
             val folder = Folder(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_str(),
+                State.deserialize(deserializer)
             )
 
             deserializer.decrease_container_depth()

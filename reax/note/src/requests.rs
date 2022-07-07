@@ -4,7 +4,7 @@ use base::{Error, Store, Config};
 use reqwest::{Client, StatusCode};
 use serde::Serialize;
 
-use crate::{models::Folder, responses::{Commit, Note}};
+use crate::{models::{Folder, Note}, responses::Commit};
 
 #[derive(Serialize)]
 #[serde(rename_all = "camelCase")]
