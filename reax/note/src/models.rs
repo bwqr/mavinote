@@ -1,23 +1,50 @@
 use serde::{Serialize, Deserialize};
 use sqlx::{FromRow, Type};
 
-#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
+#[derive(Copy, Clone)]
+pub struct LocalId(pub i32);
+#[derive(Copy, Clone)]
+pub struct RemoteId(pub i32);
+
+#[derive(Clone, Debug, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: i32,
+    pub remote_id: Option<i32>,
     pub name: String,
     pub state: State,
 }
 
-#[derive(Clone, Debug, Deserialize, FromRow, Serialize)]
+impl Folder {
+    pub fn local_id(&self) -> LocalId {
+        LocalId(self.id)
+    }
+
+    pub fn remote_id(&self) -> Option<RemoteId> {
+        self.remote_id.map(|id| RemoteId(id))
+    }
+}
+
+#[derive(Clone, Debug, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Note {
     pub id: i32,
     pub folder_id: i32,
+    pub remote_id: Option<i32>,
     pub title: Option<String>,
     pub text: String,
     pub commit_id: i32,
     pub state: State,
+}
+
+impl Note {
+    pub fn local_id(&self) -> LocalId {
+        LocalId(self.id)
+    }
+
+    pub fn remote_id(&self) -> Option<RemoteId> {
+        self.remote_id.map(|id| RemoteId(id))
+    }
 }
 
 #[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Type)]

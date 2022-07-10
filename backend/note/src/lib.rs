@@ -17,5 +17,6 @@ pub fn register(config: &mut ServiceConfig) {
             .service(handlers::create_note)
             .service(handlers::fetch_note)
             .service(handlers::update_note)
+            .service(handlers::delete_note)
     );
 }

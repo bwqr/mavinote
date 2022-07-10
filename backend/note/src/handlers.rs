@@ -67,7 +67,7 @@ pub async fn delete_folder(
             .filter(folders::id.eq(folder_id))
             .set((
                 folders::state.eq(State::Deleted),
-                folders::name.eq(""),
+                //folders::name.eq(""),
             ))
             .execute(&conn)?;
 
@@ -239,7 +239,6 @@ pub async fn delete_note(
 
         let note_id = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
-            .filter(notes::state.eq(State::Clean.as_str()))
             .filter(folders::user_id.eq(user.id))
             .inner_join(folders::table)
             .select(notes::id)
@@ -249,7 +248,7 @@ pub async fn delete_note(
             .filter(notes::id.eq(note_id))
             .set((
                 notes::state.eq(State::Deleted),
-                notes::title.eq(None as Option<State>),
+                //notes::title.eq(None as Option<State>),
             ))
             .execute(&conn)?;
 

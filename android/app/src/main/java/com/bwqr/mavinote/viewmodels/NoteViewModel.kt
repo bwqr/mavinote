@@ -57,11 +57,39 @@ class NoteViewModel {
         }
     }
 
+    suspend fun folder(folderId: Int): Folder? = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { deserializer ->
+                cont.resume(TraitHelpers.deserializeOption(deserializer) {
+                    Folder.deserialize(it)
+                })
+            },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _folder(it, folderId) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
     suspend fun addFolder(name: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
             onStart = { _addFolder(it, name) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
+    suspend fun deleteFolder(folderId: Int): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit)},
+            onError = { cont.resumeWithException(it)},
+            onStart = { _deleteFolder(it, folderId) }
         ))
 
         cont.invokeOnCancellation {
@@ -114,11 +142,23 @@ class NoteViewModel {
         }
     }
 
-    suspend fun updateNote(noteId: Int, folderId: Int, text: String): Unit = suspendCancellableCoroutine { cont ->
+    suspend fun updateNote(noteId: Int, text: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _updateNote(it, noteId, folderId, text) }
+            onStart = { _updateNote(it, noteId, text) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
+    suspend fun deleteNote(noteId: Int): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _deleteNote(it, noteId) }
         ))
 
         cont.invokeOnCancellation {
@@ -129,9 +169,12 @@ class NoteViewModel {
     private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _folders(streamId: Int): Long
+    private external fun _folder(onceId: Int, folderId: Int): Long
     private external fun _addFolder(onceId: Int, name: String): Long
+    private external fun _deleteFolder(onceId: Int, folderId: Int): Long
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
     private external fun _note(onceId: Int, noteId: Int): Long
     private external fun _createNote(onceId: Int, folderId: Int): Long
-    private external fun _updateNote(onceId: Int, noteId: Int, folderId: Int, text: String): Long
+    private external fun _updateNote(onceId: Int, noteId: Int, text: String): Long
+    private external fun _deleteNote(onceId: Int, noteId: Int): Long
 }

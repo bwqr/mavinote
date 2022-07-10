@@ -14,7 +14,7 @@ pub struct CreateFolderRequest {
 pub struct CreateNoteRequest {
     #[sanitize(skip_sanitizing)]
     pub folder_id: i32,
-    pub title: String,
+    pub title: Option<String>,
     pub text: String,
 }
 

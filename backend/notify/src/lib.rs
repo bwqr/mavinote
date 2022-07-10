@@ -14,8 +14,8 @@ mod server;
 mod session;
 
 #[get("/connect")]
-async fn connect(manager: web::Data<Addr<SessionManager>>, req: HttpRequest, stream: web::Payload) -> actix_web::error::Result<HttpResponse> {
-    let session: Session = manager.send(CreateSession { user_id: 1 })
+async fn connect(manager: web::Data<Addr<SessionManager>>, req: HttpRequest, stream: web::Payload, user: User) -> actix_web::error::Result<HttpResponse> {
+    let session: Session = manager.send(CreateSession { user_id: user.id })
         .await
         .map_err(|e| {
             log::error!("failed to create session from manager {e:?}");
@@ -42,7 +42,7 @@ async fn send_message(server: web::Data<Addr<Server>>, user_id: web::Path<i32>, 
 pub fn register(config: &mut ServiceConfig) {
     config.service(
         scope("api/notify")
-            //.wrap(AuthUser)
+            .wrap(AuthUser)
             .service(connect)
             .service(send_message)
     );

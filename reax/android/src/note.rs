@@ -22,6 +22,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
     Box::into_raw(Box::new(handle)) as jlong
 }
 
+
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
     _: JNIEnv,
@@ -73,6 +74,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folder(
+    _: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    folder_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::folder(folder_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
     env: JNIEnv,
     _: JObject,
@@ -83,6 +100,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
 
     let handle = spawn(async move {
         let res = note::create_folder(name).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteFolder(
+    _: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    folder_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::delete_folder(folder_id).await;
 
         send_once(once_id, res);
     });
@@ -156,13 +189,28 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
     _: JObject,
     once_id: jint,
     note_id: jint,
-    folder_id: jint,
     text: JString,
 ) -> jlong {
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::update_note(note_id, folder_id, text).await;
+        let res = note::update_note(note_id, text).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteNote(
+    _: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    note_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::delete_note(note_id).await;
 
         send_once(once_id, res);
     });

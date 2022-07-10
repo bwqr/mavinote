@@ -1,6 +1,7 @@
 package com.bwqr.mavinote.ui.note
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.FloatingActionButton
@@ -10,6 +11,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
 import androidx.navigation.NavController
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.ReaxException
@@ -37,11 +39,15 @@ fun Folders(navController: NavController) {
             .launchIn(this)
     }
 
-    LazyColumn {
-        items(folders) { folder ->
-            Text(folder.name, Modifier.clickable {
-                navController.navigate("notes/${folder.id}")
-            })
+    Column {
+        Text(text = "Folders", fontWeight = FontWeight.Bold)
+
+        LazyColumn {
+            items(folders) { folder ->
+                Text(folder.name, Modifier.clickable {
+                    navController.navigate("notes/${folder.id}")
+                })
+            }
         }
     }
 }

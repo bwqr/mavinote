@@ -6,6 +6,7 @@ import com.novi.serde.Deserializer
 data class Note constructor(
     val id: Int,
     val folderId: Int,
+    val remoteId: Int?,
     val title: String?,
     val text: String,
     val commitId: Int,
@@ -18,6 +19,7 @@ data class Note constructor(
             val note = Note(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
+                TraitHelpers.deserializeOption(deserializer) { it.deserialize_i32() },
                 TraitHelpers.deserializeOption(deserializer) { it.deserialize_str() },
                 deserializer.deserialize_str(),
                 deserializer.deserialize_i32(),

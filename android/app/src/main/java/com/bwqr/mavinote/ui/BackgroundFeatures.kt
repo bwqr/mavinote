@@ -88,9 +88,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
                 NoteScreens.Note.route,
                 arguments = listOf(navArgument("noteId") { type = NavType.IntType })
             ) { backStackEntry ->
-                Note(
-                    backStackEntry.arguments?.getInt("noteId") ?: 0
-                )
+                Note(navController, backStackEntry.arguments?.getInt("noteId") ?: 0)
             }
         }
     }
