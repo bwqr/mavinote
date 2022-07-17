@@ -21,7 +21,6 @@ struct FoldersView: View {
                 Text("Add Folder")
             }
         }
-        .navigationBarBackButtonHidden(true)
         .navigationBarTitle("Folders")
         .onAppear {
             task = Task {

@@ -5,6 +5,7 @@ struct NoteView : View {
     var noteId: Int32?
     @State var task: Task<(), Never>?
     @State var text = ""
+    @State var updateNote: Bool = false
     @EnvironmentObject var appState: AppState
 
     var body: some View {
@@ -19,6 +20,7 @@ struct NoteView : View {
             task = Task {
                 do {
                     if let note = try await NoteViewModel().note(noteId) {
+                        updateNote = true
                         text = note.text
                     }
                 } catch {
@@ -26,20 +28,17 @@ struct NoteView : View {
                 }
             }
         }.onDisappear {
-            if let task = task {
-                task.cancel()
-            }
+            task?.cancel()
 
             Task {
                 do {
-                    var noteId = noteId
-
-                    if noteId == nil {
-                        noteId = try await NoteViewModel().createNote(folderId)
-                    }
-
                     if let noteId = noteId {
-                        try await NoteViewModel().updateNote(noteId, folderId, text)
+                        if updateNote {
+                            try await NoteViewModel().updateNote(noteId, text)
+                        }
+                    } else {
+                        let noteId = try await NoteViewModel().createNote(folderId)
+                        try await NoteViewModel().updateNote(noteId, text)
                     }
                 } catch {
                     print("failed to update or create note", error)

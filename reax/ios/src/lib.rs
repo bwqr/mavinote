@@ -12,7 +12,6 @@ mod auth;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
-static DATABASE: OnceCell<Pool<Sqlite>> = OnceCell::new();
 
 #[derive(Serialize)]
 enum Message<T: Serialize> {
@@ -55,11 +54,12 @@ where
 }
 
 #[no_mangle]
-pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
+pub extern fn reax_init(api_url: *const c_char, notify_url: *const c_char, storage_dir: *const c_char) {
     let api_url = unsafe { CStr::from_ptr(api_url).to_str().unwrap().to_string() };
+    let notify_url = unsafe { CStr::from_ptr(notify_url).to_str().unwrap().to_string() };
     let storage_dir = unsafe { CStr::from_ptr(storage_dir).to_str().unwrap().to_string() };
 
-    std::env::set_var("RUST_LOG", "debug,sqlx=warn");
+    std::env::set_var("RUST_LOG", "debug");
     env_logger::init();
 
     ASYNC_RUNTIME
@@ -98,7 +98,8 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
 
         pool
     });
-    DATABASE.set(pool.clone()).unwrap();
+
+    runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
 
     runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
 
@@ -108,7 +109,7 @@ pub extern fn reax_init(api_url: *const c_char, storage_dir: *const c_char) {
     }));
 
     ::note::init();
-
+    ::notify::init(notify_url);
     ::log::info!("reax runtime is initialized");
 }
 

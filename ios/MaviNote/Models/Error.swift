@@ -16,6 +16,14 @@ enum ReaxError : Error {
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for ReaxError")
         }
     }
+
+    func handle(_ appState: AppState) {
+        switch self {
+        case .Http(.Unauthorized): appState.navigate(Screen.Login)
+        case .Http(.NoConnection): appState.emit(BusEvent.NoConnection)
+        default: debugPrint("Unhandled ReaxError \(self)")
+        }
+    }
 }
 
 enum HttpError {

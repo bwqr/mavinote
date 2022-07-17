@@ -22,7 +22,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
     Box::into_raw(Box::new(handle)) as jlong
 }
 
-
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
     _: JNIEnv,

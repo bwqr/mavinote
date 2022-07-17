@@ -28,6 +28,7 @@
 		ACB447032826710C00CCF027 /* MaviNoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB447022826710C00CCF027 /* MaviNoteTests.swift */; };
 		ACB4470D2826710C00CCF027 /* MaviNoteUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB4470C2826710C00CCF027 /* MaviNoteUITests.swift */; };
 		ACB4470F2826710C00CCF027 /* MaviNoteUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACB4470E2826710C00CCF027 /* MaviNoteUITestsLaunchTests.swift */; };
+		ACE5665B287DB43600586412 /* BackgroundFeaturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACE5665A287DB43600586412 /* BackgroundFeaturesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -72,6 +73,7 @@
 		ACB447082826710C00CCF027 /* MaviNoteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MaviNoteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACB4470C2826710C00CCF027 /* MaviNoteUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaviNoteUITests.swift; sourceTree = "<group>"; };
 		ACB4470E2826710C00CCF027 /* MaviNoteUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MaviNoteUITestsLaunchTests.swift; sourceTree = "<group>"; };
+		ACE5665A287DB43600586412 /* BackgroundFeaturesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundFeaturesView.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -143,6 +145,7 @@
 			children = (
 				AC88477E2827C77A00EFA78A /* Auth */,
 				AC42577A2826EE490084BCB5 /* Note */,
+				ACE5665A287DB43600586412 /* BackgroundFeaturesView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -368,6 +371,7 @@
 				ACB446F22826710600CCF027 /* MaviNoteApp.swift in Sources */,
 				AC3360522826BD4E005EB968 /* Error.swift in Sources */,
 				AC39D98F2826FBA100B7B6A4 /* Note.swift in Sources */,
+				ACE5665B287DB43600586412 /* BackgroundFeaturesView.swift in Sources */,
 				AC33604D2826B805005EB968 /* Folder.swift in Sources */,
 				AC39D99A28270F8400B7B6A4 /* FoldersView.swift in Sources */,
 				AC8847822827C79A00EFA78A /* AuthViewModel.swift in Sources */,

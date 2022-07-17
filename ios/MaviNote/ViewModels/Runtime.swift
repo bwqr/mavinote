@@ -112,7 +112,7 @@ class Runtime {
             .init(target: self, selector: #selector(initHandler), object: nil)
             .start()
  
-        reax_init("http://192.168.1.50:8050/api", storageDir)
+        reax_init("http://127.0.0.1:8050/api", "ws://127.0.0.1:8050/api/notify/connect", storageDir)
     }
    
     @objc private func initHandler() {

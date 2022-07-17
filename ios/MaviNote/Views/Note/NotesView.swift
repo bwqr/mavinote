@@ -11,7 +11,11 @@ struct NotesView: View {
             NavigationLink(destination: {
                 NoteView(folderId: folderId, noteId: note.id)
             }) {
-                Text(note.title)
+                if let title = note.title {
+                    Text(title)
+                } else {
+                    Text("New title")
+                }
             }
         }.onAppear {
             task = Task {

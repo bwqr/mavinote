@@ -21,7 +21,7 @@ struct LoginView : View {
                 Task {
                     do {
                         try await AuthViewModel().login(email, password)
-                        appState.navigate(Screen.Folders)
+                        appState.navigate(Screen.BackgroundFeatures)
                     } catch {
                         print("failed to login", error)
                     }
