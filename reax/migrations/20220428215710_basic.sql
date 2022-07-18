@@ -14,7 +14,7 @@ create table notes(
     text        text            not null,
     commit_id   integer         not null,
     state       varchar(8)      not null,
-    foreign key(folder_id)  references  folders(id),
+    foreign key(folder_id)  references  folders(id) on delete cascade on update no action,
     check(state in ('Clean', 'Modified', 'Deleted'))
 );
 
