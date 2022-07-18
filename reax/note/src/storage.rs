@@ -45,10 +45,11 @@ pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<
             .await
             .map(|_| ())?;
 
-        Ok(sqlx::query_as("select * from folders order by id desc")
+        sqlx::query_as("select * from folders order by id desc")
             .fetch_optional(conn)
-            .await?
-            .unwrap())
+            .await
+            .map(|opt| opt.unwrap())
+            .map_err(|e| e.into())
     }))
      .await
 }
@@ -57,11 +58,6 @@ pub async fn delete_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId)
     sqlx::query("delete from folders where id = ?")
         .bind(local_id.0)
         .execute(&mut *conn)
-        .await?;
-
-    sqlx::query("delete from notes where folder_id = ?")
-        .bind(local_id.0)
-        .execute(conn)
         .await
         .map(|_| ())
         .map_err(|e| e.into())
@@ -83,11 +79,12 @@ pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: Lo
 }
 
 pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId) -> Result<(), Error> {
-    if let Some(folder) = fetch_folder_by_remote_id(conn, remote_id).await? {
-        delete_folder(conn, folder.local_id()).await
-    } else {
-        Ok(())
-    }
+    sqlx::query("delete from folders where remote_id = ?")
+        .bind(remote_id.0)
+        .execute(conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
 }
 
 pub async fn fetch_all_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) -> Result<Vec<Note>, Error> {
@@ -135,10 +132,11 @@ pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, 
             .execute(&mut *conn)
             .await?;
 
-        Ok(sqlx::query_as("select * from notes order by id desc")
+        sqlx::query_as("select * from notes order by id desc")
             .fetch_optional(conn)
-            .await?
-            .unwrap())
+            .await
+            .map(|opt| opt.unwrap())
+            .map_err(|e| e.into())
     }))
      .await
 }
