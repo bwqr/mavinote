@@ -6,10 +6,24 @@ pub struct LocalId(pub i32);
 #[derive(Copy, Clone)]
 pub struct RemoteId(pub i32);
 
+#[derive(Debug, FromRow, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Account {
+    pub id: i32,
+    pub kind: AccountKind,
+}
+
+#[derive(Debug, PartialEq, Serialize, Type)]
+pub enum AccountKind {
+    Mavinote,
+    Local
+}
+
 #[derive(Clone, Debug, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: i32,
+    pub account_id: i32,
     pub remote_id: Option<i32>,
     pub name: String,
     pub state: State,

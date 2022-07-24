@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.viewmodels
 
+import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.TraitHelpers
@@ -32,6 +33,23 @@ class NoteViewModel {
             },
             onError = { cancel("", it) },
             onStart = { _activeSyncs(it) },
+            onComplete = { channel.close() }
+        ))
+
+        awaitClose {
+            Runtime.instance.abortStream(streamId)
+        }
+    }
+
+    fun accounts(): Flow<List<Account>> = callbackFlow {
+        val streamId = Runtime.instance.startStream(Stream(
+            onNext = { deserializer ->
+                trySend(TraitHelpers.deserializeList(deserializer) {
+                    Account.deserialize(it)
+                })
+            },
+            onError = { cancel("", it) },
+            onStart = { _accounts(it) },
             onComplete = { channel.close() }
         ))
 
@@ -73,11 +91,11 @@ class NoteViewModel {
         }
     }
 
-    suspend fun addFolder(name: String): Unit = suspendCancellableCoroutine { cont ->
+    suspend fun addFolder(accountId: Int, name: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _addFolder(it, name) }
+            onStart = { _addFolder(it, accountId, name) }
         ))
 
         cont.invokeOnCancellation {
@@ -168,9 +186,10 @@ class NoteViewModel {
 
     private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
+    private external fun _accounts(streamId: Int): Long
     private external fun _folders(streamId: Int): Long
     private external fun _folder(onceId: Int, folderId: Int): Long
-    private external fun _addFolder(onceId: Int, name: String): Long
+    private external fun _addFolder(onceId: Int, accountId: Int, name: String): Long
     private external fun _deleteFolder(onceId: Int, folderId: Int): Long
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
     private external fun _note(onceId: Int, noteId: Int): Long

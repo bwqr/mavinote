@@ -1,8 +1,10 @@
 package com.bwqr.mavinote.ui
 
-import androidx.compose.material.Scaffold
-import androidx.compose.material.Text
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.material.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
 import androidx.navigation.*
 import androidx.navigation.compose.*
@@ -17,6 +19,8 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 sealed class NoteScreens(val route: String) {
+    object Accounts : NoteScreens("accounts")
+    object AccountAdd : NoteScreens("account-add")
     object Folders : NoteScreens("folders")
     object FolderAdd : NoteScreens("folder-add")
     object Notes : NoteScreens("notes/{folderId}")
@@ -59,6 +63,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
         scaffoldState = scaffoldState,
         floatingActionButton = {
             when (backstackEntry.value?.destination?.route) {
+                NoteScreens.Accounts.route -> AccountFab(navController)
                 NoteScreens.Folders.route -> FolderFab(navController)
                 NoteScreens.Notes.route -> NotesFab(
                     navController,
@@ -67,10 +72,18 @@ fun BackgroundFeatures(mainNavController: NavController) {
             }
         },
         bottomBar = {
-            Text(text = "Syncing $syncing")
+            Row {
+                Text(text = "Syncing $syncing")
+                IconButton(onClick = { navController.navigate(NoteScreens.Accounts.route) }) {
+                    Icon(Icons.Default.AccountCircle, contentDescription = null)
+                }
+            }
         }
     ) {
         NavHost(navController, startDestination = NoteScreens.Folders.route) {
+            composable(NoteScreens.Accounts.route) { Accounts() }
+            composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
+
             composable(NoteScreens.Folders.route) { Folders(navController) }
             composable(NoteScreens.FolderAdd.route) { FolderAdd(navController) }
 

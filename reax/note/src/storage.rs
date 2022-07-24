@@ -2,10 +2,26 @@ use base::Error;
 use sqlx::Connection;
 use sqlx::{Sqlite, pool::PoolConnection};
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId};
+use crate::models::{Folder, Note, State, RemoteId, LocalId, Account};
 
-pub async fn fetch_all_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {
-    sqlx::query_as("select * from folders order by id")
+pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
+    sqlx::query_as("select * from accounts order by id")
+        .fetch_all(conn)
+        .await
+        .map_err(|e| e.into())
+}
+
+pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<Account>, Error> {
+    sqlx::query_as("select * from accounts where id = ?")
+        .bind(account_id)
+        .fetch_optional(conn)
+        .await
+        .map_err(|e| e.into())
+}
+
+pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {
+    sqlx::query_as("select * from folders where account_id = ? order by id")
+        .bind(account_id)
         .fetch_all(conn)
         .await
         .map_err(|e| e.into())
@@ -28,18 +44,20 @@ pub async fn fetch_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) 
         .map_err(|e| e.into())
 }
 
-pub async fn fetch_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId) -> Result<Option<Folder>, Error> {
-    sqlx::query_as("select * from folders where remote_id = ?")
+pub async fn fetch_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<Option<Folder>, Error> {
+    sqlx::query_as("select * from folders where remote_id = ? and account_id = ?")
         .bind(remote_id.0)
+        .bind(account_id)
         .fetch_optional(conn)
         .await
         .map_err(|e| e.into())
 }
 
-pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<RemoteId>, name: String) -> Result<Folder, Error> {
+pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<RemoteId>, account_id: i32, name: String) -> Result<Folder, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into folders (remote_id, name) values(?, ?)")
+        sqlx::query("insert into folders (remote_id, account_id, name) values(?, ?, ?)")
             .bind(remote_id.map(|id| id.0))
+            .bind(account_id)
             .bind(name.as_str())
             .execute(&mut *conn)
             .await
@@ -78,9 +96,10 @@ pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: Lo
         .map_err(|e| e.into())
 }
 
-pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId) -> Result<(), Error> {
-    sqlx::query("delete from folders where remote_id = ?")
+pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<(), Error> {
+    sqlx::query("delete from folders where remote_id = ? and account_id = ?")
         .bind(remote_id.0)
+        .bind(account_id)
         .execute(conn)
         .await
         .map(|_| ())
@@ -112,9 +131,10 @@ pub async fn fetch_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId) -> 
         .map_err(|e| e.into())
 }
 
-pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id: RemoteId) -> Result<Option<Note>, Error> {
-    sqlx::query_as("select * from notes where remote_id = ?")
+pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id: RemoteId, folder_id: LocalId) -> Result<Option<Note>, Error> {
+    sqlx::query_as("select * from notes where remote_id = ? and folder_id = ?")
         .bind(note_id.0)
+        .bind(folder_id.0)
         .fetch_optional(conn)
         .await
         .map_err(|e| e.into())

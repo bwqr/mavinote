@@ -44,6 +44,35 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1accounts(
+    _: JNIEnv,
+    _: JObject,
+    stream_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let mut rx = note::accounts().await;
+
+        match &*rx.borrow() {
+            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+            _ => {},
+        };
+
+        while rx.changed().await.is_ok() {
+            match &*rx.borrow() {
+                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+                State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+                _ => {},
+            };
+        }
+
+        send_stream::<Vec<note::models::Account>>(stream_id, Message::Complete);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
     _: JNIEnv,
     _: JObject,
@@ -93,12 +122,13 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
     env: JNIEnv,
     _: JObject,
     once_id: jint,
+    account_id: i32,
     name: JString,
 ) -> jlong {
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::create_folder(name).await;
+        let res = note::create_folder(account_id, name).await;
 
         send_once(once_id, res);
     });

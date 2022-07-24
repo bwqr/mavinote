@@ -6,7 +6,7 @@ use tokio::sync::watch::{channel, Sender};
 
 use base::{Error, State, observable_map::{ObservableMap, Receiver}};
 
-use models::{Folder, Note, State as ModelState, LocalId};
+use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind};
 
 pub mod models;
 mod requests;
@@ -14,6 +14,7 @@ mod responses;
 mod storage;
 mod sync;
 
+static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
 static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
 static ACTIVE_SYNCS: OnceCell<Sender<i32>> = OnceCell::new();
@@ -26,6 +27,7 @@ fn end_sync() {
 }
 
 pub fn init() {
+    ACCOUNTS.set(channel(State::default()).0).unwrap();
     FOLDERS.set(channel(State::default()).0).unwrap();
     NOTES_MAP.set(Arc::new(ObservableMap::new())).unwrap();
     ACTIVE_SYNCS.set(channel(0).0).unwrap();
@@ -40,18 +42,25 @@ pub async fn try_sync() -> Result<(), Error> {
 
     tokio::time::sleep(std::time::Duration::from_secs(2)).await;
 
+    let mavinote_account = if let Some(account) = storage::fetch_accounts(&mut conn).await?.into_iter().find(|a| a.kind == AccountKind::Mavinote) {
+        account
+    } else {
+        log::debug!("mavinote account is not found, not syncing");
+        return Ok(());
+    };
+
     let remote_folders = requests::fetch_folders().await?;
 
     for remote_folder in remote_folders {
         if let ModelState::Deleted = remote_folder.state {
-            storage::delete_folder_by_remote_id(&mut conn, remote_folder.id()).await?;
+            storage::delete_folder_by_remote_id(&mut conn, remote_folder.id(), mavinote_account.id).await?;
             continue
         }
 
-        let folder = if let Some(folder) = storage::fetch_folder_by_remote_id(&mut conn, remote_folder.id()).await? {
+        let folder = if let Some(folder) = storage::fetch_folder_by_remote_id(&mut conn, remote_folder.id(), mavinote_account.id).await? {
             folder
         } else {
-            storage::create_folder(&mut conn, Some(remote_folder.id()), remote_folder.name.clone()).await?
+            storage::create_folder(&mut conn, Some(remote_folder.id()), mavinote_account.id, remote_folder.name.clone()).await?
         };
 
         let commits = match requests::fetch_commits(remote_folder.id()).await {
@@ -64,7 +73,7 @@ pub async fn try_sync() -> Result<(), Error> {
         };
 
         for commit in commits {
-            let note = storage::fetch_note_by_remote_id(&mut conn, commit.note_id()).await?;
+            let note = storage::fetch_note_by_remote_id(&mut conn, commit.note_id(), folder.local_id()).await?;
 
             if let Some(note) = note {
                 if ModelState::Clean == note.state && note.commit_id < commit.commit_id {
@@ -92,7 +101,10 @@ pub async fn try_sync() -> Result<(), Error> {
         }
     }
 
-    let local_folders = storage::fetch_all_folders(&mut conn).await?;
+    let local_folders = storage::fetch_account_folders(&mut conn, mavinote_account.id).await?
+        .into_iter()
+        .filter(|folder| folder.account_id == mavinote_account.id)
+        .collect::<Vec<Folder>>();
 
     for local_folder in local_folders {
         if let ModelState::Deleted = local_folder.state {
@@ -173,6 +185,25 @@ pub async fn sync() -> Result<(), Error> {
     res
 }
 
+pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Error>> {
+    let sender = ACCOUNTS.get().unwrap();
+    let load = match *sender.borrow() {
+        State::Initial | State::Err(_) => true,
+        _ => false,
+    };
+
+    if load {
+        sender.send_replace(State::Loading);
+
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+        sender.send_replace(storage::fetch_accounts(&mut conn).await.into());
+    }
+
+    sender.subscribe()
+
+}
+
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
     let sender = FOLDERS.get().unwrap();
     let load = match *sender.borrow() {
@@ -196,18 +227,30 @@ pub async fn folder(folder_id: i32) -> Result<Option<Folder>, Error> {
     storage::fetch_folder(&mut conn, LocalId(folder_id)).await
 }
 
-pub async fn create_folder(name: String) -> Result<(), Error> {
+pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-    let remote_id = match requests::create_folder(name.as_str()).await {
-        Ok(folder) => Some(folder.id()),
-        Err(e) => {
-            log::debug!("failed to create folder in remote {e:?}");
-            None
-        },
+    let account = storage::fetch_account(&mut conn, account_id)
+        .await?
+        .ok_or_else(|| {
+            log::error!("trying to create a folder in an unknown account, {account_id}");
+
+            return Error::Message("unknown account".to_string());
+        })?;
+
+    let remote_id = if account.kind == AccountKind::Mavinote {
+        match requests::create_folder(name.as_str()).await {
+            Ok(folder) => Some(folder.id()),
+            Err(e) => {
+                log::debug!("failed to create folder in remote {e:?}");
+                None
+            },
+        }
+    } else {
+        None
     };
 
-    let folder = storage::create_folder(&mut conn, remote_id, name).await?;
+    let folder = storage::create_folder(&mut conn, remote_id, account_id, name).await?;
 
     FOLDERS.get().unwrap().send_modify(move |state| {
         if let State::Ok(folders) = state {
@@ -276,20 +319,33 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
         .ok_or_else(|| {
             log::error!("trying to create a note in a folder with id {folder_id} which does not exist");
 
-            return Error::Message("unknown folder id".to_string());
+            return Error::Message("unknown folder".to_string());
         })?;
+
+    let account = storage::fetch_account(&mut conn, folder.account_id)
+        .await?
+        .ok_or_else(|| {
+            log::error!("a folder with unknown account id {} cannot be exist", folder.account_id);
+
+            return Error::Message("unknown account".to_string());
+        })?;
+
 
     let title = Some("".to_string());
     let text = "".to_string();
 
-    let remote_note = if let Some(remote_id) = folder.remote_id() {
-        match requests::create_note(remote_id, title.as_ref().map(|title| title.as_str()), text.as_str()).await {
-            Ok(note) => Some(note),
-            Err(e) => {
-                log::debug!("failed to create note in remote, {e:?}");
+    let remote_note = if account.kind == AccountKind::Mavinote {
+        if let Some(remote_id) = folder.remote_id() {
+            match requests::create_note(remote_id, title.as_ref().map(|title| title.as_str()), text.as_str()).await {
+                Ok(note) => Some(note),
+                Err(e) => {
+                    log::debug!("failed to create note in remote, {e:?}");
 
-                None
-            },
+                    None
+                },
+            }
+        } else {
+            None
         }
     } else {
         None
