@@ -24,7 +24,7 @@ import com.bwqr.mavinote.ui.NoteScreens
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.zip
+import kotlinx.coroutines.flow.combine
 
 data class AccountWithFolders(
     val account: Account,
@@ -41,7 +41,7 @@ fun Folders(navController: NavController) {
     LaunchedEffect(key1 = 1) {
         NoteViewModel()
             .accounts()
-            .zip(NoteViewModel().folders()) { accounts, folders ->
+            .combine(NoteViewModel().folders()) { accounts, folders ->
                 accounts.map {
                     AccountWithFolders(
                         it,
