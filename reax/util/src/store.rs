@@ -60,4 +60,17 @@ impl Store for FileStore {
                 .map_err(|e| e.into())
         })
     }
+
+    fn remove<'a>(&'a self, key: &'a str) -> Pin<Box<dyn Future<Output = Result<(), base::Error>> + Send + 'a>> {
+        Box::pin(async move {
+            let mut conn = self.pool.acquire().await?;
+
+            sqlx::query("delete from store where key = ?")
+                .bind(key)
+                .execute(&mut conn)
+                .await
+                .map(|_| ())
+                .map_err(|e| e.into())
+        })
+    }
 }

@@ -219,6 +219,33 @@ pub async fn create_account(email: String, password: String) -> Result<(), Error
     Ok(())
 }
 
+pub async fn delete_account(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let store = runtime::get::<Arc<dyn Store>>().unwrap();
+
+    let account = storage::fetch_account(&mut conn, account_id).await?
+        .ok_or_else(|| {
+            log::error!("trying to delete an unknown account, {account_id}");
+
+            Error::Message("unknown account".to_string())
+        })?;
+
+    if account.kind != AccountKind::Mavinote {
+        log::error!("can delete only mavinote account");
+
+        return Err(Error::Message("can delete only mavinote account".to_string()));
+    }
+
+    storage::delete_account(&mut conn, account_id).await?;
+    store.remove("token").await?;
+    store.remove("mavinote_email").await?;
+
+    ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.into());
+    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
+
+    Ok(())
+}
+
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
     let sender = FOLDERS.get().unwrap();
     let load = match *sender.borrow() {

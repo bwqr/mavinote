@@ -93,6 +93,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteAccount(
+    _: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    account_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::delete_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
     _: JNIEnv,
     _: JObject,

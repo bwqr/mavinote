@@ -44,6 +44,15 @@ pub async fn create_account(conn: &mut PoolConnection<Sqlite>, account_kind: Acc
      .await
 }
 
+pub async fn delete_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
+    sqlx::query("delete from accounts where id = ?")
+        .bind(account_id)
+        .execute(&mut *conn)
+        .await
+        .map(|_| ())
+        .map_err(|e| e.into())
+}
+
 pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {
     sqlx::query_as("select * from folders where state != ? order by id")
         .bind(State::Deleted)
