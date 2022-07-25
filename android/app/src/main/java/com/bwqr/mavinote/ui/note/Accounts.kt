@@ -3,11 +3,8 @@ package com.bwqr.mavinote.ui.note
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
+import androidx.compose.material.Button
 import androidx.compose.material.Text
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.ExperimentalUnitApi
@@ -24,7 +21,7 @@ import kotlinx.coroutines.flow.onEach
 
 @OptIn(ExperimentalUnitApi::class)
 @Composable
-fun Accounts() {
+fun Accounts(navController: NavController) {
     var accounts by remember { mutableStateOf(listOf<Account>()) }
 
     LaunchedEffect(key1 = 0) {
@@ -51,13 +48,9 @@ fun Accounts() {
                 Text(account.kind.toString())
             }
         }
-    }
-}
 
-
-@Composable
-fun AccountFab(navController: NavController) {
-    FloatingActionButton(onClick = { navController.navigate(NoteScreens.AccountAdd.route) }) {
-        Icon(Icons.Filled.Add, contentDescription = null)
+        Button(onClick = { navController.navigate(NoteScreens.AccountAdd.route) }) {
+            Text("Add Mavinote account")
+        }
     }
 }

@@ -2,7 +2,7 @@ use base::Error;
 use sqlx::Connection;
 use sqlx::{Sqlite, pool::PoolConnection};
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId, Account};
+use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind};
 
 pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
     sqlx::query_as("select * from accounts order by id")
@@ -25,6 +25,23 @@ pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id
         .fetch_all(conn)
         .await
         .map_err(|e| e.into())
+}
+
+pub async fn create_account(conn: &mut PoolConnection<Sqlite>, account_kind: AccountKind) -> Result<Account, Error> {
+    conn.transaction(|conn| Box::pin(async move {
+        sqlx::query("insert into accounts (kind) values(?)")
+            .bind(account_kind)
+            .execute(&mut *conn)
+            .await
+            .map(|_| ())?;
+
+        sqlx::query_as("select * from accounts order by id desc")
+            .fetch_optional(conn)
+            .await
+            .map(|opt| opt.unwrap())
+            .map_err(|e| e.into())
+    }))
+     .await
 }
 
 pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {

@@ -58,6 +58,18 @@ class NoteViewModel {
         }
     }
 
+    suspend fun addAccount(email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _addAccount(it, email, password) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
     fun folders(): Flow<List<Folder>> = callbackFlow {
         val streamId = Runtime.instance.startStream(Stream(
             onNext = { deserializer ->
@@ -187,6 +199,7 @@ class NoteViewModel {
     private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _accounts(streamId: Int): Long
+    private external fun _addAccount(onceId: Int, email: String, password: String): Long
     private external fun _folders(streamId: Int): Long
     private external fun _folder(onceId: Int, folderId: Int): Long
     private external fun _addFolder(onceId: Int, accountId: Int, name: String): Long

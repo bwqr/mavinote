@@ -1,19 +1,22 @@
 package com.bwqr.mavinote.ui
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountCircle
 import androidx.compose.runtime.*
-import androidx.navigation.*
-import androidx.navigation.compose.*
-import com.bwqr.mavinote.MainScreens
+import androidx.navigation.NavController
+import androidx.navigation.NavType
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.Bus
 import com.bwqr.mavinote.viewmodels.BusEvent
 import com.bwqr.mavinote.viewmodels.NoteViewModel
-import com.bwqr.mavinote.ui.note.*
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
@@ -42,7 +45,9 @@ fun BackgroundFeatures(mainNavController: NavController) {
                     BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
                         "No internet connection"
                     )
-                    BusEvent.RequireAuthorization -> mainNavController.navigate(MainScreens.Login.route)
+                    BusEvent.RequireAuthorization -> scaffoldState.snackbarHostState.showSnackbar(
+                        "Mavinote account requires authorization"
+                    )
                 }
             }
         }
@@ -63,7 +68,6 @@ fun BackgroundFeatures(mainNavController: NavController) {
         scaffoldState = scaffoldState,
         floatingActionButton = {
             when (backstackEntry.value?.destination?.route) {
-                NoteScreens.Accounts.route -> AccountFab(navController)
                 NoteScreens.Folders.route -> FolderFab(navController)
                 NoteScreens.Notes.route -> NotesFab(
                     navController,
@@ -81,7 +85,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
         }
     ) {
         NavHost(navController, startDestination = NoteScreens.Folders.route) {
-            composable(NoteScreens.Accounts.route) { Accounts() }
+            composable(NoteScreens.Accounts.route) { Accounts(navController) }
             composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
 
             composable(NoteScreens.Folders.route) { Folders(navController) }

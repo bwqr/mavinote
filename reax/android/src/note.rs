@@ -73,6 +73,26 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1accounts(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
+    env: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    email: JString,
+    password: JString,
+) -> jlong {
+    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+    let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::create_account(email, password).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
     _: JNIEnv,
     _: JObject,

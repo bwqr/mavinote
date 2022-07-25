@@ -18,7 +18,6 @@ use serde::Serialize;
 use tokio::task::JoinHandle;
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
-mod auth;
 mod log;
 mod note;
 mod notify;

@@ -4,7 +4,7 @@ use once_cell::sync::OnceCell;
 use sqlx::{Pool, Sqlite};
 use tokio::sync::watch::{channel, Sender};
 
-use base::{Error, State, observable_map::{ObservableMap, Receiver}};
+use base::{Error, State, observable_map::{ObservableMap, Receiver}, Store};
 
 use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind};
 
@@ -22,6 +22,7 @@ static ACTIVE_SYNCS: OnceCell<Sender<i32>> = OnceCell::new();
 fn start_sync() {
     ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs += 1; });
 }
+
 fn end_sync() {
     ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs -= 1; });
 }
@@ -202,6 +203,20 @@ pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Erro
 
     sender.subscribe()
 
+}
+
+pub async fn create_account(email: String, password: String) -> Result<(), Error> {
+    let store = runtime::get::<Arc<dyn Store>>().unwrap();
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let token = auth::login(email.as_str(), password.as_str()).await?;
+
+    storage::create_account(&mut conn, AccountKind::Mavinote).await?;
+
+    store.put("token", token.token.as_str()).await?;
+    store.put("mavinote_email", email.as_str()).await?;
+
+    Ok(())
 }
 
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {

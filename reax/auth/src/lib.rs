@@ -1,15 +1,18 @@
 use std::sync::Arc;
 
-use base::{Error, Config, models::Token, Store};
+use base::{Error, Config, models::Token};
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
 
 mod requests;
 
-pub async fn login(store: Arc<dyn Store>, client: Arc<Client>, config: Arc<Config>, email: String, password: String) -> Result<(), Error> {
-    let email = email.as_str().trim();
-    let password = password.as_str().trim();
+pub async fn login(email: &str, password: &str) -> Result<Token, Error> {
+    let client = runtime::get::<Arc<Client>>().unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let email = email.trim();
+    let password = password.trim();
 
     if email.is_empty() || password.is_empty() {
         return Err(Error::Message("Email and password must be filled out".to_string()));
@@ -27,15 +30,9 @@ pub async fn login(store: Arc<dyn Store>, client: Arc<Client>, config: Arc<Confi
         return Err(Error::Message("Email or password is invalid".to_string()));
     }
 
-    let token = response
+    response
         .error_for_status()?
         .json::<Token>()
-        .await?;
-
-    if let Err(e) = store.put("token", token.token.as_str()).await {
-        log::error!("failed to set token, {:?}", e);
-    }
-
-    log::debug!("received token {}", token.token);
-    Ok(())
+        .await
+        .map_err(|e| e.into())
 }
