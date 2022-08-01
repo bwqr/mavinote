@@ -7,12 +7,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Card
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -71,8 +69,26 @@ fun FoldersView(
     navController: NavController,
     accounts: List<AccountWithFolders>,
 ) {
+    var expanded by remember { mutableStateOf(false) }
+
     Column(modifier = Modifier.padding(12.dp)) {
-        Title("Folders", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
+        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+            Title(
+                "Folders",
+                modifier = Modifier
+                    .padding(0.dp, 0.dp, 0.dp, 12.dp)
+                    .weight(1f)
+            )
+            IconButton(onClick = { expanded = true }) {
+                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+                DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+                    DropdownMenuItem(onClick = { navController.navigate(NoteScreens.Accounts.route) }) {
+                        Text(text = "Manage Accounts")
+                    }
+                }
+            }
+        }
+
 
         for (account in accounts) {
             Row(
@@ -101,15 +117,22 @@ fun FoldersView(
                     .fillMaxWidth()
                     .padding(0.dp, 0.dp, 0.dp, 18.dp)
             ) {
-                LazyColumn {
-                    items(account.folders) { folder ->
-                        Text(
-                            folder.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { navController.navigate("notes/${folder.id}") }
-                                .padding(16.dp, 12.dp)
-                        )
+                if (account.folders.isEmpty()) {
+                    Text(
+                        text = "There is no folder in this account",
+                        modifier = Modifier.padding(16.dp, 12.dp)
+                    )
+                } else {
+                    LazyColumn {
+                        items(account.folders) { folder ->
+                            Text(
+                                folder.name,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { navController.navigate("notes/${folder.id}") }
+                                    .padding(16.dp, 12.dp)
+                            )
+                        }
                     }
                 }
             }

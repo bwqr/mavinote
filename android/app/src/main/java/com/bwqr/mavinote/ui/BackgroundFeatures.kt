@@ -105,6 +105,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
                 )
             ) { backStackEntry ->
                 Note(
+                    navController,
                     backStackEntry.arguments?.getString("folderId")?.toInt(),
                     backStackEntry.arguments?.getString("noteId")?.toInt(),
                 )
