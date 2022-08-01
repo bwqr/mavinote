@@ -100,7 +100,7 @@ fun CreateFolderView(
 
             Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
                 Text(
-                    text = stringResource(R.string.account_this_folder_be_created),
+                    text = stringResource(R.string.account_this_folder_to_be_created),
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
                 )
                 LazyColumn {
