@@ -1,95 +1,69 @@
 package com.bwqr.mavinote.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.layout.Column
-import androidx.compose.material.Button
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Text
 import androidx.compose.material.TextField
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.navigation.NavController
-import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.ui.theme.MaviNoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
+/*
+ * Between folderId and noteId, exactly one of them must be not null
+ * When folderId is not null and noteId is null, it is meant to create a new note in the given folderId.
+ * When noteId is not null and folderId is null, it is meant to update given noteId
+ */
 @Composable
-fun Note(navController: NavController, noteId: Int) {
+fun Note(folderId: Int?, noteId: Int?) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    val coroutineScope = rememberCoroutineScope()
 
-    var updateNote by remember { mutableStateOf(false) }
-
-    var inProgress by remember { mutableStateOf(false) }
-
-    var note: Note? by remember { mutableStateOf(null) }
-
+    var title by remember { mutableStateOf<String?>(null) }
     var text by remember { mutableStateOf("") }
+    var modified by remember { mutableStateOf(false) }
 
     LaunchedEffect(key1 = 1) {
-        try {
-            NoteViewModel().note(noteId)?.let {
-                note = it
-                text = it.text
-            }
-        } catch (e: ReaxException) {
-            e.handle()
-        }
-    }
+        noteId?.let {
+            try {
+                val note = NoteViewModel().note(noteId)
 
-    Column {
-        note?.let {
-            Text(text = it.title ?: "New Note")
-            Text(text = "LocalId ${it.id}")
-            Text(text = "RemoteId ${it.remoteId ?: "No Remote Id"}")
-            Text(text = "CommitId ${it.commitId}")
-            Text(text = "State ${it.state}")
-
-            Button(onClick = {
-                if (inProgress) {
-                    return@Button
+                if (note != null) {
+                    title = note.title
+                    text = note.text
+                } else {
+                    Log.e("Note", "noteId $noteId does not exist")
                 }
-
-                inProgress = true
-
-                coroutineScope.launch {
-                    try {
-                        NoteViewModel()
-                            .deleteNote(it.id)
-
-                        updateNote = false
-
-                        navController.navigateUp()
-                    } catch (e: ReaxException) {
-                        e.handle()
-                    }
-                }
-            }) {
-                Text("Delete Note")
+            } catch (e: ReaxException) {
+                e.handle()
             }
         }
-
-        TextField(value = text, onValueChange = {
-            updateNote = true
-
-            text = it
-        })
     }
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
             when (event) {
                 Lifecycle.Event.ON_STOP -> GlobalScope.launch {
-                    if (updateNote) {
-                        note?.let {
-                            try {
-                                NoteViewModel().updateNote(it.id, text)
-                            } catch (e: ReaxException) {
-                                e.handle()
-                            }
+                    try {
+                        if (noteId != null && modified) {
+                            NoteViewModel().updateNote(noteId, text)
+                        } else if (noteId == null && text.isNotBlank()) {
+                            // if noteId is null, folderId must be provided
+                            NoteViewModel().createNote(folderId!!, text)
                         }
+                    } catch (e: ReaxException) {
+                        e.handle()
                     }
                 }
                 else -> {}
@@ -101,5 +75,46 @@ fun Note(navController: NavController, noteId: Int) {
         onDispose {
             lifecycleOwner.lifecycle.removeObserver(observer)
         }
+    }
+    NoteView(title, text, {
+        text = it
+        modified = true
+    }, {})
+}
+
+@Composable
+fun NoteView(
+    title: String?,
+    text: String,
+    onTextChange: (text: String) -> Unit,
+    onDelete: () -> Unit
+) {
+    Column(modifier = Modifier.padding(12.dp)) {
+        Title(title ?: "New Note")
+        Text(text = "Note", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
+
+        TextField(
+            value = text,
+            onValueChange = onTextChange,
+            placeholder = {
+                Text(text = "You can write your note here")
+            },
+            modifier = Modifier
+                .fillMaxHeight()
+                .fillMaxWidth()
+        )
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotePreview() {
+    MaviNoteTheme {
+        NoteView(
+            "Shining Note",
+            "Here is a little bit description about note",
+            {},
+            {}
+        )
     }
 }

@@ -2,36 +2,42 @@ package com.bwqr.mavinote.ui.note
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.material.Card
 import androidx.compose.material.FloatingActionButton
 import androidx.compose.material.Icon
 import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.ExperimentalUnitApi
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bwqr.mavinote.models.Account
-import com.bwqr.mavinote.models.Folder
-import com.bwqr.mavinote.models.ReaxException
-import com.bwqr.mavinote.viewmodels.NoteViewModel
+import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.models.*
+import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.NoteScreens
+import com.bwqr.mavinote.ui.SubTitle
+import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.ui.theme.MaviNoteTheme
+import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
-import kotlinx.coroutines.flow.combine
 
 data class AccountWithFolders(
     val account: Account,
     val folders: List<Folder>,
 )
 
-@OptIn(ExperimentalUnitApi::class)
 @Composable
 fun Folders(navController: NavController) {
     var accounts by remember {
@@ -57,25 +63,54 @@ fun Folders(navController: NavController) {
             .launchIn(this)
     }
 
-    Column {
-        Text(
-            text = "Folders",
-            fontWeight = FontWeight.ExtraBold,
-            fontSize = TextUnit(6f, TextUnitType.Em)
-        )
+    FoldersView(navController, accounts)
+}
+
+@Composable
+fun FoldersView(
+    navController: NavController,
+    accounts: List<AccountWithFolders>,
+) {
+    Column(modifier = Modifier.padding(12.dp)) {
+        Title("Folders", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
 
         for (account in accounts) {
-            Text(
-                text = account.account.kind.toString(),
-                fontWeight = FontWeight.Bold,
-                fontSize = TextUnit(4.5f, TextUnitType.Em)
-            )
+            Row(
+                verticalAlignment = Alignment.Bottom,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(0.dp, 0.dp, 0.dp, 6.dp)
+            ) {
+                SubTitle(
+                    account.account.kind.toString(),
+                    modifier = Modifier
+                        .padding(24.dp + 16.dp, 0.dp, 0.dp, 0.dp)
+                )
 
-            LazyColumn {
-                items(account.folders) { folder ->
-                    Text(folder.name, Modifier.clickable {
-                        navController.navigate("notes/${folder.id}")
-                    })
+                Text(
+                    text = account.folders.size.toString(),
+                    textAlign = TextAlign.End,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            }
+
+            Card(
+                elevation = 1.dp,
+                modifier = Modifier
+                    .padding(24.dp, 0.dp, 0.dp, 0.dp)
+                    .fillMaxWidth()
+                    .padding(0.dp, 0.dp, 0.dp, 18.dp)
+            ) {
+                LazyColumn {
+                    items(account.folders) { folder ->
+                        Text(
+                            folder.name,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate("notes/${folder.id}") }
+                                .padding(16.dp, 12.dp)
+                        )
+                    }
                 }
             }
         }
@@ -86,5 +121,29 @@ fun Folders(navController: NavController) {
 fun FolderFab(navController: NavController) {
     FloatingActionButton(onClick = { navController.navigate(NoteScreens.FolderAdd.route) }) {
         Icon(Icons.Filled.Add, contentDescription = null)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FoldersPreview() {
+    val navController = rememberNavController()
+
+    val accounts = listOf(
+        AccountWithFolders(
+            Account(1, AccountKind.Local),
+            listOf(
+                Folder(1, 1, null, "Favorites", State.Clean),
+                Folder(2, 1, null, "Todos", State.Clean)
+            )
+        ),
+        AccountWithFolders(
+            Account(2, AccountKind.Mavinote),
+            listOf(Folder(1, 2, null, "Race Cars", State.Clean))
+        )
+    )
+
+    MaviNoteTheme {
+        FoldersView(navController, accounts)
     }
 }

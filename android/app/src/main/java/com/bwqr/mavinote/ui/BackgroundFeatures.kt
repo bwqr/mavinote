@@ -1,10 +1,10 @@
 package com.bwqr.mavinote.ui
 
-import androidx.compose.foundation.layout.Row
-import androidx.compose.material.*
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountCircle
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.Scaffold
+import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -27,7 +27,7 @@ sealed class NoteScreens(val route: String) {
     object Folders : NoteScreens("folders")
     object FolderAdd : NoteScreens("folder-add")
     object Notes : NoteScreens("notes/{folderId}")
-    object Note : NoteScreens("note/{noteId}")
+    object Note : NoteScreens("note?noteId={noteId}&folderId={folderId}")
 }
 
 @Composable
@@ -71,20 +71,16 @@ fun BackgroundFeatures(mainNavController: NavController) {
                 NoteScreens.Folders.route -> FolderFab(navController)
                 NoteScreens.Notes.route -> NotesFab(
                     navController,
-                    navController.currentBackStackEntry?.arguments?.getInt("folderId") ?: 0
+                    navController.currentBackStackEntry?.arguments?.getInt("folderId")!!
                 )
             }
         },
-        bottomBar = {
-            Row {
-                Text(text = "Syncing $syncing")
-                IconButton(onClick = { navController.navigate(NoteScreens.Accounts.route) }) {
-                    Icon(Icons.Default.AccountCircle, contentDescription = null)
-                }
-            }
-        }
     ) {
-        NavHost(navController, startDestination = NoteScreens.Folders.route) {
+        NavHost(
+            navController,
+            startDestination = NoteScreens.Folders.route,
+            modifier = Modifier.padding(it)
+        ) {
             composable(NoteScreens.Accounts.route) { Accounts(navController) }
             composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
 
@@ -97,15 +93,21 @@ fun BackgroundFeatures(mainNavController: NavController) {
             ) { backStackEntry ->
                 Notes(
                     navController,
-                    backStackEntry.arguments?.getInt("folderId") ?: 0
+                    backStackEntry.arguments?.getInt("folderId")!!
                 )
             }
 
             composable(
                 NoteScreens.Note.route,
-                arguments = listOf(navArgument("noteId") { type = NavType.IntType })
+                arguments = listOf(
+                    navArgument("folderId") { nullable = true },
+                    navArgument("noteId") { nullable = true },
+                )
             ) { backStackEntry ->
-                Note(navController, backStackEntry.arguments?.getInt("noteId") ?: 0)
+                Note(
+                    backStackEntry.arguments?.getString("folderId")?.toInt(),
+                    backStackEntry.arguments?.getString("noteId")?.toInt(),
+                )
             }
         }
     }

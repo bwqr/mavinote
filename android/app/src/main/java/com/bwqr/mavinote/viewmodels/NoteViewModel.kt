@@ -172,11 +172,11 @@ class NoteViewModel {
         }
     }
 
-    suspend fun createNote(folderId: Int): Int = suspendCancellableCoroutine { cont ->
+    suspend fun createNote(folderId: Int, text: String): Int = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(it.deserialize_i32()) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _createNote(it, folderId) }
+            onStart = { _createNote(it, folderId, text) }
         ))
 
         cont.invokeOnCancellation {
@@ -219,7 +219,7 @@ class NoteViewModel {
     private external fun _deleteFolder(onceId: Int, folderId: Int): Long
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
     private external fun _note(onceId: Int, noteId: Int): Long
-    private external fun _createNote(onceId: Int, folderId: Int): Long
+    private external fun _createNote(onceId: Int, folderId: Int, text: String): Long
     private external fun _updateNote(onceId: Int, noteId: Int, text: String): Long
     private external fun _deleteNote(onceId: Int, noteId: Int): Long
 }

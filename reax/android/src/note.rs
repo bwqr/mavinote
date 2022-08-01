@@ -234,13 +234,16 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
-    _: JNIEnv,
+    env: JNIEnv,
     _: JObject,
     once_id: jint,
     folder_id: jint,
+    text: JString,
 ) -> jlong {
+    let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
+
     let handle = spawn(async move {
-        let res = note::create_note(folder_id).await;
+        let res = note::create_note(folder_id, text).await;
 
         send_once(once_id, res);
     });

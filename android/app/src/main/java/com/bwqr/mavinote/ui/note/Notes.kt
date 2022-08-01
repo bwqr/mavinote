@@ -1,26 +1,27 @@
 package com.bwqr.mavinote.ui.note
 
+import android.util.Log
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Button
-import androidx.compose.material.FloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontStyle
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.TextUnit
-import androidx.compose.ui.unit.TextUnitType
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
-import com.bwqr.mavinote.ui.NoteScreens
+import com.bwqr.mavinote.models.State
+import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.ui.theme.MaviNoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -29,24 +30,20 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun Notes(navController: NavController, folderId: Int) {
-    val coroutineScope = rememberCoroutineScope()
+    var folder by remember { mutableStateOf<Folder?>(null) }
 
-    var folder by remember {
-        mutableStateOf<Folder?>(null)
-    }
-    var notes by remember {
-        mutableStateOf(listOf<Note>())
-    }
-
-    var inProgress by remember {
-        mutableStateOf(false)
-    }
+    var notes by remember { mutableStateOf(listOf<Note>()) }
 
     LaunchedEffect(key1 = folderId) {
-        try {
-            folder = NoteViewModel().folder(folderId)
-        } catch(e: ReaxException) {
-            e.handle()
+        launch {
+            try {
+                folder = NoteViewModel().folder(folderId)
+                if (folder == null) {
+                    Log.e("Notes", "folderId $folderId does not exist")
+                }
+            } catch (e: ReaxException) {
+                e.handle()
+            }
         }
 
         NoteViewModel()
@@ -60,54 +57,81 @@ fun Notes(navController: NavController, folderId: Int) {
             .launchIn(this)
     }
 
-    Column {
-        folder?.let {
-            Text(it.name, fontWeight = FontWeight.Bold)
-        }
+    folder?.let {
+        NotesView(navController, it, notes)
+    }
+}
 
-        Button(onClick = {
-            if (inProgress) {
-                return@Button
-            }
+@Composable
+fun NotesView(navController: NavController, folder: Folder, notes: List<Note>) {
+    Column(modifier = Modifier.padding(12.dp)) {
+        Title(folder.name)
+        Text(text = "Folder", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
 
-            inProgress = true
-
-            coroutineScope.launch {
-                try {
-                    NoteViewModel().deleteFolder(folderId)
-
-                    navController.navigate(NoteScreens.Folders.route)
-                } catch (e: ReaxException) {
-                    e.handle()
-                } finally {
-                    inProgress = false
+        if (notes.isEmpty()) {
+            Text(
+                text = "There is no note in this folder",
+                color = MaterialTheme.colors.onBackground
+            )
+        } else {
+            Card(
+                elevation = 1.dp,
+                modifier = Modifier
+                    .padding(24.dp, 0.dp, 0.dp, 0.dp)
+                    .fillMaxWidth()
+                    .padding(0.dp, 0.dp, 0.dp, 18.dp)
+            ) {
+                LazyColumn {
+                    items(notes) { note ->
+                        Text(
+                            note.title ?: "New Note",
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable { navController.navigate("note?noteId=${note.id}") }
+                                .padding(16.dp, 12.dp)
+                        )
+                    }
                 }
             }
-        }) {
-            Text(text = "Delete folder")
         }
-        LazyColumn {
-            items(notes) { note ->
-                Text(text = note.title ?: "New Note", Modifier.clickable {
-                    navController.navigate("note/${note.id}")
-                })
-            }
-        }
-    }
 
+    }
 }
 
 @Composable
 fun NotesFab(navController: NavController, folderId: Int) {
-    val scope = rememberCoroutineScope()
-
-    FloatingActionButton(onClick = {
-        scope.launch {
-            val addedNoteId = NoteViewModel().createNote(folderId)
-
-            navController.navigate("note/$addedNoteId")
-        }
-    }) {
+    FloatingActionButton(onClick = { navController.navigate("note?folderId=$folderId") }) {
         Icon(Icons.Filled.Add, contentDescription = null)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun NotesPreview() {
+    val navController = rememberNavController()
+
+    val folder = Folder(1, 1, null, "Can Long Typed Title Fit Here Or Cannot Fit Here", State.Clean)
+
+    val notes = listOf(
+        Note(1, folder.id, null, "Downtown", "Going to downtown", 1, State.Clean),
+        Note(2, folder.id, null, "Hometown", "Sky hometown", 1, State.Clean),
+        Note(3, folder.id, null, "Middle Town", "Right in the middle", 1, State.Clean),
+        Note(4, folder.id, null, "Middle ", "Right in the middle", 1, State.Clean),
+    )
+
+    MaviNoteTheme {
+        NotesView(navController, folder, notes)
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun EmptyNotesPreview() {
+    val navController = rememberNavController()
+
+    val folder = Folder(1, 1, null, "Todos", State.Clean)
+
+    MaviNoteTheme {
+        NotesView(navController, folder, listOf())
     }
 }

@@ -353,7 +353,7 @@ pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
     storage::fetch_note(&mut conn, LocalId(note_id)).await
 }
 
-pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
+pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
     let folder = storage::fetch_folder(&mut conn, LocalId(folder_id))
@@ -373,12 +373,13 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
         })?;
 
 
-    let title = Some("".to_string());
-    let text = "".to_string();
+    let text = text.as_str().trim();
+    let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
+    let title = text[..ending_index].replace('\n', "");
 
     let remote_note = if account.kind == AccountKind::Mavinote {
         if let Some(remote_id) = folder.remote_id() {
-            match requests::create_note(remote_id, title.as_ref().map(|title| title.as_str()), text.as_str()).await {
+            match requests::create_note(remote_id, Some(title.as_str()), text).await {
                 Ok(note) => Some(note),
                 Err(e) => {
                     log::debug!("failed to create note in remote, {e:?}");
@@ -397,8 +398,8 @@ pub async fn create_note(folder_id: i32) -> Result<i32, Error> {
         &mut conn,
         folder.local_id(),
         remote_note.as_ref().map(|n| n.id()),
-        title,
-        text,
+        Some(title),
+        text.to_string(),
         remote_note.map(|n| n.commit_id).unwrap_or(0)
     ).await?;
 
