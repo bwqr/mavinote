@@ -1,3 +1,10 @@
 <resources>
     <string name="app_name">MaviNote</string>
+    <string name="no_folder_in_account">There is no folder in this account</string>
+    <string name="manage_accounts">Manage Accounts</string>
+    <string name="folders">Folders</string>
+
+    <string name="create_folder">Create Folder</string>
+    <string name="account_this_folder_be_created">Account this folder be created</string>
+    <string name="folder_name">Folder Name</string>
 </resources>

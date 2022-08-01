@@ -14,11 +14,13 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.*
 import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.NoteScreens
@@ -74,7 +76,7 @@ fun FoldersView(
     Column(modifier = Modifier.padding(12.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
             Title(
-                "Folders",
+                stringResource(R.string.folders),
                 modifier = Modifier
                     .padding(0.dp, 0.dp, 0.dp, 12.dp)
                     .weight(1f)
@@ -83,7 +85,7 @@ fun FoldersView(
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(onClick = { navController.navigate(NoteScreens.Accounts.route) }) {
-                        Text(text = "Manage Accounts")
+                        Text(text = stringResource(R.string.manage_accounts))
                     }
                 }
             }
@@ -110,19 +112,19 @@ fun FoldersView(
                 )
             }
 
-            Card(
-                elevation = 1.dp,
-                modifier = Modifier
-                    .padding(24.dp, 0.dp, 0.dp, 0.dp)
-                    .fillMaxWidth()
-                    .padding(0.dp, 0.dp, 0.dp, 18.dp)
-            ) {
-                if (account.folders.isEmpty()) {
-                    Text(
-                        text = "There is no folder in this account",
-                        modifier = Modifier.padding(16.dp, 12.dp)
-                    )
-                } else {
+            if (account.folders.isEmpty()) {
+                Text(
+                    text = stringResource(R.string.no_folder_in_account),
+                    modifier = Modifier.padding(24.dp + 16.dp, 12.dp)
+                )
+            } else {
+                Card(
+                    elevation = 1.dp,
+                    modifier = Modifier
+                        .padding(24.dp, 0.dp, 0.dp, 0.dp)
+                        .fillMaxWidth()
+                        .padding(0.dp, 0.dp, 0.dp, 18.dp)
+                ) {
                     LazyColumn {
                         items(account.folders) { folder ->
                             Text(

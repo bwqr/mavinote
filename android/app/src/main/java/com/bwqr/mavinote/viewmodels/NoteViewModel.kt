@@ -115,7 +115,7 @@ class NoteViewModel {
         }
     }
 
-    suspend fun addFolder(accountId: Int, name: String): Unit = suspendCancellableCoroutine { cont ->
+    suspend fun createFolder(accountId: Int, name: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
