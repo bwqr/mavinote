@@ -1,6 +1,5 @@
-use base::Error;
 use sqlx::Connection;
-use sqlx::{Sqlite, pool::PoolConnection};
+use sqlx::{Sqlite, pool::PoolConnection, Error};
 
 use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind};
 
@@ -8,7 +7,6 @@ pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Acc
     sqlx::query_as("select * from accounts order by id")
         .fetch_all(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<Account>, Error> {
@@ -16,7 +14,6 @@ pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -
         .bind(account_id)
         .fetch_optional(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {
@@ -24,13 +21,13 @@ pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id
         .bind(account_id)
         .fetch_all(conn)
         .await
-        .map_err(|e| e.into())
 }
 
-pub async fn create_account(conn: &mut PoolConnection<Sqlite>, account_kind: AccountKind) -> Result<Account, Error> {
+pub async fn create_account(conn: &mut PoolConnection<Sqlite>, name: String, kind: AccountKind) -> Result<Account, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into accounts (kind) values(?)")
-            .bind(account_kind)
+        sqlx::query("insert into accounts (name, kind) values(?, ?)")
+            .bind(name)
+            .bind(kind)
             .execute(&mut *conn)
             .await
             .map(|_| ())?;
@@ -39,7 +36,6 @@ pub async fn create_account(conn: &mut PoolConnection<Sqlite>, account_kind: Acc
             .fetch_optional(conn)
             .await
             .map(|opt| opt.unwrap())
-            .map_err(|e| e.into())
     }))
      .await
 }
@@ -50,7 +46,6 @@ pub async fn delete_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) 
         .execute(&mut *conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {
@@ -58,7 +53,6 @@ pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Fold
         .bind(State::Deleted)
         .fetch_all(conn)
         .await
-        .map_err(|e| e.into())
 
 }
 
@@ -67,7 +61,6 @@ pub async fn fetch_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) 
         .bind(local_id.0)
         .fetch_optional(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<Option<Folder>, Error> {
@@ -76,7 +69,6 @@ pub async fn fetch_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote
         .bind(account_id)
         .fetch_optional(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<RemoteId>, account_id: i32, name: String) -> Result<Folder, Error> {
@@ -93,7 +85,6 @@ pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<
             .fetch_optional(conn)
             .await
             .map(|opt| opt.unwrap())
-            .map_err(|e| e.into())
     }))
      .await
 }
@@ -104,7 +95,6 @@ pub async fn delete_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId)
         .execute(&mut *conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
@@ -119,7 +109,6 @@ pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: Lo
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<(), Error> {
@@ -129,7 +118,6 @@ pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remot
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_all_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) -> Result<Vec<Note>, Error> {
@@ -137,7 +125,6 @@ pub async fn fetch_all_notes(conn: &mut PoolConnection<Sqlite>, folder_id: Local
         .bind(folder_id.0)
         .fetch_all(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) -> Result<Vec<Note>, Error> {
@@ -146,7 +133,6 @@ pub async fn fetch_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) 
         .bind(State::Deleted)
         .fetch_all(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId) -> Result<Option<Note>, Error> {
@@ -154,7 +140,6 @@ pub async fn fetch_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId) -> 
         .bind(note_id.0)
         .fetch_optional(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id: RemoteId, folder_id: LocalId) -> Result<Option<Note>, Error> {
@@ -163,7 +148,6 @@ pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id:
         .bind(folder_id.0)
         .fetch_optional(conn)
         .await
-        .map_err(|e| e.into())
 }
 
 pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit_id: i32) -> Result<Note, Error> {
@@ -182,7 +166,6 @@ pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, 
             .fetch_optional(conn)
             .await
             .map(|opt| opt.unwrap())
-            .map_err(|e| e.into())
     }))
      .await
 }
@@ -197,7 +180,6 @@ pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, ti
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, commit_id: i32) -> Result<(), Error> {
@@ -208,7 +190,6 @@ pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, 
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn delete_note(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
@@ -217,7 +198,6 @@ pub async fn delete_note(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -
         .execute(conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }
 
 pub async fn delete_note_local(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
@@ -227,5 +207,4 @@ pub async fn delete_note_local(conn: &mut PoolConnection<Sqlite>, local_id: Loca
         .execute(&mut *conn)
         .await
         .map(|_| ())
-        .map_err(|e| e.into())
 }

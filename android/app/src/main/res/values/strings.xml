@@ -7,4 +7,9 @@
     <string name="create_folder">Create Folder</string>
     <string name="account_this_folder_to_be_created">Account this folder to be created</string>
     <string name="folder_name">Folder Name</string>
+    <string name="accounts">Accounts</string>
+    <string name="create_account">Create Account</string>
+    <string name="account_name">Account Name</string>
+    <string name="email">Email</string>
+    <string name="password">Password</string>
 </resources>

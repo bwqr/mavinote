@@ -24,6 +24,7 @@ import kotlinx.coroutines.launch
 sealed class NoteScreens(val route: String) {
     object Accounts : NoteScreens("accounts")
     object AccountAdd : NoteScreens("account-add")
+    object Account : NoteScreens("account/{accountId}")
     object Folders : NoteScreens("folders")
     object FolderAdd : NoteScreens("folder-add")
     object Notes : NoteScreens("notes/{folderId}")
@@ -73,6 +74,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
                     navController,
                     navController.currentBackStackEntry?.arguments?.getInt("folderId")!!
                 )
+                NoteScreens.Accounts.route -> AccountsFab(navController)
             }
         },
     ) {
@@ -82,6 +84,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
             modifier = Modifier.padding(it)
         ) {
             composable(NoteScreens.Accounts.route) { Accounts(navController) }
+            composable(NoteScreens.Account.route) { Account() }
             composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
 
             composable(NoteScreens.Folders.route) { Folders(navController) }

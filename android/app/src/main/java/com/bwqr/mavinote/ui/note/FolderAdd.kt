@@ -110,7 +110,7 @@ fun CreateFolderView(
                                 selected = accountId == account.id,
                                 onClick = { accountId = account.id }
                             )
-                            Text(account.kind.toString())
+                            Text(account.name)
                         }
                     }
                 }
@@ -140,8 +140,8 @@ fun CreateFolderView(
 @Composable
 fun CreateFolderPreview() {
     val accounts = listOf(
-        Account(1, AccountKind.Local),
-        Account(2, AccountKind.Mavinote)
+        Account(1, "Default", AccountKind.Local),
+        Account(2, "Remote", AccountKind.Mavinote)
     )
 
     val error = null

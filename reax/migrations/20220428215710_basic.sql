@@ -1,10 +1,11 @@
 create table accounts(
     id      integer primary key autoincrement,
+    name    text        not null    unique,
     kind    varchar(9)  not null,
     check(kind in ('Mavinote', 'Local'))
 );
 
-insert into accounts (kind) values ('Local');
+insert into accounts (name, kind) values ('Local', 'Local');
 
 create table folders(
     id          integer primary key autoincrement,

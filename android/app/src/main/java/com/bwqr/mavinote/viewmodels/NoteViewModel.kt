@@ -58,11 +58,11 @@ class NoteViewModel {
         }
     }
 
-    suspend fun addAccount(email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
+    suspend fun createAccount(name: String, email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _addAccount(it, email, password) }
+            onStart = { _createAccount(it, name, email, password) }
         ))
 
         cont.invokeOnCancellation {
@@ -211,7 +211,7 @@ class NoteViewModel {
     private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _accounts(streamId: Int): Long
-    private external fun _addAccount(onceId: Int, email: String, password: String): Long
+    private external fun _createAccount(onceId: Int, name: String, email: String, password: String): Long
     private external fun _deleteAccount(onceId: Int, accountId: Int): Long
     private external fun _folders(streamId: Int): Long
     private external fun _folder(onceId: Int, folderId: Int): Long

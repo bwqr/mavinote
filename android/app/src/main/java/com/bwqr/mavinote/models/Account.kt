@@ -5,6 +5,7 @@ import com.novi.serde.Deserializer
 
 data class Account(
     val id: Int,
+    val name: String,
     val kind: AccountKind,
 ) {
     companion object {
@@ -13,6 +14,7 @@ data class Account(
 
             val account = Account(
                 deserializer.deserialize_i32(),
+                deserializer.deserialize_str(),
                 AccountKind.deserialize(deserializer)
             )
 

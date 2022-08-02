@@ -173,7 +173,7 @@ pub async fn try_sync() -> Result<(), Error> {
         }
     }
 
-    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
+    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
 
     Ok(())
 }
@@ -198,20 +198,20 @@ pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Erro
 
         let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
-        sender.send_replace(storage::fetch_accounts(&mut conn).await.into());
+        sender.send_replace(storage::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
     }
 
     sender.subscribe()
 
 }
 
-pub async fn create_account(email: String, password: String) -> Result<(), Error> {
+pub async fn create_account(name: String, email: String, password: String) -> Result<(), Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let token = auth::login(email.as_str(), password.as_str()).await?;
 
-    storage::create_account(&mut conn, AccountKind::Mavinote).await?;
+    storage::create_account(&mut conn, name, AccountKind::Mavinote).await?;
 
     store.put("token", token.token.as_str()).await?;
     store.put("mavinote_email", email.as_str()).await?;
@@ -240,8 +240,8 @@ pub async fn delete_account(account_id: i32) -> Result<(), Error> {
     store.remove("token").await?;
     store.remove("mavinote_email").await?;
 
-    ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.into());
-    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
+    ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
+    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
 
     Ok(())
 }
@@ -258,7 +258,7 @@ pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>
 
         let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
-        sender.send_replace(storage::fetch_folders(&mut conn).await.into());
+        sender.send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
     }
 
     sender.subscribe()
@@ -266,7 +266,7 @@ pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>
 
 pub async fn folder(folder_id: i32) -> Result<Option<Folder>, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
-    storage::fetch_folder(&mut conn, LocalId(folder_id)).await
+    storage::fetch_folder(&mut conn, LocalId(folder_id)).await.map_err(|e| e.into())
 }
 
 pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
@@ -330,7 +330,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
         storage::delete_folder_local(&mut conn, folder.local_id()).await?;
     }
 
-    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.into());
+    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
 
     Ok(())
 }
@@ -342,7 +342,7 @@ pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
         notes_map.insert(folder_id, State::Loading);
 
         let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
-        notes_map.update(folder_id, storage::fetch_notes(&mut conn, LocalId(folder_id)).await.into());
+        notes_map.update(folder_id, storage::fetch_notes(&mut conn, LocalId(folder_id)).await.map_err(|e| e.into()).into());
     }
 
     notes_map.subscribe(folder_id).unwrap()
@@ -350,7 +350,7 @@ pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
 
 pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
-    storage::fetch_note(&mut conn, LocalId(note_id)).await
+    storage::fetch_note(&mut conn, LocalId(note_id)).await.map_err(|e| e.into())
 }
 
 pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {

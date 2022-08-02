@@ -10,6 +10,7 @@ pub struct RemoteId(pub i32);
 #[serde(rename_all = "camelCase")]
 pub struct Account {
     pub id: i32,
+    pub name: String,
     pub kind: AccountKind,
 }
 

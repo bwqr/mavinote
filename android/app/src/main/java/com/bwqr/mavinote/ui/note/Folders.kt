@@ -100,7 +100,7 @@ fun FoldersView(
                     .padding(0.dp, 0.dp, 0.dp, 6.dp)
             ) {
                 SubTitle(
-                    account.account.kind.toString(),
+                    account.account.name,
                     modifier = Modifier
                         .padding(24.dp + 16.dp, 0.dp, 0.dp, 0.dp)
                 )
@@ -115,7 +115,7 @@ fun FoldersView(
             if (account.folders.isEmpty()) {
                 Text(
                     text = stringResource(R.string.no_folder_in_account),
-                    modifier = Modifier.padding(24.dp + 16.dp, 12.dp)
+                    modifier = Modifier.padding(24.dp + 16.dp, 12.dp, 24.dp + 16.dp, 18.dp + 12.dp)
                 )
             } else {
                 Card(
@@ -156,14 +156,14 @@ fun FoldersPreview() {
 
     val accounts = listOf(
         AccountWithFolders(
-            Account(1, AccountKind.Local),
+            Account(1, "Default", AccountKind.Local),
             listOf(
                 Folder(1, 1, null, "Favorites", State.Clean),
                 Folder(2, 1, null, "Todos", State.Clean)
             )
         ),
         AccountWithFolders(
-            Account(2, AccountKind.Mavinote),
+            Account(2, "Remote", AccountKind.Mavinote),
             listOf(Folder(1, 2, null, "Race Cars", State.Clean))
         )
     )

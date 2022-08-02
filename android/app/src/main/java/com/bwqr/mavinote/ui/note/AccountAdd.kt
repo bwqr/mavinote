@@ -1,100 +1,133 @@
 package com.bwqr.mavinote.ui.note
 
-import android.view.KeyEvent
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Button
-import androidx.compose.material.OutlinedTextField
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
+import androidx.compose.material.TextField
 import androidx.compose.runtime.*
-import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.focus.FocusDirection
-import androidx.compose.ui.input.key.Key
-import androidx.compose.ui.input.key.key
-import androidx.compose.ui.input.key.onPreviewKeyEvent
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
+import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Message
 import com.bwqr.mavinote.models.ReaxException
-import com.bwqr.mavinote.ui.NoteScreens
+import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalComposeUiApi::class)
 @Composable
 fun AccountAdd(navController: NavController) {
     val scope = rememberCoroutineScope()
-
     var inProgress by remember { mutableStateOf(false) }
+    var error by remember { mutableStateOf<String?>(null) }
 
+    CreateAccountView(error) { accountName, email, password ->
+        if (inProgress) {
+            return@CreateAccountView
+        }
+
+        error = null
+
+        if (accountName.isBlank() || email.isBlank() || password.isBlank()) {
+            error = "Please fill the fields"
+            return@CreateAccountView
+        }
+
+        inProgress = true
+
+        scope.launch {
+            try {
+                NoteViewModel().createAccount(accountName, email, password)
+
+                navController.navigateUp()
+            } catch (e: ReaxException) {
+                if (e.error is Message) {
+                    error = e.error.message
+                } else {
+                    e.handle()
+                }
+
+            } finally {
+                inProgress = false
+            }
+        }
+    }
+}
+
+@Composable
+fun CreateAccountView(
+    error: String?,
+    onCreateAccount: (accountName: String, email: String, password: String) -> Unit
+) {
+    var accountName by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
 
-    var warning by remember { mutableStateOf("") }
-
-    val focusManager = LocalFocusManager.current
-
-    Column {
-        OutlinedTextField(
-            placeholder = { Text("Email") },
-            value = email,
-            onValueChange = { email = it },
-            modifier = Modifier.onPreviewKeyEvent {
-                if (it.key == Key.Tab && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                    focusManager.moveFocus(FocusDirection.Down)
-                    true
-                } else {
-                    false
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
-        )
-        OutlinedTextField(
-            placeholder = { Text("Password") },
-            value = password,
-            onValueChange = { password = it },
-            modifier = Modifier.onPreviewKeyEvent {
-                if (it.key == Key.Tab && it.nativeKeyEvent.action == KeyEvent.ACTION_DOWN) {
-                    focusManager.moveFocus(FocusDirection.Down)
-                    true
-                } else {
-                    false
-                }
-            },
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next),
-            keyboardActions = KeyboardActions(onNext = { focusManager.moveFocus(FocusDirection.Down) })
+    Column(modifier = Modifier.padding(12.dp)) {
+        Title(
+            stringResource(R.string.create_account),
+            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 48.dp)
         )
 
-        if (warning.isNotEmpty()) {
-            Text(text = warning)
-        }
+        Column(
+            modifier = Modifier
+                .padding(40.dp, 0.dp, 0.dp, 0.dp)
+        ) {
+            Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
+                Text(
+                    text = stringResource(R.string.account_name),
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
+                )
+                TextField(value = accountName, onValueChange = { accountName = it })
+            }
 
-        Button(onClick = {
-            if (!inProgress) {
-                inProgress = true
+            Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
+                Text(
+                    text = stringResource(R.string.email),
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
+                )
+                TextField(value = email, onValueChange = { email = it })
+            }
 
-                scope.launch {
-                    try {
-                        NoteViewModel().addAccount(email, password)
+            Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
+                Text(
+                    text = stringResource(R.string.password),
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
+                )
+                TextField(value = password, onValueChange = { password = it })
+            }
 
-                        navController.navigate(NoteScreens.Folders.route)
-                    } catch (e: ReaxException) {
-                        if (e.error is Message) {
-                            warning = e.error.message
-                        } else {
-                            e.handle()
-                        }
-                    } finally {
-                        inProgress = false
-                    }
+            if (error != null) {
+                Text(
+                    text = error,
+                    color = MaterialTheme.colors.error,
+                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
+                )
+            }
+
+            Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
+                Button(
+                    onClick = { onCreateAccount(accountName, email, password) },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text(text = stringResource(id = R.string.create_account))
                 }
             }
-        }) {
-            Text("Add account")
         }
     }
+}
+
+@Preview(showBackground = true)
+@Composable
+fun CreateAccountPreview() {
+    val error = null
+
+    CreateAccountView(error) { _, _, _ -> }
 }
