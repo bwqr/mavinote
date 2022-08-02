@@ -205,6 +205,11 @@ pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Erro
 
 }
 
+pub async fn account(account_id: i32) -> Result<Option<Account>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    storage::fetch_account(&mut conn, account_id).await.map_err(|e| e.into())
+}
+
 pub async fn create_account(name: String, email: String, password: String) -> Result<(), Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;

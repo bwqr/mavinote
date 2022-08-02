@@ -100,7 +100,7 @@ fun CreateFolderView(
 
             Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
                 Text(
-                    text = stringResource(R.string.account_this_folder_to_be_created),
+                    text = stringResource(R.string.account_this_folder_will_be_created),
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
                 )
                 LazyColumn {
@@ -123,14 +123,14 @@ fun CreateFolderView(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
                 )
             }
+        }
 
-            Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-                Button(
-                    onClick = { onCreateFolder(accountId, folderName) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(id = R.string.create_folder))
-                }
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = { onCreateFolder(accountId, folderName) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(id = R.string.create_folder))
             }
         }
     }

@@ -15,10 +15,12 @@ import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
@@ -102,13 +104,13 @@ fun NotesView(
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(onClick = onDelete) {
-                        Text(text = "Delete")
+                        Text(text = stringResource(R.string.delete))
                     }
                 }
             }
         }
 
-        Text(text = "Folder", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
+        Text(text = stringResource(R.string.folder), modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
 
         if (notes.isEmpty()) {
             Text(text = "There is no note in this folder")

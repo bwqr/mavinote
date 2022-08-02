@@ -111,14 +111,14 @@ fun CreateAccountView(
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
                 )
             }
+        }
 
-            Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-                Button(
-                    onClick = { onCreateAccount(accountName, email, password) },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Text(text = stringResource(id = R.string.create_account))
-                }
+        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
+            Button(
+                onClick = { onCreateAccount(accountName, email, password) },
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Text(text = stringResource(id = R.string.create_account))
             }
         }
     }

@@ -84,7 +84,15 @@ fun BackgroundFeatures(mainNavController: NavController) {
             modifier = Modifier.padding(it)
         ) {
             composable(NoteScreens.Accounts.route) { Accounts(navController) }
-            composable(NoteScreens.Account.route) { Account() }
+            composable(
+                NoteScreens.Account.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                Account(
+                    navController,
+                    backstackEntry.arguments?.getInt("accountId")!!
+                )
+            }
             composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
 
             composable(NoteScreens.Folders.route) { Folders(navController) }

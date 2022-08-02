@@ -58,6 +58,20 @@ class NoteViewModel {
         }
     }
 
+    suspend fun account(accountId: Int): Account? = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(TraitHelpers.deserializeOption(it) { deserializer ->
+                Account.deserialize(deserializer)
+            }) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _account(it, accountId) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
     suspend fun createAccount(name: String, email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
@@ -211,6 +225,7 @@ class NoteViewModel {
     private external fun _sync(onceId: Int): Long
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _accounts(streamId: Int): Long
+    private external fun _account(onceId: Int, accountId: Int): Long
     private external fun _createAccount(onceId: Int, name: String, email: String, password: String): Long
     private external fun _deleteAccount(onceId: Int, accountId: Int): Long
     private external fun _folders(streamId: Int): Long
