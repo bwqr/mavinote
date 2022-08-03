@@ -1,7 +1,7 @@
 use base::{State, Error};
 use jni::{
     objects::{JObject, JString},
-    sys::{jint, jlong},
+    sys::{jint, jlong, jboolean},
     JNIEnv,
 };
 
@@ -96,13 +96,14 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
     name: JString,
     email: JString,
     password: JString,
+    create_account: jboolean,
 ) -> jlong {
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
     let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::add_account(name, email, password).await;
+        let res = note::add_account(name, email, password, create_account > 0).await;
 
         send_once(once_id, res);
     });

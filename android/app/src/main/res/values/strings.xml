@@ -18,4 +18,9 @@
     <string name="account">Account</string>
     <string name="kind">Kind</string>
     <string name="name">Name</string>
+    <string name="dont_have_account_create_one">I do not have a Mavinote account, create a new one</string>
+    <string name="account_add_description">
+        You can add your Mavinote account or create a new one if you do not have.
+        Mavinote account lets you synchronize your notes with other devices.
+    </string>
 </resources>

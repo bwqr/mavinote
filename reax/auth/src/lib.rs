@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use base::{Error, Config, models::Token};
+use requests::SignUp;
 use reqwest::{Client, StatusCode};
 
 use crate::requests::Login;
@@ -14,20 +15,37 @@ pub async fn login(email: &str, password: &str) -> Result<Token, Error> {
     let email = email.trim();
     let password = password.trim();
 
-    if email.is_empty() || password.is_empty() {
-        return Err(Error::Message("Email and password must be filled out".to_string()));
-    }
-
     let request_body = serde_json::to_string(&Login { email, password }).unwrap();
 
-    let response = client
+    client
         .post(format!("{}/auth/login", config.api_url))
+        .body(request_body)
+        .send()
+        .await?
+        .error_for_status()?
+        .json::<Token>()
+        .await
+        .map_err(|e| e.into())
+}
+
+pub async fn sign_up(name: &str, email: &str, password: &str) -> Result<Token, Error> {
+    let client = runtime::get::<Arc<Client>>().unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let name = name.trim();
+    let email = email.trim();
+    let password = password.trim();
+
+    let request_body = serde_json::to_string(&SignUp { name, email, password }).unwrap();
+
+    let response = client
+        .post(format!("{}/auth/sign-up", config.api_url))
         .body(request_body)
         .send()
         .await?;
 
-    if StatusCode::UNAUTHORIZED == response.status() {
-        return Err(Error::Message("Email or password is invalid".to_string()));
+    if response.status() == StatusCode::CONFLICT {
+        return Err(Error::Message("user_with_given_email_already_exists".to_string()))
     }
 
     response

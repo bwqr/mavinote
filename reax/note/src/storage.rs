@@ -16,6 +16,14 @@ pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -
         .await
 }
 
+pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
+    sqlx::query_as::<Sqlite, (i32,)>("select id from accounts where name = ?")
+        .bind(name)
+        .fetch_optional(conn)
+        .await
+        .map(|opt| opt.is_some())
+}
+
 pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {
     sqlx::query_as("select * from folders where account_id = ? order by id")
         .bind(account_id)

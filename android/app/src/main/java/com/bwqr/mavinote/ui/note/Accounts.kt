@@ -54,7 +54,7 @@ fun AccountsView(navController: NavController, accounts: List<Account>) {
     Column(modifier = Modifier.padding(12.dp)) {
         Title(
             stringResource(R.string.accounts),
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 48.dp)
+            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
         )
 
         Card(

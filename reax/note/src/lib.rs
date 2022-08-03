@@ -210,16 +210,26 @@ pub async fn account(account_id: i32) -> Result<Option<Account>, Error> {
     storage::fetch_account(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
-pub async fn add_account(name: String, email: String, password: String) -> Result<(), Error> {
+pub async fn add_account(name: String, email: String, password: String, create_account: bool) -> Result<(), Error> {
     let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-    let token = auth::login(email.as_str(), password.as_str()).await?;
+    if storage::account_with_name_exists(&mut conn, name.as_str()).await? {
+        return Err(Error::Message("account_with_given_name_already_exists".to_string()));
+    }
+
+    let token = if create_account {
+        auth::sign_up(name.as_str(), email.as_str(), password.as_str()).await?
+    } else {
+        auth::login(email.as_str(), password.as_str()).await?
+    };
 
     storage::create_account(&mut conn, name, AccountKind::Mavinote).await?;
 
     store.put("token", token.token.as_str()).await?;
     store.put("mavinote_email", email.as_str()).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
 
     Ok(())
 }

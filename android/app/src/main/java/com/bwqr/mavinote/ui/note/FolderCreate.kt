@@ -83,7 +83,7 @@ fun FolderCreateView(
     Column(modifier = Modifier.padding(12.dp)) {
         Title(
             stringResource(R.string.create_folder),
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 48.dp)
+            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
         )
 
         Column(

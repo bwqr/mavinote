@@ -2,9 +2,8 @@ use base::models::Token;
 use base::schemas::users;
 use base::{crypto::Crypto, sanitize::Sanitized, types::Pool, HttpError};
 
-use actix_web::HttpResponse;
 use actix_web::{
-    post, put,
+    post,
     web::{block, Data, Json},
 };
 use diesel::prelude::*;
@@ -44,13 +43,15 @@ pub async fn login(
     Ok(Json(TokenResponse::new(token)))
 }
 
-#[put("sign-up")]
+#[post("sign-up")]
 pub async fn sign_up(
     crypto: Data<Crypto>,
     pool: Data<Pool>,
     sign_up_request: Sanitized<Json<SignUp>>,
-) -> Result<HttpResponse, HttpError> {
-    block(move || {
+) -> Result<Json<TokenResponse>, HttpError> {
+    let token = block(move || -> Result<String, HttpError> {
+        let conn = pool.get().unwrap();
+
         let password = crypto.sign512(&sign_up_request.password);
 
         diesel::insert_into(users::table)
@@ -59,7 +60,7 @@ pub async fn sign_up(
                 users::email.eq(&sign_up_request.email),
                 users::password.eq(password),
             ))
-            .execute(&pool.get().unwrap())
+            .execute(&conn)
             .map_err(|e| -> HttpError {
                 match e {
                     diesel::result::Error::DatabaseError(
@@ -68,9 +69,16 @@ pub async fn sign_up(
                     ) => Error::UserExists.into(),
                     e => e.into(),
                 }
-            })
+            })?;
+
+        let user_id = users::table
+            .filter(users::email.eq(&sign_up_request.email))
+            .select(users::id)
+            .first::<i32>(&conn)?;
+
+        crypto.encode(&Token::new(user_id)).map_err(|e| e.into())
     })
     .await??;
 
-    Ok(HttpResponse::Created().finish())
+    Ok(Json(TokenResponse::new(token)))
 }
