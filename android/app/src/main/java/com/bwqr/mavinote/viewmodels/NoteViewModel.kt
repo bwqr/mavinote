@@ -72,11 +72,11 @@ class NoteViewModel {
         }
     }
 
-    suspend fun createAccount(name: String, email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
+    suspend fun addAccount(name: String, email: String, password: String): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _createAccount(it, name, email, password) }
+            onStart = { _addAccount(it, name, email, password) }
         ))
 
         cont.invokeOnCancellation {
@@ -133,7 +133,7 @@ class NoteViewModel {
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
             onError = { cont.resumeWithException(it) },
-            onStart = { _addFolder(it, accountId, name) }
+            onStart = { _createFolder(it, accountId, name) }
         ))
 
         cont.invokeOnCancellation {
@@ -226,11 +226,11 @@ class NoteViewModel {
     private external fun _activeSyncs(streamId: Int): Long
     private external fun _accounts(streamId: Int): Long
     private external fun _account(onceId: Int, accountId: Int): Long
-    private external fun _createAccount(onceId: Int, name: String, email: String, password: String): Long
+    private external fun _addAccount(onceId: Int, name: String, email: String, password: String): Long
     private external fun _deleteAccount(onceId: Int, accountId: Int): Long
     private external fun _folders(streamId: Int): Long
     private external fun _folder(onceId: Int, folderId: Int): Long
-    private external fun _addFolder(onceId: Int, accountId: Int, name: String): Long
+    private external fun _createFolder(onceId: Int, accountId: Int, name: String): Long
     private external fun _deleteFolder(onceId: Int, folderId: Int): Long
     private external fun _noteSummaries(streamId: Int, folderId: Int): Long
     private external fun _note(onceId: Int, noteId: Int): Long

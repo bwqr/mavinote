@@ -26,7 +26,7 @@ sealed class NoteScreens(val route: String) {
     object AccountAdd : NoteScreens("account-add")
     object Account : NoteScreens("account/{accountId}")
     object Folders : NoteScreens("folders")
-    object FolderAdd : NoteScreens("folder-add")
+    object FolderCreate : NoteScreens("folder-create")
     object Notes : NoteScreens("notes/{folderId}")
     object Note : NoteScreens("note?noteId={noteId}&folderId={folderId}")
 }
@@ -96,7 +96,7 @@ fun BackgroundFeatures(mainNavController: NavController) {
             composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
 
             composable(NoteScreens.Folders.route) { Folders(navController) }
-            composable(NoteScreens.FolderAdd.route) { FolderAdd(navController) }
+            composable(NoteScreens.FolderCreate.route) { FolderCreate(navController) }
 
             composable(
                 NoteScreens.Notes.route,

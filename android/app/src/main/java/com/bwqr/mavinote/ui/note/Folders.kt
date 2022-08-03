@@ -144,7 +144,7 @@ fun FoldersView(
 
 @Composable
 fun FolderFab(navController: NavController) {
-    FloatingActionButton(onClick = { navController.navigate(NoteScreens.FolderAdd.route) }) {
+    FloatingActionButton(onClick = { navController.navigate(NoteScreens.FolderCreate.route) }) {
         Icon(Icons.Filled.Add, contentDescription = null)
     }
 }

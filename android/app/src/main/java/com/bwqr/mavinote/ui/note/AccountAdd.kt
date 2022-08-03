@@ -28,23 +28,23 @@ fun AccountAdd(navController: NavController) {
     var inProgress by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    CreateAccountView(error) { accountName, email, password ->
+    AccountAddView(error) { accountName, email, password ->
         if (inProgress) {
-            return@CreateAccountView
+            return@AccountAddView
         }
 
         error = null
 
         if (accountName.isBlank() || email.isBlank() || password.isBlank()) {
             error = "Please fill the fields"
-            return@CreateAccountView
+            return@AccountAddView
         }
 
         inProgress = true
 
         scope.launch {
             try {
-                NoteViewModel().createAccount(accountName, email, password)
+                NoteViewModel().addAccount(accountName, email, password)
 
                 navController.navigateUp()
             } catch (e: ReaxException) {
@@ -62,7 +62,7 @@ fun AccountAdd(navController: NavController) {
 }
 
 @Composable
-fun CreateAccountView(
+fun AccountAddView(
     error: String?,
     onCreateAccount: (accountName: String, email: String, password: String) -> Unit
 ) {
@@ -72,7 +72,7 @@ fun CreateAccountView(
 
     Column(modifier = Modifier.padding(12.dp)) {
         Title(
-            stringResource(R.string.create_account),
+            stringResource(R.string.add_account),
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 48.dp)
         )
 
@@ -118,7 +118,7 @@ fun CreateAccountView(
                 onClick = { onCreateAccount(accountName, email, password) },
                 modifier = Modifier.fillMaxWidth()
             ) {
-                Text(text = stringResource(id = R.string.create_account))
+                Text(text = stringResource(id = R.string.add_account))
             }
         }
     }
@@ -126,8 +126,8 @@ fun CreateAccountView(
 
 @Preview(showBackground = true)
 @Composable
-fun CreateAccountPreview() {
+fun AccountAddPreview() {
     val error = null
 
-    CreateAccountView(error) { _, _, _ -> }
+    AccountAddView(error) { _, _, _ -> }
 }

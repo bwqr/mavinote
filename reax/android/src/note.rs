@@ -89,7 +89,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1account(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
     env: JNIEnv,
     _: JObject,
     once_id: jint,
@@ -102,7 +102,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createAccoun
     let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::create_account(name, email, password).await;
+        let res = note::add_account(name, email, password).await;
 
         send_once(once_id, res);
     });
@@ -172,7 +172,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folder(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addFolder(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createFolder(
     env: JNIEnv,
     _: JObject,
     once_id: jint,

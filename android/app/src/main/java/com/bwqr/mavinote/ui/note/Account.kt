@@ -79,7 +79,7 @@ fun AccountView(account: Account, onDelete: () -> Unit) {
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                     DropdownMenuItem(onClick = onDelete) {
-                        Text(text = stringResource(R.string.delete))
+                        Text(text = stringResource(R.string.remove))
                     }
                 }
             }

@@ -8,11 +8,12 @@
     <string name="account_this_folder_will_be_created">Account this folder will be created in</string>
     <string name="folder_name">Folder Name</string>
     <string name="accounts">Accounts</string>
-    <string name="create_account">Create Account</string>
+    <string name="add_account">Add Account</string>
     <string name="account_name">Account Name</string>
     <string name="email">Email</string>
     <string name="password">Password</string>
     <string name="delete">Delete</string>
+    <string name="remove">Remove</string>
     <string name="folder">Folder</string>
     <string name="account">Account</string>
     <string name="kind">Kind</string>

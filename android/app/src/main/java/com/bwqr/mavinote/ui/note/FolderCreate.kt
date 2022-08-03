@@ -23,7 +23,7 @@ import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 @Composable
-fun FolderAdd(navController: NavController) {
+fun FolderCreate(navController: NavController) {
     val coroutineScope = rememberCoroutineScope()
     var inProgress by remember { mutableStateOf(false) }
 
@@ -43,14 +43,14 @@ fun FolderAdd(navController: NavController) {
     }
 
     accounts?.let {
-        CreateFolderView(it, error) { accountId, folderName ->
+        FolderCreateView(it, error) { accountId, folderName ->
             if (inProgress) {
-                return@CreateFolderView
+                return@FolderCreateView
             }
 
             if (accountId == null || folderName.isBlank()) {
                 error = "Please specify a folder name and select an account"
-                return@CreateFolderView
+                return@FolderCreateView
             }
 
             error = ""
@@ -72,7 +72,7 @@ fun FolderAdd(navController: NavController) {
 }
 
 @Composable
-fun CreateFolderView(
+fun FolderCreateView(
     accounts: List<Account>,
     error: String?,
     onCreateFolder: (accountId: Int?, folderName: String) -> Unit
@@ -138,7 +138,7 @@ fun CreateFolderView(
 
 @Preview(showBackground = true)
 @Composable
-fun CreateFolderPreview() {
+fun FolderCreatePreview() {
     val accounts = listOf(
         Account(1, "Default", AccountKind.Local),
         Account(2, "Remote", AccountKind.Mavinote)
@@ -146,5 +146,5 @@ fun CreateFolderPreview() {
 
     val error = null
 
-    CreateFolderView(accounts, error) { _, _ -> }
+    FolderCreateView(accounts, error) { _, _ -> }
 }
