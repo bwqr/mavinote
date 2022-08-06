@@ -1,19 +1,29 @@
+use serde::de::DeserializeOwned;
 use sqlx::Connection;
+use sqlx::types::Json;
 use sqlx::{Sqlite, pool::PoolConnection, Error};
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind};
+use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote};
 
 pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
-    sqlx::query_as("select * from accounts order by id")
+    sqlx::query_as("select id, name, kind from accounts order by id")
         .fetch_all(conn)
         .await
 }
 
 pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<Account>, Error> {
-    sqlx::query_as("select * from accounts where id = ?")
+    sqlx::query_as("select id, name, kind from accounts where id = ?")
         .bind(account_id)
         .fetch_optional(conn)
         .await
+}
+
+pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<T>, Error> {
+    sqlx::query_as::<Sqlite, (Json<T>,)>("select data from accounts where id = ?")
+        .bind(account_id)
+        .fetch_optional(conn)
+        .await
+        .map(|opt| opt.map(|json| json.0.0))
 }
 
 pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
@@ -31,21 +41,31 @@ pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id
         .await
 }
 
-pub async fn create_account(conn: &mut PoolConnection<Sqlite>, name: String, kind: AccountKind) -> Result<Account, Error> {
+pub async fn create_account(conn: &mut PoolConnection<Sqlite>, name: String, kind: AccountKind, data: Option<Json<Mavinote>>) -> Result<Account, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into accounts (name, kind) values(?, ?)")
+        sqlx::query("insert into accounts (name, kind, data) values(?, ?, ?)")
             .bind(name)
             .bind(kind)
+            .bind(data)
             .execute(&mut *conn)
             .await
             .map(|_| ())?;
 
-        sqlx::query_as("select * from accounts order by id desc")
+        sqlx::query_as("select id, name, kind from accounts order by id desc")
             .fetch_optional(conn)
             .await
             .map(|opt| opt.unwrap())
     }))
      .await
+}
+
+pub async fn update_account_data(conn: &mut PoolConnection<Sqlite>, account_id: i32, data: Option<Json<Mavinote>>) -> Result<(), Error> {
+    sqlx::query("update accounts set data = ? where id = ?")
+        .bind(data)
+        .bind(account_id)
+        .execute(&mut *conn)
+        .await
+        .map(|_| ())
 }
 
 pub async fn delete_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {

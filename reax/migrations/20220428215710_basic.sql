@@ -2,6 +2,7 @@ create table accounts(
     id      integer primary key autoincrement,
     name    text        not null    unique,
     kind    varchar(9)  not null,
+    data    text    default null,
     check(kind in ('Mavinote', 'Local'))
 );
 

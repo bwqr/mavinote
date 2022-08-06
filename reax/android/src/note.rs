@@ -14,30 +14,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
     once_id: jint
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::sync().await;
+        let res = note::sync::sync().await;
 
         send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1activeSyncs(
-    _: JNIEnv,
-    _: JObject,
-    stream_id: jint
-) -> jlong {
-    let handle = spawn(async move {
-        let mut rx = note::active_syncs();
-
-        send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
-
-        while rx.changed().await.is_ok() {
-            send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
-        }
-
-        send_stream::<i32>(stream_id, Message::Complete);
     });
 
     Box::into_raw(Box::new(handle)) as jlong
@@ -89,6 +68,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1account(
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1mavinoteAccount(
+    _: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    account_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::mavinote_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
     env: JNIEnv,
     _: JObject,
@@ -120,6 +115,25 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteAccoun
 ) -> jlong {
     let handle = spawn(async move {
         let res = note::delete_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1authorizeMavinoteAccount(
+    env: JNIEnv,
+    _: JObject,
+    once_id: jint,
+    account_id: jint,
+    password: JString,
+) -> jlong {
+    let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::authorize_mavinote_account(account_id, password).await;
 
         send_once(once_id, res);
     });

@@ -3,7 +3,10 @@ package com.bwqr.mavinote.ui
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Scaffold
 import androidx.compose.material.rememberScaffoldState
-import androidx.compose.runtime.*
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavController
 import androidx.navigation.NavType
@@ -17,8 +20,6 @@ import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.Bus
 import com.bwqr.mavinote.viewmodels.BusEvent
 import com.bwqr.mavinote.viewmodels.NoteViewModel
-import kotlinx.coroutines.flow.launchIn
-import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 sealed class NoteScreens(val route: String) {
@@ -37,26 +38,20 @@ fun BackgroundFeatures(mainNavController: NavController) {
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
 
-    var syncing by remember { mutableStateOf(false) }
+    val accountsToAuthorize = remember { mutableStateMapOf<Int, Unit>() }
+
 
     LaunchedEffect(key1 = 1) {
         launch {
             while (true) {
-                when (Bus.listen()) {
-                    BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
+                when (val event = Bus.listen()) {
+                    is BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
                         "No internet connection"
                     )
-                    BusEvent.RequireAuthorization -> scaffoldState.snackbarHostState.showSnackbar(
-                        "Mavinote account requires authorization"
-                    )
+                    is BusEvent.RequireAuthorization -> accountsToAuthorize[event.accountId] = Unit
                 }
             }
         }
-
-        NoteViewModel()
-            .activeSyncs()
-            .onEach { syncing = it > 0 }
-            .launchIn(this)
 
         try {
             NoteViewModel().sync()
@@ -78,6 +73,10 @@ fun BackgroundFeatures(mainNavController: NavController) {
             }
         },
     ) {
+        accountsToAuthorize.firstNotNullOfOrNull { accountId -> accountId.key }?.let { accountId ->
+            AccountAuthorize(accountId) { accountsToAuthorize.remove(accountId) }
+        }
+
         NavHost(
             navController,
             startDestination = NoteScreens.Folders.route,

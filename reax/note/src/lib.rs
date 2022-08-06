@@ -1,189 +1,30 @@
 use std::sync::Arc;
 
+use mavinote::Client;
 use once_cell::sync::OnceCell;
-use sqlx::{Pool, Sqlite};
+use sqlx::{Pool, Sqlite, types::Json};
 use tokio::sync::watch::{channel, Sender};
 
-use base::{Error, State, observable_map::{ObservableMap, Receiver}, Store};
+use base::{Error, State, observable_map::{ObservableMap, Receiver}, Store, Config};
 
-use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind};
+use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
 pub mod models;
+pub mod sync;
+
+mod mavinote;
 mod requests;
 mod responses;
 mod storage;
-mod sync;
 
 static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
-static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
+pub(crate) static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
-static ACTIVE_SYNCS: OnceCell<Sender<i32>> = OnceCell::new();
-
-fn start_sync() {
-    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs += 1; });
-}
-
-fn end_sync() {
-    ACTIVE_SYNCS.get().unwrap().send_modify(|active_syncs| { *active_syncs -= 1; });
-}
 
 pub fn init() {
     ACCOUNTS.set(channel(State::default()).0).unwrap();
     FOLDERS.set(channel(State::default()).0).unwrap();
     NOTES_MAP.set(Arc::new(ObservableMap::new())).unwrap();
-    ACTIVE_SYNCS.set(channel(0).0).unwrap();
-}
-
-pub fn active_syncs() -> tokio::sync::watch::Receiver<i32> {
-    ACTIVE_SYNCS.get().unwrap().subscribe()
-}
-
-pub async fn try_sync() -> Result<(), Error> {
-    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
-
-    tokio::time::sleep(std::time::Duration::from_secs(2)).await;
-
-    let mavinote_account = if let Some(account) = storage::fetch_accounts(&mut conn).await?.into_iter().find(|a| a.kind == AccountKind::Mavinote) {
-        account
-    } else {
-        log::debug!("mavinote account is not found, not syncing");
-        return Ok(());
-    };
-
-    let remote_folders = requests::fetch_folders().await?;
-
-    for remote_folder in remote_folders {
-        if let ModelState::Deleted = remote_folder.state {
-            storage::delete_folder_by_remote_id(&mut conn, remote_folder.id(), mavinote_account.id).await?;
-            continue
-        }
-
-        let folder = if let Some(folder) = storage::fetch_folder_by_remote_id(&mut conn, remote_folder.id(), mavinote_account.id).await? {
-            folder
-        } else {
-            storage::create_folder(&mut conn, Some(remote_folder.id()), mavinote_account.id, remote_folder.name.clone()).await?
-        };
-
-        let commits = match requests::fetch_commits(remote_folder.id()).await {
-            Ok(commits) => commits,
-            Err(e) => {
-                log::debug!("failed to fetch commits for folder with remote id {}, {e:?}", remote_folder.id);
-
-                continue
-            }
-        };
-
-        for commit in commits {
-            let note = storage::fetch_note_by_remote_id(&mut conn, commit.note_id(), folder.local_id()).await?;
-
-            if let Some(note) = note {
-                if ModelState::Clean == note.state && note.commit_id < commit.commit_id {
-                    // A note fetched by its remote id must have remote id. Hence we can safely unwrap it
-                    match requests::fetch_note(note.remote_id().unwrap()).await {
-                        Ok(remote_note) => storage::update_note(
-                            &mut conn,
-                            note.local_id(),
-                            remote_note.title.as_ref().map(|title| title.as_str()),
-                            remote_note.text.as_str(),
-                            remote_note.commit_id,
-                            ModelState::Clean,
-                        ).await?,
-                        Err(e) => log::debug!("failed to fetch note with remote id {}, {e:?}", note.remote_id().unwrap().0),
-                    }
-                }
-            } else {
-                match requests::fetch_note(commit.note_id()).await {
-                    Ok(note) => {
-                        storage::create_note(&mut conn, folder.local_id(), Some(note.id()), note.title, note.text, note.commit_id).await?;
-                    },
-                    Err(e) => log::debug!("failed to fetch note with remote id {}, {e:?}", commit.note_id),
-                };
-            }
-        }
-    }
-
-    let local_folders = storage::fetch_account_folders(&mut conn, mavinote_account.id).await?
-        .into_iter()
-        .filter(|folder| folder.account_id == mavinote_account.id)
-        .collect::<Vec<Folder>>();
-
-    for local_folder in local_folders {
-        if let ModelState::Deleted = local_folder.state {
-            if let Some(remote_id) = local_folder.remote_id() {
-                if let Ok(_) = requests::delete_folder(remote_id).await {
-                    storage::delete_folder(&mut conn, local_folder.local_id()).await?;
-                }
-            } else {
-                log::error!("A folder cannot be in deleted state while being not created at remote side");
-            }
-
-            continue;
-        }
-
-        let mut remote_folder_id = local_folder.remote_id();
-
-        if remote_folder_id.is_none() {
-            match requests::create_folder(local_folder.name.as_str()).await {
-                Ok(remote_folder) => {
-                    sqlx::query("update folders set remote_id = ? where id = ?")
-                        .bind(remote_folder.id)
-                        .bind(local_folder.id)
-                        .execute(&mut conn)
-                        .await?;
-
-                    remote_folder_id = Some(remote_folder.id());
-                },
-                Err(e) => log::error!("failed to create local folder in remote, {e:?}"),
-            }
-        };
-
-        if let Some(remote_folder_id) = remote_folder_id {
-            let local_notes = storage::fetch_all_notes(&mut conn, local_folder.local_id()).await?;
-
-            for local_note in local_notes {
-                if let ModelState::Deleted = local_note.state {
-                    if let Some(remote_id) = local_note.remote_id() {
-                        if let Ok(_) = requests::delete_note(remote_id).await {
-                            storage::delete_note(&mut conn, local_note.local_id()).await?;
-                        }
-                    } else {
-                        log::error!("A note cannot be in deleted state while being not created at remote side");
-                    }
-                } else if let Some(remote_id) = local_note.remote_id() {
-                    if ModelState::Modified == local_note.state {
-                        match requests::update_note(remote_id, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
-                            Ok(commit) => storage::update_commit(&mut conn, local_note.local_id(), commit.commit_id).await?,
-                            Err(e) => log::debug!("failed to update note with id {}, {e:?}", local_note.id),
-                        }
-                    }
-                } else if local_note.remote_id().is_none() {
-                    match requests::create_note(remote_folder_id, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
-                        Ok(remote_note) => {
-                            sqlx::query("update notes set remote_id = ?, commit_id = ? where id = ?")
-                                .bind(remote_note.id)
-                                .bind(remote_note.commit_id)
-                                .bind(local_note.id)
-                                .execute(&mut conn)
-                                .await?;
-                        },
-                        Err(e) => log::debug!("failed to create local note in remote, {e:?}"),
-                    }
-                }
-            }
-        }
-    }
-
-    FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
-
-    Ok(())
-}
-
-pub async fn sync() -> Result<(), Error> {
-    start_sync();
-    let res = try_sync().await;
-    end_sync();
-
-    res
 }
 
 pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Error>> {
@@ -210,8 +51,12 @@ pub async fn account(account_id: i32) -> Result<Option<Account>, Error> {
     storage::fetch_account(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
+pub async fn mavinote_account(account_id: i32) -> Result<Option<Mavinote>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    storage::fetch_account_data::<Mavinote>(&mut conn, account_id).await.map_err(|e| e.into())
+}
+
 pub async fn add_account(name: String, email: String, password: String, create_account: bool) -> Result<(), Error> {
-    let store = runtime::get::<Arc<dyn Store>>().unwrap();
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     if storage::account_with_name_exists(&mut conn, name.as_str()).await? {
@@ -224,10 +69,7 @@ pub async fn add_account(name: String, email: String, password: String, create_a
         auth::login(email.as_str(), password.as_str()).await?
     };
 
-    storage::create_account(&mut conn, name, AccountKind::Mavinote).await?;
-
-    store.put("token", token.token.as_str()).await?;
-    store.put("mavinote_email", email.as_str()).await?;
+    storage::create_account(&mut conn, name, AccountKind::Mavinote, Some(Json(Mavinote { token: token.token, email}))).await?;
 
     ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
 
@@ -261,6 +103,26 @@ pub async fn delete_account(account_id: i32) -> Result<(), Error> {
     Ok(())
 }
 
+pub async fn authorize_mavinote_account(account_id: i32, password: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    let account = storage::fetch_account(&mut conn, account_id).await?
+        .ok_or(Error::Message(format!("given account id {account_id} does not exist")))?;
+
+    if AccountKind::Mavinote != account.kind {
+        return Err(Error::Message("cannot authorize non mavinote accounts".to_string()));
+    }
+
+    let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account_id).await?
+        .ok_or(Error::Message(format!("mavinote account data does not exist for {account_id}")))?;
+
+    let token = auth::login(account_data.email.as_str(), password.as_str()).await?;
+
+    storage::update_account_data(&mut conn, account_id, Some(Json(Mavinote { email: account_data.email, token: token.token }))).await?;
+
+    Ok(())
+}
+
 pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
     let sender = FOLDERS.get().unwrap();
     let load = match *sender.borrow() {
@@ -286,6 +148,7 @@ pub async fn folder(folder_id: i32) -> Result<Option<Folder>, Error> {
 
 pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let account = storage::fetch_account(&mut conn, account_id)
         .await?
@@ -296,7 +159,10 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
         })?;
 
     let remote_id = if account.kind == AccountKind::Mavinote {
-        match requests::create_folder(name.as_str()).await {
+        let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+        let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+
+        match mavinote.create_folder(name.as_str()).await {
             Ok(folder) => Some(folder.id()),
             Err(e) => {
                 log::debug!("failed to create folder in remote {e:?}");
@@ -320,6 +186,7 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
 
 pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let folder = if let Some(folder) = storage::fetch_folder(&mut conn, LocalId(folder_id)).await? {
         folder
@@ -332,10 +199,16 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
     let mut delete = true;
 
     if let Some(remote_id) = folder.remote_id() {
-        if let Err(e) = requests::delete_folder(remote_id).await {
-            log::debug!("failed to delete folder in remote, {e:?}");
+        let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
 
-            delete = false;
+            if let Err(e) = mavinote.delete_folder(remote_id).await {
+                log::debug!("failed to delete folder in remote, {e:?}");
+
+                delete = false;
+            }
         }
     }
 
@@ -370,6 +243,7 @@ pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
 
 pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let folder = storage::fetch_folder(&mut conn, LocalId(folder_id))
         .await?
@@ -394,7 +268,10 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
 
     let remote_note = if account.kind == AccountKind::Mavinote {
         if let Some(remote_id) = folder.remote_id() {
-            match requests::create_note(remote_id, Some(title.as_str()), text).await {
+            let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+
+            match mavinote.create_note(remote_id, Some(title.as_str()), text).await {
                 Ok(note) => Some(note),
                 Err(e) => {
                     log::debug!("failed to create note in remote, {e:?}");
@@ -431,6 +308,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
 
 pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let note = match storage::fetch_note(&mut conn, LocalId(note_id)).await? {
         Some(note) => note,
@@ -446,12 +324,21 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
     let title = text[..ending_index].replace('\n', "");
 
     let (commit_id, state) = if let Some(remote_id) = note.remote_id() {
-        match requests::update_note(remote_id, Some(title.as_str()), text).await {
-            Ok(commit) => (commit.commit_id, ModelState::Clean),
-            Err(e) => {
-                log::debug!("failed to update note with id {note_id}, {e:?}");
-                (note.commit_id, ModelState::Modified)
+        let folder = storage::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
+        let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+
+            match mavinote.update_note(remote_id, Some(title.as_str()), text).await {
+                Ok(commit) => (commit.commit_id, ModelState::Clean),
+                Err(e) => {
+                    log::debug!("failed to update note with id {note_id}, {e:?}");
+                    (note.commit_id, ModelState::Modified)
+                }
             }
+        } else {
+            (note.commit_id, ModelState::Clean)
         }
     } else {
         (note.commit_id, ModelState::Clean)
@@ -474,6 +361,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
 
 pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let note = if let Some(note) = storage::fetch_note(&mut conn, LocalId(note_id)).await? {
         note
@@ -486,10 +374,17 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     let mut delete = true;
 
     if let Some(remote_id) = note.remote_id() {
-        if let Err(e) = requests::delete_note(remote_id).await {
-            log::debug!("failed to delete note in remote, {e:?}");
+        let folder = storage::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
+        let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
 
-            delete = false;
+            if let Err(e) = mavinote.delete_note(remote_id).await {
+                log::debug!("failed to delete note in remote, {e:?}");
+
+                delete = false;
+            }
         }
     }
 

@@ -4,9 +4,9 @@ import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
-enum class BusEvent {
-    DisplayNoInternetWarning,
-    RequireAuthorization,
+sealed class BusEvent {
+    object DisplayNoInternetWarning : BusEvent()
+    class RequireAuthorization(val accountId: Int) : BusEvent()
 }
 
 class Bus {

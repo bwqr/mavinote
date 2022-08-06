@@ -10,7 +10,7 @@ class ReaxException constructor(val error: Error) : Throwable() {
     fun handle() {
         when (error) {
             is HttpError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
-            is HttpError.Unauthorized -> Bus.emit(BusEvent.RequireAuthorization)
+            is HttpError.Unauthorized -> error.accountId?.let { Bus.emit(BusEvent.RequireAuthorization(it)) }
             else -> Log.e("ReaxException", "Unhandled error, $error")
         }
     }
@@ -33,8 +33,8 @@ open class Error {
 
 sealed class HttpError : Error() {
     object NoConnection : HttpError()
-    object UnexpectedResponse: HttpError()
-    object Unauthorized : HttpError()
+    object UnexpectedResponse : HttpError()
+    class Unauthorized(val accountId: Int?) : HttpError()
     object Unknown : HttpError()
 
     companion object {
@@ -44,7 +44,9 @@ sealed class HttpError : Error() {
             return when (index) {
                 0 -> NoConnection
                 1 -> UnexpectedResponse
-                2 -> Unauthorized
+                2 -> Unauthorized(TraitHelpers.deserializeOption(deserializer) {
+                    it.deserialize_i32()
+                })
                 3 -> Unknown
                 else -> throw DeserializationError("Unknown variant index for HttpError: $index")
             }

@@ -41,14 +41,14 @@ pub enum Error {
 pub enum HttpError {
     NoConnection,
     UnexpectedResponse,
-    Unauthorized,
+    Unauthorized(Option<i32>),
     Unknown,
 }
 
 impl From<reqwest::Error> for Error {
     fn from(e: reqwest::Error) -> Self {
         if let Some(StatusCode::UNAUTHORIZED) = e.status() {
-            return Error::Http(HttpError::Unauthorized)
+            return Error::Http(HttpError::Unauthorized(None))
         }
 
         #[cfg(not(target_arch = "wasm32"))]

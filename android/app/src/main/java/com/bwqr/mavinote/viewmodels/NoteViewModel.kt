@@ -1,9 +1,6 @@
 package com.bwqr.mavinote.viewmodels
 
-import com.bwqr.mavinote.models.Account
-import com.bwqr.mavinote.models.Folder
-import com.bwqr.mavinote.models.Note
-import com.bwqr.mavinote.models.TraitHelpers
+import com.bwqr.mavinote.models.*
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -23,21 +20,6 @@ class NoteViewModel {
 
         cont.invokeOnCancellation {
             Runtime.instance.abortOnce(onceId)
-        }
-    }
-
-    fun activeSyncs(): Flow<Int> = callbackFlow {
-        val streamId = Runtime.instance.startStream(Stream(
-            onNext = { deserializer ->
-                trySend(deserializer.deserialize_i32())
-            },
-            onError = { cancel("", it) },
-            onStart = { _activeSyncs(it) },
-            onComplete = { channel.close() }
-        ))
-
-        awaitClose {
-            Runtime.instance.abortStream(streamId)
         }
     }
 
@@ -72,6 +54,20 @@ class NoteViewModel {
         }
     }
 
+    suspend fun mavinoteAccount(accountId: Int): Mavinote? = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(TraitHelpers.deserializeOption(it) { deserializer ->
+                Mavinote.deserialize(deserializer)
+            }) },
+            onError = { cont.resumeWithException(it) },
+            onStart = { _mavinoteAccount(it, accountId) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
     suspend fun addAccount(name: String, email: String, password: String, createAccount: Boolean): Unit = suspendCancellableCoroutine { cont ->
         val onceId = Runtime.instance.startOnce(Once(
             onNext = { cont.resume(Unit) },
@@ -89,6 +85,18 @@ class NoteViewModel {
             onNext = { cont.resume(Unit)},
             onError = { cont.resumeWithException(it)},
             onStart = { _deleteAccount(it, accountId) }
+        ))
+
+        cont.invokeOnCancellation {
+            Runtime.instance.abortOnce(onceId)
+        }
+    }
+
+    suspend fun authorizeMavinoteAccount(accountId: Int, password: String): Unit = suspendCancellableCoroutine { cont ->
+        val onceId = Runtime.instance.startOnce(Once(
+            onNext = { cont.resume(Unit)},
+            onError = { cont.resumeWithException(it)},
+            onStart = { _authorizeMavinoteAccount(it, accountId, password) }
         ))
 
         cont.invokeOnCancellation {
@@ -223,11 +231,12 @@ class NoteViewModel {
     }
 
     private external fun _sync(onceId: Int): Long
-    private external fun _activeSyncs(streamId: Int): Long
     private external fun _accounts(streamId: Int): Long
     private external fun _account(onceId: Int, accountId: Int): Long
+    private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
     private external fun _addAccount(onceId: Int, name: String, email: String, password: String, createAccount: Boolean): Long
     private external fun _deleteAccount(onceId: Int, accountId: Int): Long
+    private external fun _authorizeMavinoteAccount(onceId: Int, accountId: Int, password: String): Long
     private external fun _folders(streamId: Int): Long
     private external fun _folder(onceId: Int, folderId: Int): Long
     private external fun _createFolder(onceId: Int, accountId: Int, name: String): Long

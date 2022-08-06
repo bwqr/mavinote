@@ -20,6 +20,12 @@ pub enum AccountKind {
     Local
 }
 
+#[derive(Debug, Deserialize, Serialize)]
+pub struct Mavinote {
+    pub email: String,
+    pub token: String,
+}
+
 #[derive(Clone, Debug, FromRow, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Folder {

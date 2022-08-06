@@ -15,7 +15,7 @@ data class Account(
             val account = Account(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_str(),
-                AccountKind.deserialize(deserializer)
+                AccountKind.deserialize(deserializer),
             )
 
             deserializer.decrease_container_depth()
@@ -38,6 +38,23 @@ enum class AccountKind {
                 1 -> Local
                 else -> throw DeserializationError("Unknown variant index for AccountKind: $index")
             }
+        }
+    }
+}
+
+data class Mavinote(val email: String, val token: String) {
+    companion object {
+        fun deserialize(deserializer: Deserializer): Mavinote {
+            deserializer.increase_container_depth()
+
+            val account = Mavinote(
+                deserializer.deserialize_str(),
+                deserializer.deserialize_str(),
+            )
+
+            deserializer.decrease_container_depth()
+
+            return account
         }
     }
 }
