@@ -20,9 +20,23 @@ android {
     }
 
     buildTypes {
+        def ApiUrl = 'API_ENDPOINT'
+        def NotifyUrl = 'NOTIFY_URL'
+
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
+            buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
+            buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
+            signingConfig signingConfigs.debug
+        }
+
+        debug {
+            debuggable true
+            applicationIdSuffix '.debug'
+
+            buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
+            buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
         }
     }
     compileOptions {

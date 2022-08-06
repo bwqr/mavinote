@@ -1,7 +1,7 @@
 package com.bwqr.mavinote.viewmodels
 
 import android.util.Log
-import com.bwqr.mavinote.AppConfig
+import com.bwqr.mavinote.BuildConfig
 import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.ReaxException
 import com.novi.bincode.BincodeDeserializer
@@ -87,7 +87,7 @@ class Runtime private constructor(filesDir: String) {
     init {
         System.loadLibrary("reax")
 
-        _init(AppConfig.API_URL, AppConfig.NOTIFY_URL, filesDir)
+        _init(BuildConfig.API_ENDPOINT, BuildConfig.NOTIFY_URL, filesDir)
 
         thread {
             _initHandler { id, isStream, bytes ->

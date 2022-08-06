@@ -164,7 +164,12 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
 
     ::note::init();
     ::notify::init(notify_url);
-    ::log::info!("reax runtime is initialized");
+
+    if cfg!(debug_assertions) {
+        ::log::info!("reax runtime is initialized, debug build");
+    } else {
+        ::log::info!("reax runtime is initialized, release build");
+    }
 }
 
 #[no_mangle]
