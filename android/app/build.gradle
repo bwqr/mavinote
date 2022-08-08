@@ -33,7 +33,6 @@ android {
 
         debug {
             debuggable true
-            applicationIdSuffix '.debug'
 
             buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
             buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
@@ -58,6 +57,22 @@ android {
         }
     }
     namespace 'com.bwqr.mavinote'
+}
+
+apply plugin: 'org.mozilla.rust-android-gradle.rust-android'
+
+cargo {
+    module = '../../reax'
+    libname = 'reax'
+    extraCargoBuildArguments = ['--package', 'android']
+    targets = gradle.startParameter.taskNames.any{it.toLowerCase().contains("debug")} ? ['x86_64'] : ['x86_64', 'arm64']
+    profile = gradle.startParameter.taskNames.any{it.toLowerCase().contains("debug")} ? "debug" : "release"
+}
+
+tasks.whenTaskAdded { task ->
+    if ((task.name == 'javaPreCompileDebug' || task.name == 'javaPreCompileRelease')) {
+        task.dependsOn 'cargoBuild'
+    }
 }
 
 dependencies {

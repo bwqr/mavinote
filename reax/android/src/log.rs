@@ -49,7 +49,7 @@ impl Log for Logger {
         };
 
         unsafe {
-            __android_log_write(level, tag.as_ptr() as *const i8,c_str.as_ptr());
+            __android_log_write(level, tag.as_ptr() as *const c_char,c_str.as_ptr());
         }
     }
 

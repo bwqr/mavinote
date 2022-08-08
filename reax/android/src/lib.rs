@@ -12,6 +12,7 @@ use jni::{
     signature::{JavaType, Primitive},
     JNIEnv, sys::jlong,
 };
+use libc::c_char;
 use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
@@ -73,11 +74,11 @@ fn capture_stderr() {
         let readonly = CString::new("r").unwrap();
         let file = libc::fdopen(pipes[0], readonly.as_ptr());
 
-        let mut buff: [i8; 256] = [0; 256];
+        let mut buff: [c_char; 256] = [0; 256];
         let tag = CString::new("stderr").unwrap();
 
         loop {
-            libc::fgets(&mut buff as *mut i8, 256, file);
+            libc::fgets(&mut buff as *mut c_char, 256, file);
             log::__android_log_write(5, tag.as_ptr(), buff.as_ptr());
         }
     });
@@ -165,11 +166,8 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
     ::note::init();
     ::notify::init(notify_url);
 
-    if cfg!(debug_assertions) {
-        ::log::info!("reax runtime is initialized, debug build");
-    } else {
-        ::log::info!("reax runtime is initialized, release build");
-    }
+    ::log::info!("reax is built with {} profile", if cfg!(debug_assertions) { "debug" } else { "release" });
+    ::log::info!("reax runtime is initialized");
 }
 
 #[no_mangle]
