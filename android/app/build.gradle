@@ -3,9 +3,9 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
-def properties = new Properties()
+def localProperties = new Properties()
 if (rootProject.file("local.properties").exists()) {
-    properties.load(rootProject.file("local.properties").newDataInputStream())
+    localProperties.load(rootProject.file("local.properties").newDataInputStream())
 }
 
 android {
@@ -41,8 +41,8 @@ android {
         debug {
             debuggable true
 
-            buildConfigField 'String', ApiUrl, "\"${properties.getProperty("endpoint.apiUrl")}\""
-            buildConfigField 'String', NotifyUrl, "\"${properties.getProperty("endpoint.notifyUrl")}\""
+            buildConfigField 'String', ApiUrl, "\"${localProperties.getProperty("endpoint.apiUrl")}\""
+            buildConfigField 'String', NotifyUrl, "\"${localProperties.getProperty("endpoint.notifyUrl")}\""
         }
     }
     compileOptions {

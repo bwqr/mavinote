@@ -1,13 +1,10 @@
 package com.bwqr.mavinote.ui.note
 
 import android.util.Log
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -22,6 +19,7 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
+import com.bwqr.mavinote.models.Mavinote
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -32,10 +30,21 @@ fun Account(navController: NavController, accountId: Int) {
     val scope = rememberCoroutineScope()
     var inProgress by remember { mutableStateOf(false) }
     var account by remember { mutableStateOf<Account?>(null) }
+    var mavinote by remember { mutableStateOf<Mavinote?>(null) }
 
     LaunchedEffect(key1 = 0) {
         try {
             account = NoteViewModel().account(accountId)
+
+            account?.let {
+                if (AccountKind.Mavinote == it.kind) {
+                    try {
+                        mavinote = NoteViewModel().mavinoteAccount(it.id)
+                    } catch (e: ReaxException) {
+                        e.handle()
+                    }
+                }
+            }
 
             if (account == null) {
                 Log.e("Account", "accountId $accountId does not exist")
@@ -45,8 +54,8 @@ fun Account(navController: NavController, accountId: Int) {
         }
     }
 
-    account?.let {
-        AccountView(it) {
+    account?.let { it ->
+        AccountView(it, mavinote) {
             if (inProgress) {
                 return@AccountView
             }
@@ -66,10 +75,11 @@ fun Account(navController: NavController, accountId: Int) {
             }
         }
     }
+
 }
 
 @Composable
-fun AccountView(account: Account, onDelete: () -> Unit) {
+fun AccountView(account: Account, mavinote: Mavinote?, onDelete: () -> Unit) {
     var expanded by remember { mutableStateOf(false) }
 
     Column(modifier = Modifier.padding(12.dp)) {
@@ -122,6 +132,34 @@ fun AccountView(account: Account, onDelete: () -> Unit) {
                 }
             }
         }
+
+        mavinote?.let {
+            MavinoteAccountView(it)
+        }
+    }
+}
+
+@Composable
+fun MavinoteAccountView(mavinote: Mavinote) {
+    Card(
+        elevation = 1.dp,
+        modifier = Modifier
+            .padding(24.dp, 0.dp, 0.dp, 18.dp)
+            .fillMaxWidth()
+    ) {
+        Column {
+            Row(modifier = Modifier.padding(18.dp)) {
+                Text(
+                    text = "Email",
+                    fontWeight = FontWeight.Bold,
+                    modifier = Modifier.weight(1f)
+                )
+                Text(
+                    mavinote.email,
+                    modifier = Modifier.weight(1f)
+                )
+            }
+        }
     }
 }
 
@@ -129,6 +167,7 @@ fun AccountView(account: Account, onDelete: () -> Unit) {
 @Composable
 fun AccountPreview() {
     val account = Account(1, "Note on My Phone", AccountKind.Local)
+    val mavinote = Mavinote("email@email.com", "")
 
-    AccountView(account) {}
+    AccountView(account, mavinote) {}
 }
