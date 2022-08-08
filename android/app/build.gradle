@@ -3,6 +3,11 @@ plugins {
     id 'org.jetbrains.kotlin.android'
 }
 
+def properties = new Properties()
+if (rootProject.file("local.properties").exists()) {
+    properties.load(rootProject.file("local.properties").newDataInputStream())
+}
+
 android {
     compileSdk 32
 
@@ -10,8 +15,11 @@ android {
         applicationId "com.bwqr.mavinote"
         minSdk 21
         targetSdk 32
-        versionCode 1
-        versionName "1.0"
+        versionCode 100
+        versionName "0.1.0"
+
+        manifestPlaceholders.versionCode = versionCode
+        manifestPlaceholders.versionName = versionName
 
         testInstrumentationRunner "androidx.test.runner.AndroidJUnitRunner"
         vectorDrawables {
@@ -28,14 +36,13 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
             buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
-            signingConfig signingConfigs.debug
         }
 
         debug {
             debuggable true
 
-            buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
-            buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
+            buildConfigField 'String', ApiUrl, "\"${properties.getProperty("endpoint.apiUrl")}\""
+            buildConfigField 'String', NotifyUrl, "\"${properties.getProperty("endpoint.notifyUrl")}\""
         }
     }
     compileOptions {
@@ -65,8 +72,8 @@ cargo {
     module = '../../reax'
     libname = 'reax'
     extraCargoBuildArguments = ['--package', 'android']
-    targets = gradle.startParameter.taskNames.any{it.toLowerCase().contains("debug")} ? ['x86_64'] : ['x86_64', 'arm64']
-    profile = gradle.startParameter.taskNames.any{it.toLowerCase().contains("debug")} ? "debug" : "release"
+    targets = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") } ? ['x86_64'] : ['x86_64', 'arm64']
+    profile = gradle.startParameter.taskNames.any { it.toLowerCase().contains("debug") } ? "debug" : "release"
 }
 
 tasks.whenTaskAdded { task ->
