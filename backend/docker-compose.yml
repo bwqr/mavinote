@@ -1,0 +1,32 @@
+version: '3.3'
+
+services: 
+  postgres:
+    image: postgres:14
+    restart: always
+    environment: 
+      POSTGRES_PASSWORD: toor
+      POSTGRES_USER: mavinote
+      POSTGRES_DB: mavinote
+    volumes: 
+      - '/mnt/storage/projects/mavinote/tmp/volume/postgres:/var/lib/postgresql'
+    networks:
+      - app-network
+
+  mavinote:
+    image: bwqr/mavinote:0.1
+    restart: always
+    environment:
+      RUST_LOG: debug
+      DATABASE_URL: postgres://mavinote:toor@postgres/mavinote
+      BIND_ADDRESS: 0.0.0.0:8050
+      SECRET_KEY: secret_key
+    ports:
+      - '8050:8050'
+    networks:
+      - app-network
+    depends_on: 
+          - postgres
+networks: 
+    app-network:
+        driver: bridge
