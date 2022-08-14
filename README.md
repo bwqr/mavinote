@@ -2,6 +2,13 @@
 
 Simple and open source note-taking application. You can take notes that reside only in your device or use a Mavinote account to synchronize your notes across your devices.
 
+Contents of this Readme
+
+1. [Avaialability](#availability)
+2. [Project Goals](#project-goals)
+3. [Project Structure](#project-structure)
+4. [Building the Project](#building-the-project)
+
 ### Availability
 
 Anyone can build the project by himself/herself and start using the application. If you want to try it or just want to use it, first store planned to be released on will be [f-droid](https://f-droid.org/) (it is not yet released). A Merge Request will be sent to [fdroiddata](https://gitlab.com/fdroid/fdroiddata) very soon.
@@ -42,14 +49,14 @@ Mavinote contains multiple projects seperated by being a library, backend and fr
 
 * **Backend**
 
-    Backend is a server application which provides authorization and synchronization of notes across multiple applications. It is implemented in [Rust](https://www.rust-lang.org/tr) and uses [actix-web](https://actix.rs/).
+    Backend is a RESTful web service that provides authorization and synchronization of notes across multiple applications. It is implemented in [Rust](https://www.rust-lang.org/tr) and uses [actix-web](https://actix.rs/).
 
 * **Frontends**
 
     * Android
 
         Android implementation of Mavinote. Since developing an Android application on Linux is possible, most of the first development in frontend happens in Android.
-        Other frontend implementations may receive the updates much more later.
+        Other frontend implementations may receive the updates much later.
         It is implemented in [Kotlin](https://kotlinlang.org/) and uses [Jetpack Compose](https://developer.android.com/jetpack/compose).
 
     * iOS
@@ -64,3 +71,9 @@ Mavinote contains multiple projects seperated by being a library, backend and fr
     * Svelte
 
         A web app implementation of Mavinote. Web app is currently incomplete. It is implemented in [TypeScript](https://www.typescriptlang.org/) and uses [Svelte](https://svelte.dev/).
+
+
+### Running Mavinote application
+
+You can refer to frontend applications' README files. For example, if you want to run android application, you can checkout [android/README.md](https://github.com/bwqr/mavinote/tree/main/android) file.
+If you want to synchronize your notes across multiple applications, you need a running backend service.
