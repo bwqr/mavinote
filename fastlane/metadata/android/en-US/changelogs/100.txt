@@ -1,0 +1,6 @@
+This is first release. With this release, Mavinote contains these features
+
+* Adding a Mavinote account
+* Creating folder and note in a Local or Mavinote account
+* Editing a created note
+* Synchronization of folders and notes created in a Mavinote account
