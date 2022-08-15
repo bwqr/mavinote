@@ -34,8 +34,8 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField 'String', ApiUrl, '"http://10.0.2.2:8050/api"'
-            buildConfigField 'String', NotifyUrl, '"ws://10.0.2.2:8050/api/notify/connect"'
+            buildConfigField 'String', ApiUrl, '"http://ec2-18-134-209-122.eu-west-2.compute.amazonaws.com/api"'
+            buildConfigField 'String', NotifyUrl, '"ws://ec2-18-134-209-122.eu-west-2.compute.amazonaws.com/api/notify/connect"'
         }
 
         debug {
