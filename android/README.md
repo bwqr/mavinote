@@ -2,7 +2,7 @@
 
 Android application of Mavinote. This project depends on the **reax** library. **Reax** will be automatically build when you build the android project. However you need to complete the **android prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
 
-After completing the prerequisites, you can build the android project from command line or from Android Studio (be sure that **cargo** and **rustc** are available from **PATH** environment variable).
+After completing the prerequisites, you can build the android project from command line or from Android Studio (be sure that **cargo** and **rustc** are accessible via **PATH** environment variable).
 
 If you want to have your backend service running and want the built application to connect your service, you need to change the predefined endpoint in [app/build.gradle](https://github.com/bwqr/mavinote/blob/main/android/app/build.gradle). These configurations are defined as **buildConfigField**. You can change **ApiUrl** defined in **release** section as you wish.
 

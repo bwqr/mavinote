@@ -13,7 +13,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.ui.BackgroundFeatures
-import com.bwqr.mavinote.ui.theme.MaviNoteTheme
+import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.Runtime
 
 sealed class MainScreens(val route: String) {
@@ -27,7 +27,7 @@ class MainActivity : ComponentActivity() {
         Runtime.initialize(applicationContext.filesDir.absolutePath)
 
         setContent {
-            MaviNoteTheme {
+            MavinoteTheme {
                 // A surface container using the 'background' color from the theme
                 Surface(
                     modifier = Modifier.fillMaxSize(),
@@ -57,7 +57,7 @@ fun MainScreen() {
 @Preview(showBackground = true)
 @Composable
 fun DefaultPreview() {
-    MaviNoteTheme {
+    MavinoteTheme {
         MainScreen()
     }
 }

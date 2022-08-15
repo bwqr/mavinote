@@ -26,7 +26,7 @@ import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.NoteScreens
 import com.bwqr.mavinote.ui.SubTitle
 import com.bwqr.mavinote.ui.Title
-import com.bwqr.mavinote.ui.theme.MaviNoteTheme
+import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -168,7 +168,7 @@ fun FoldersPreview() {
         )
     )
 
-    MaviNoteTheme {
+    MavinoteTheme {
         FoldersView(navController, accounts)
     }
 }

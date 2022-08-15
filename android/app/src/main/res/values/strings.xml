@@ -1,5 +1,5 @@
 <resources>
-    <string name="app_name">MaviNote</string>
+    <string name="app_name">Mavinote</string>
     <string name="no_folder_in_account">There is no folder in this account</string>
     <string name="manage_accounts">Manage Accounts</string>
     <string name="folders">Folders</string>

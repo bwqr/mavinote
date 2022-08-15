@@ -16,7 +16,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.ui.Title
-import com.bwqr.mavinote.ui.theme.MaviNoteTheme
+import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
@@ -154,7 +154,7 @@ fun NoteView(
 @Preview(showBackground = true)
 @Composable
 fun NotePreview() {
-    MaviNoteTheme {
+    MavinoteTheme {
         NoteView(
             "Shining Note",
             "Here is a little bit description about note",

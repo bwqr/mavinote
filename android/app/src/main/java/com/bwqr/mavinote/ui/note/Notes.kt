@@ -26,7 +26,7 @@ import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.Title
-import com.bwqr.mavinote.ui.theme.MaviNoteTheme
+import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -160,7 +160,7 @@ fun NotesPreview() {
         Note(4, folder.id, null, "Middle ", "Right in the middle", 1, State.Clean),
     )
 
-    MaviNoteTheme {
+    MavinoteTheme {
         NotesView(navController, folder, notes) {}
     }
 }
@@ -172,7 +172,7 @@ fun EmptyNotesPreview() {
 
     val folder = Folder(1, 1, null, "Todos", State.Clean)
 
-    MaviNoteTheme {
+    MavinoteTheme {
         NotesView(navController, folder, listOf()) {}
     }
 }
