@@ -24,4 +24,5 @@ sqlx = { version = "0.5.13", features = [ "runtime-tokio-rustls", "sqlite" ] }
 tokio = { version = "1.17.0", features = ["full"] }
 
 [lib]
+name = "reax"
 crate-type= ["staticlib"]

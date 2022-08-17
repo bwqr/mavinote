@@ -11,26 +11,9 @@ use crate::{spawn, send_stream, Message, send_once};
 #[no_mangle]
 pub extern "C" fn reax_note_sync(once_id: c_int) -> * mut JoinHandle<()> {
     let handle = spawn(async move {
-        let res = note::sync().await;
+        let res = note::sync::sync().await;
 
         send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle))
-}
-
-#[no_mangle]
-pub extern "C" fn reax_note_active_syncs(stream_id: c_int) -> * mut JoinHandle<()> {
-    let handle = spawn(async move {
-        let mut rx = note::active_syncs();
-
-        send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
-
-        while rx.changed().await.is_ok() {
-            send_stream::<i32>(stream_id, Message::Ok(*rx.borrow()));
-        }
-
-        send_stream::<i32>(stream_id, Message::Complete);
     });
 
     Box::into_raw(Box::new(handle))
@@ -77,7 +60,7 @@ pub extern "C" fn reax_note_create_folder(once_id: c_int, name: *const c_char) -
     let name = unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() };
 
     let handle = spawn(async move {
-        let res = note::create_folder(name).await;
+        let res = note::create_folder(1, name).await;
 
         send_once(once_id, res);
     });
@@ -131,9 +114,11 @@ pub extern "C" fn reax_note_note(once_id: c_int, note_id: c_int) -> * mut JoinHa
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_create_note(once_id: c_int, folder_id: c_int) -> * mut JoinHandle<()>  {
+pub extern "C" fn reax_note_create_note(once_id: c_int, folder_id: c_int, text: *const c_char) -> * mut JoinHandle<()>  {
+    let text = unsafe { CStr::from_ptr(text).to_str().unwrap().to_string() };
+
     let handle = spawn(async move {
-        let res = note::create_note(folder_id).await;
+        let res = note::create_note(folder_id, text).await;
 
         send_once(once_id, res);
     });

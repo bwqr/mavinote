@@ -8,7 +8,6 @@ use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 use tokio::task::JoinHandle;
 
 mod note;
-mod auth;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
