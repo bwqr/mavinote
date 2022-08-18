@@ -32,23 +32,12 @@ struct ContentView: View {
     @StateObject private var appState = AppState()
 
     var body: some View {
-        NavigationView {
-            VStack {
-                NavigationLink(destination: LoginView(), tag: Screen.Login, selection: $appState.activeScreen) {
-                   EmptyView()
-                }
-
-                NavigationLink(destination: BackgroundFeaturesView(), tag: Screen.BackgroundFeatures, selection: $appState.activeScreen) {
-                    EmptyView()
-                }
+        BackgroundFeaturesView()
+            .environmentObject(appState)
+            .onAppear {
+                appState.activeScreen = Screen.BackgroundFeatures
             }
-        }
-        .environmentObject(appState)
-        .onAppear {
-            appState.activeScreen = Screen.BackgroundFeatures
-        }
-    }
-}
+    }}
 
 struct ContentView_Previews: PreviewProvider {
     static var previews: some View {

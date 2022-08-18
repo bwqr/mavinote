@@ -37,8 +37,7 @@ struct NoteView : View {
                             try await NoteViewModel().updateNote(noteId, text)
                         }
                     } else {
-                        let noteId = try await NoteViewModel().createNote(folderId)
-                        try await NoteViewModel().updateNote(noteId, text)
+                        let _ = try await NoteViewModel().createNote(folderId, text)
                     }
                 } catch {
                     print("failed to update or create note", error)

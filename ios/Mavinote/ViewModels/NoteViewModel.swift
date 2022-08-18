@@ -9,21 +9,6 @@ class NoteViewModel {
         }
     }
 
-    func activeSyncs() -> AsyncStream<Result<Int32, ReaxError>> {
-        return AsyncStream { continuation in
-             let streamId = Runtime.instance().startStream(Stream(
-                onNext: { continuation.yield(Result.success(try $0.deserialize_i32())) },
-                onError: { continuation.yield(Result.failure($0))},
-                onComplete: { continuation.finish() },
-                onStart: { reax_note_active_syncs($0)}
-            ))
-
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
-        }
-    }
-
     func folders() -> AsyncStream<Result<[Folder], ReaxError>> {
         return AsyncStream { continuation in
              let streamId = Runtime.instance().startStream(Stream(
@@ -86,12 +71,12 @@ class NoteViewModel {
         }
     }
 
-    func createNote(_ folderId: Int32) async throws -> Int32 {
+    func createNote(_ folderId: Int32, _ text: String) async throws -> Int32 {
         return try await withCheckedThrowingContinuation { continuation in
             Runtime.instance().startOnce(Once(
                 onNext: { continuation.resume(returning: try $0.deserialize_i32()) },
                 onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_create_note($0, folderId) }
+                onStart: { reax_note_create_note($0, folderId, text) }
             ))
         }
     }

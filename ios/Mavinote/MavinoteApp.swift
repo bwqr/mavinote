@@ -1,7 +1,7 @@
 import SwiftUI
 
 @main
-struct MaviNoteApp: App {
+struct MavinoteApp: App {
     init() {
         do {
             let appSupportDir = try FileManager.default.url(for: .applicationSupportDirectory, in: .userDomainMask, appropriateFor: nil, create: true)
@@ -12,7 +12,7 @@ struct MaviNoteApp: App {
             fatalError("Unable to create application support directory")
         }
     }
-    
+
     var body: some Scene {
         WindowGroup {
             ContentView()

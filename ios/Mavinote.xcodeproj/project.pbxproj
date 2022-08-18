@@ -1,0 +1,696 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 55;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
+		AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5228AD1C17005F2A15 /* Folder.swift */; };
+		AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5328AD1C17005F2A15 /* Note.swift */; };
+		AC6CAA5828AD1C17005F2A15 /* TraitHelpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */; };
+		AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */; };
+		AC6CAA5D28AD1C1F005F2A15 /* NoteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */; };
+		AC7A67A728AD21C000D7FAEC /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = AC7A67A628AD21C000D7FAEC /* Serde */; };
+		AC7A67A928AD240700D7FAEC /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC7A67A828AD23F900D7FAEC /* libreax.a */; };
+		ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73728AEAB4C0015F71E /* NoteView.swift */; };
+		ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */; };
+		ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73928AEAB4C0015F71E /* FoldersView.swift */; };
+		ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73A28AEAB4C0015F71E /* NotesView.swift */; };
+		ACA8F74328AEAB4C0015F71E /* BackgroundFeaturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */; };
+		ACC07B9E28AD197700305FC6 /* MavinoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07B9D28AD197700305FC6 /* MavinoteApp.swift */; };
+		ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07B9F28AD197700305FC6 /* ContentView.swift */; };
+		ACC07BA228AD197900305FC6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACC07BA128AD197900305FC6 /* Assets.xcassets */; };
+		ACC07BA528AD197900305FC6 /* Preview Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACC07BA428AD197900305FC6 /* Preview Assets.xcassets */; };
+		ACC07BAF28AD197900305FC6 /* MavinoteTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07BAE28AD197900305FC6 /* MavinoteTests.swift */; };
+		ACC07BB928AD197900305FC6 /* MavinoteUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07BB828AD197900305FC6 /* MavinoteUITests.swift */; };
+		ACC07BBB28AD197900305FC6 /* MavinoteUITestsLaunchTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07BBA28AD197900305FC6 /* MavinoteUITestsLaunchTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		ACC07BAB28AD197900305FC6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACC07B9228AD197700305FC6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ACC07B9928AD197700305FC6;
+			remoteInfo = Mavinote;
+		};
+		ACC07BB528AD197900305FC6 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACC07B9228AD197700305FC6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = ACC07B9928AD197700305FC6;
+			remoteInfo = Mavinote;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		AC6CAA5128AD1C17005F2A15 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
+		AC6CAA5228AD1C17005F2A15 /* Folder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
+		AC6CAA5328AD1C17005F2A15 /* Note.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
+		AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TraitHelpers.swift; sourceTree = "<group>"; };
+		AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Runtime.swift; sourceTree = "<group>"; };
+		AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoteViewModel.swift; sourceTree = "<group>"; };
+		AC7A67A428AD219300D7FAEC /* Serde */ = {isa = PBXFileReference; lastKnownFileType = wrapper; path = Serde; sourceTree = "<group>"; };
+		AC7A67A828AD23F900D7FAEC /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../reax/target/x86_64-apple-ios/debug/libreax.a"; sourceTree = "<group>"; };
+		ACA8F73728AEAB4C0015F71E /* NoteView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NoteView.swift; sourceTree = "<group>"; };
+		ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FolderCreateView.swift; sourceTree = "<group>"; };
+		ACA8F73928AEAB4C0015F71E /* FoldersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoldersView.swift; sourceTree = "<group>"; };
+		ACA8F73A28AEAB4C0015F71E /* NotesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotesView.swift; sourceTree = "<group>"; };
+		ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackgroundFeaturesView.swift; sourceTree = "<group>"; };
+		ACC07B9A28AD197700305FC6 /* Mavinote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mavinote.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACC07B9D28AD197700305FC6 /* MavinoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavinoteApp.swift; sourceTree = "<group>"; };
+		ACC07B9F28AD197700305FC6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		ACC07BA128AD197900305FC6 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		ACC07BA428AD197900305FC6 /* Preview Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "Preview Assets.xcassets"; sourceTree = "<group>"; };
+		ACC07BAA28AD197900305FC6 /* MavinoteTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MavinoteTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACC07BAE28AD197900305FC6 /* MavinoteTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavinoteTests.swift; sourceTree = "<group>"; };
+		ACC07BB428AD197900305FC6 /* MavinoteUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = MavinoteUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		ACC07BB828AD197900305FC6 /* MavinoteUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavinoteUITests.swift; sourceTree = "<group>"; };
+		ACC07BBA28AD197900305FC6 /* MavinoteUITestsLaunchTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavinoteUITestsLaunchTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		ACC07B9728AD197700305FC6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC7A67A728AD21C000D7FAEC /* Serde in Frameworks */,
+				AC7A67A928AD240700D7FAEC /* libreax.a in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BA728AD197900305FC6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BB128AD197900305FC6 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		AC6CAA5028AD1C17005F2A15 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				AC6CAA5128AD1C17005F2A15 /* Error.swift */,
+				AC6CAA5228AD1C17005F2A15 /* Folder.swift */,
+				AC6CAA5328AD1C17005F2A15 /* Note.swift */,
+				AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		AC6CAA5928AD1C1F005F2A15 /* ViewModels */ = {
+			isa = PBXGroup;
+			children = (
+				AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */,
+				AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */,
+			);
+			path = ViewModels;
+			sourceTree = "<group>";
+		};
+		AC7A67A328AD219300D7FAEC /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				AC7A67A428AD219300D7FAEC /* Serde */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		AC7A67A528AD21C000D7FAEC /* Frameworks */ = {
+			isa = PBXGroup;
+			children = (
+				AC7A67A828AD23F900D7FAEC /* libreax.a */,
+			);
+			name = Frameworks;
+			sourceTree = "<group>";
+		};
+		ACA8F73528AEAB4C0015F71E /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				ACA8F73628AEAB4C0015F71E /* Note */,
+				ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		ACA8F73628AEAB4C0015F71E /* Note */ = {
+			isa = PBXGroup;
+			children = (
+				ACA8F73728AEAB4C0015F71E /* NoteView.swift */,
+				ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */,
+				ACA8F73928AEAB4C0015F71E /* FoldersView.swift */,
+				ACA8F73A28AEAB4C0015F71E /* NotesView.swift */,
+			);
+			path = Note;
+			sourceTree = "<group>";
+		};
+		ACC07B9128AD197700305FC6 = {
+			isa = PBXGroup;
+			children = (
+				AC7A67A328AD219300D7FAEC /* Packages */,
+				ACC07B9C28AD197700305FC6 /* Mavinote */,
+				ACC07BAD28AD197900305FC6 /* MavinoteTests */,
+				ACC07BB728AD197900305FC6 /* MavinoteUITests */,
+				ACC07B9B28AD197700305FC6 /* Products */,
+				AC7A67A528AD21C000D7FAEC /* Frameworks */,
+			);
+			sourceTree = "<group>";
+		};
+		ACC07B9B28AD197700305FC6 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				ACC07B9A28AD197700305FC6 /* Mavinote.app */,
+				ACC07BAA28AD197900305FC6 /* MavinoteTests.xctest */,
+				ACC07BB428AD197900305FC6 /* MavinoteUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		ACC07B9C28AD197700305FC6 /* Mavinote */ = {
+			isa = PBXGroup;
+			children = (
+				ACA8F73528AEAB4C0015F71E /* Views */,
+				AC6CAA5928AD1C1F005F2A15 /* ViewModels */,
+				AC6CAA5028AD1C17005F2A15 /* Models */,
+				ACC07B9D28AD197700305FC6 /* MavinoteApp.swift */,
+				ACC07B9F28AD197700305FC6 /* ContentView.swift */,
+				ACC07BA128AD197900305FC6 /* Assets.xcassets */,
+				ACC07BA328AD197900305FC6 /* Preview Content */,
+			);
+			path = Mavinote;
+			sourceTree = "<group>";
+		};
+		ACC07BA328AD197900305FC6 /* Preview Content */ = {
+			isa = PBXGroup;
+			children = (
+				ACC07BA428AD197900305FC6 /* Preview Assets.xcassets */,
+			);
+			path = "Preview Content";
+			sourceTree = "<group>";
+		};
+		ACC07BAD28AD197900305FC6 /* MavinoteTests */ = {
+			isa = PBXGroup;
+			children = (
+				ACC07BAE28AD197900305FC6 /* MavinoteTests.swift */,
+			);
+			path = MavinoteTests;
+			sourceTree = "<group>";
+		};
+		ACC07BB728AD197900305FC6 /* MavinoteUITests */ = {
+			isa = PBXGroup;
+			children = (
+				ACC07BB828AD197900305FC6 /* MavinoteUITests.swift */,
+				ACC07BBA28AD197900305FC6 /* MavinoteUITestsLaunchTests.swift */,
+			);
+			path = MavinoteUITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		ACC07B9928AD197700305FC6 /* Mavinote */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACC07BBE28AD197900305FC6 /* Build configuration list for PBXNativeTarget "Mavinote" */;
+			buildPhases = (
+				ACC07B9628AD197700305FC6 /* Sources */,
+				ACC07B9728AD197700305FC6 /* Frameworks */,
+				ACC07B9828AD197700305FC6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Mavinote;
+			packageProductDependencies = (
+				AC7A67A628AD21C000D7FAEC /* Serde */,
+			);
+			productName = Mavinote;
+			productReference = ACC07B9A28AD197700305FC6 /* Mavinote.app */;
+			productType = "com.apple.product-type.application";
+		};
+		ACC07BA928AD197900305FC6 /* MavinoteTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACC07BC128AD197900305FC6 /* Build configuration list for PBXNativeTarget "MavinoteTests" */;
+			buildPhases = (
+				ACC07BA628AD197900305FC6 /* Sources */,
+				ACC07BA728AD197900305FC6 /* Frameworks */,
+				ACC07BA828AD197900305FC6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ACC07BAC28AD197900305FC6 /* PBXTargetDependency */,
+			);
+			name = MavinoteTests;
+			productName = MavinoteTests;
+			productReference = ACC07BAA28AD197900305FC6 /* MavinoteTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+		ACC07BB328AD197900305FC6 /* MavinoteUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = ACC07BC428AD197900305FC6 /* Build configuration list for PBXNativeTarget "MavinoteUITests" */;
+			buildPhases = (
+				ACC07BB028AD197900305FC6 /* Sources */,
+				ACC07BB128AD197900305FC6 /* Frameworks */,
+				ACC07BB228AD197900305FC6 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				ACC07BB628AD197900305FC6 /* PBXTargetDependency */,
+			);
+			name = MavinoteUITests;
+			productName = MavinoteUITests;
+			productReference = ACC07BB428AD197900305FC6 /* MavinoteUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		ACC07B9228AD197700305FC6 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1340;
+				LastUpgradeCheck = 1340;
+				TargetAttributes = {
+					ACC07B9928AD197700305FC6 = {
+						CreatedOnToolsVersion = 13.4.1;
+					};
+					ACC07BA928AD197900305FC6 = {
+						CreatedOnToolsVersion = 13.4.1;
+						TestTargetID = ACC07B9928AD197700305FC6;
+					};
+					ACC07BB328AD197900305FC6 = {
+						CreatedOnToolsVersion = 13.4.1;
+						TestTargetID = ACC07B9928AD197700305FC6;
+					};
+				};
+			};
+			buildConfigurationList = ACC07B9528AD197700305FC6 /* Build configuration list for PBXProject "Mavinote" */;
+			compatibilityVersion = "Xcode 13.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = ACC07B9128AD197700305FC6;
+			productRefGroup = ACC07B9B28AD197700305FC6 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				ACC07B9928AD197700305FC6 /* Mavinote */,
+				ACC07BA928AD197900305FC6 /* MavinoteTests */,
+				ACC07BB328AD197900305FC6 /* MavinoteUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		ACC07B9828AD197700305FC6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACC07BA528AD197900305FC6 /* Preview Assets.xcassets in Resources */,
+				ACC07BA228AD197900305FC6 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BA828AD197900305FC6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BB228AD197900305FC6 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		ACC07B9628AD197700305FC6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				AC6CAA5D28AD1C1F005F2A15 /* NoteViewModel.swift in Sources */,
+				ACA8F74328AEAB4C0015F71E /* BackgroundFeaturesView.swift in Sources */,
+				AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */,
+				ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */,
+				ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */,
+				AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */,
+				AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */,
+				ACC07B9E28AD197700305FC6 /* MavinoteApp.swift in Sources */,
+				AC6CAA5828AD1C17005F2A15 /* TraitHelpers.swift in Sources */,
+				AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */,
+				ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */,
+				ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */,
+				ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BA628AD197900305FC6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACC07BAF28AD197900305FC6 /* MavinoteTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		ACC07BB028AD197900305FC6 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				ACC07BBB28AD197900305FC6 /* MavinoteUITestsLaunchTests.swift in Sources */,
+				ACC07BB928AD197900305FC6 /* MavinoteUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		ACC07BAC28AD197900305FC6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ACC07B9928AD197700305FC6 /* Mavinote */;
+			targetProxy = ACC07BAB28AD197900305FC6 /* PBXContainerItemProxy */;
+		};
+		ACC07BB628AD197900305FC6 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = ACC07B9928AD197700305FC6 /* Mavinote */;
+			targetProxy = ACC07BB528AD197900305FC6 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		ACC07BBC28AD197900305FC6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		ACC07BBD28AD197900305FC6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++17";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		ACC07BBF28AD197900305FC6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "../reax/target/apple-ios/debug";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = ../reax/ios/src/reax.h;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Debug;
+		};
+		ACC07BC028AD197900305FC6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
+				ENABLE_PREVIEWS = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
+				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
+				INFOPLIST_KEY_UILaunchScreen_Generation = YES;
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPad = "UIInterfaceOrientationPortrait UIInterfaceOrientationPortraitUpsideDown UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				INFOPLIST_KEY_UISupportedInterfaceOrientations_iPhone = "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = "../reax/target/apple-ios/release";
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_OBJC_BRIDGING_HEADER = ../reax/ios/src/reax.h;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+			};
+			name = Release;
+		};
+		ACC07BC228AD197900305FC6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mavinote.app/Mavinote";
+			};
+			name = Debug;
+		};
+		ACC07BC328AD197900305FC6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/Mavinote.app/Mavinote";
+			};
+			name = Release;
+		};
+		ACC07BC528AD197900305FC6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Mavinote;
+			};
+			name = Debug;
+		};
+		ACC07BC628AD197900305FC6 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_EMBED_SWIFT_STANDARD_LIBRARIES = YES;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = YES;
+				MARKETING_VERSION = 1.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteUITests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				TEST_TARGET_NAME = Mavinote;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		ACC07B9528AD197700305FC6 /* Build configuration list for PBXProject "Mavinote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACC07BBC28AD197900305FC6 /* Debug */,
+				ACC07BBD28AD197900305FC6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACC07BBE28AD197900305FC6 /* Build configuration list for PBXNativeTarget "Mavinote" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACC07BBF28AD197900305FC6 /* Debug */,
+				ACC07BC028AD197900305FC6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACC07BC128AD197900305FC6 /* Build configuration list for PBXNativeTarget "MavinoteTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACC07BC228AD197900305FC6 /* Debug */,
+				ACC07BC328AD197900305FC6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		ACC07BC428AD197900305FC6 /* Build configuration list for PBXNativeTarget "MavinoteUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				ACC07BC528AD197900305FC6 /* Debug */,
+				ACC07BC628AD197900305FC6 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		AC7A67A628AD21C000D7FAEC /* Serde */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = Serde;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = ACC07B9228AD197700305FC6 /* Project object */;
+}

@@ -1,13 +1,13 @@
 //
-//  MaviNoteUITestsLaunchTests.swift
-//  MaviNoteUITests
+//  MavinoteUITestsLaunchTests.swift
+//  MavinoteUITests
 //
-//  Created by fmk on 7.05.2022.
+//  Created by fmk on 17.08.2022.
 //
 
 import XCTest
 
-class MaviNoteUITestsLaunchTests: XCTestCase {
+class MavinoteUITestsLaunchTests: XCTestCase {
 
     override class var runsForEachTargetApplicationUIConfiguration: Bool {
         true

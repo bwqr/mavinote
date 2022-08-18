@@ -1,13 +1,13 @@
 //
-//  MaviNoteUITests.swift
-//  MaviNoteUITests
+//  MavinoteUITests.swift
+//  MavinoteUITests
 //
-//  Created by fmk on 7.05.2022.
+//  Created by fmk on 17.08.2022.
 //
 
 import XCTest
 
-class MaviNoteUITests: XCTestCase {
+class MavinoteUITests: XCTestCase {
 
     override func setUpWithError() throws {
         // Put setup code here. This method is called before the invocation of each test method in the class.
