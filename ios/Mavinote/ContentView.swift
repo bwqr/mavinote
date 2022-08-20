@@ -10,20 +10,20 @@ enum BusEvent {
 }
 
 class AppState : ObservableObject {
-    private var continuation: CheckedContinuation<BusEvent, Never>?
-    @Published var activeScreen: Screen? = nil
+    private var eventContinuation: CheckedContinuation<BusEvent, Never>?
+    @Published var activeScreen: Screen?
 
     func navigate(_ screen: Screen) {
         activeScreen = screen
     }
 
     func emit(_ event: BusEvent) {
-        continuation?.resume(returning: event)
+        eventContinuation?.resume(returning: event)
     }
 
     func listenEvent() async -> BusEvent {
         return await withCheckedContinuation { continuation in
-            self.continuation = continuation
+            self.eventContinuation = continuation
         }
     }
 }

@@ -4,6 +4,7 @@ void reax_init(const char * api_url, const char * notify_url, const char * stora
 void reax_init_handler(void * ptr, void (*callback)(int id, bool is_stream, const unsigned char *bytes, int bytes_len, void * ptr));
 void reax_abort(void * handle);
 
+void * reax_note_accounts(int stream_id);
 void * reax_note_sync(int once_id);
 void * reax_note_folders(int stream_id);
 void * reax_note_folder(int once_id, int folder_id);

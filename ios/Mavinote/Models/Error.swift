@@ -29,7 +29,7 @@ enum ReaxError : Error {
 enum HttpError {
     case NoConnection
     case UnexpectedResponse
-    case Unauthorized
+    case Unauthorized(Int32?)
     case Unknown
 
     static func deserialize(_ deserializer: Deserializer) throws -> HttpError {
@@ -38,7 +38,7 @@ enum HttpError {
         switch index {
         case 0: return .NoConnection
         case 1: return .UnexpectedResponse
-        case 2: return .Unauthorized
+        case 2: return .Unauthorized(try deserializeOption(deserializer) { try $0.deserialize_i32() })
         case 3: return .Unknown
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for HttpError")
         }

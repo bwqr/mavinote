@@ -1,4 +1,19 @@
 class NoteViewModel {
+    func accounts() -> AsyncStream<Result<[Account], ReaxError>> {
+        return AsyncStream { continuation in
+             let streamId = Runtime.instance().startStream(Stream(
+                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Account.deserialize($0) })) },
+                onError: { continuation.yield(Result.failure($0))},
+                onComplete: { continuation.finish() },
+                onStart: { reax_note_accounts($0)}
+            ))
+
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
+        }
+    }
+
     func sync() async throws -> () {
         return try await withCheckedThrowingContinuation { continuation in
             Runtime.instance().startOnce(Once(

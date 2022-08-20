@@ -9,6 +9,31 @@ use tokio::task::JoinHandle;
 use crate::{spawn, send_stream, Message, send_once};
 
 #[no_mangle]
+pub extern "C" fn reax_note_accounts(stream_id: c_int) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let mut rx = note::accounts().await;
+
+        match &*rx.borrow() {
+            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+            _ => {},
+        };
+
+        while rx.changed().await.is_ok() {
+            match &*rx.borrow() {
+                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+                State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+                _ => {},
+            };
+        }
+
+        send_stream::<Vec<note::models::Account>>(stream_id, Message::Complete);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
 pub extern "C" fn reax_note_sync(once_id: c_int) -> * mut JoinHandle<()> {
     let handle = spawn(async move {
         let res = note::sync::sync().await;

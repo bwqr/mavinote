@@ -2,10 +2,11 @@ import SwiftUI
 
 struct FoldersView: View {
     @State var task: Task<(), Never>?
-    @State var folderCreateActive = false
     @State var folders: [Folder] = []
+    @State var showFolderCreate = false
+
     @EnvironmentObject var appState: AppState
-    
+
     var body: some View {
         NavigationView {
             List(folders) { folder in
@@ -18,7 +19,7 @@ struct FoldersView: View {
                 }
             }
             .toolbar {
-                NavigationLink(destination: FolderCreateView(viewActive: $folderCreateActive), isActive: $folderCreateActive) {
+                NavigationLink(destination: FolderCreateView(onClose: { showFolderCreate = false }), isActive: $showFolderCreate) {
                     Text("Add Folder")
                 }
             }

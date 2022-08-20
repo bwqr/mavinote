@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
 		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
 		AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5228AD1C17005F2A15 /* Folder.swift */; };
 		AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5328AD1C17005F2A15 /* Note.swift */; };
@@ -47,6 +48,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		AC6CAA5128AD1C17005F2A15 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		AC6CAA5228AD1C17005F2A15 /* Folder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		AC6CAA5328AD1C17005F2A15 /* Note.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
@@ -106,6 +108,7 @@
 				AC6CAA5228AD1C17005F2A15 /* Folder.swift */,
 				AC6CAA5328AD1C17005F2A15 /* Note.swift */,
 				AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */,
+				84858B0628AF9FDD001D7F4B /* Account.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -362,6 +365,7 @@
 				ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */,
 				ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */,
 				ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */,
+				84858B0728AF9FDD001D7F4B /* Account.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
