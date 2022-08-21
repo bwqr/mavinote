@@ -21,7 +21,7 @@ struct Account : Identifiable {
 
 }
 
-enum AccountKind {
+enum AccountKind : String, CaseIterable {
     case Mavinote
     case Local
 
@@ -31,7 +31,26 @@ enum AccountKind {
         switch index {
         case 0: return .Mavinote
         case 1: return .Local
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for HttpError")
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for AccountKind")
         }
+    }
+}
+
+struct Mavinote {
+    let email: String
+    let token: String
+
+    static func deserialize(_ deserializer: Deserializer) throws -> Mavinote {
+        try deserializer.increase_container_depth()
+
+        let mavinote = Mavinote(
+            email: try deserializer.deserialize_str(),
+            token: try deserializer.deserialize_str()
+        )
+
+        try deserializer.decrease_container_depth()
+
+        return mavinote
+
     }
 }

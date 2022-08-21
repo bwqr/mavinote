@@ -1,46 +1,52 @@
 import SwiftUI
 
 struct FolderCreateView : View {
-    var onClose: () -> ()
-
     @EnvironmentObject var appState: AppState
 
+    @Environment(\.dismiss) var dismiss: DismissAction
+
     @State var tasks: [Task<(), Never>] = []
-    @State var accounts: [Account] = []
+    @State var accounts: [Account]?
     @State var inProgress = false
     @State var error: String?
 
-
     var body: some View {
-        _FolderCreateView(
-            onCreate: { name in
-                if (inProgress) {
-                    return
-                }
-
-                if name.isEmpty {
-                    error = "Please specify a folder name"
-                    return
-                }
-
-                error = nil
-                inProgress = true
-
-                Task {
-                    do {
-                        try await NoteViewModel().createFolder(name)
-                        onClose()
-                    } catch {
-                        print("failed to create folder", error)
+        SafeContainer(value: $accounts) { accounts in
+            _FolderCreateView(
+                onCreate: { accountId, name in
+                    if (inProgress) {
+                        return
                     }
 
-                    inProgress = false
-                }
-            },
-            accounts: $accounts,
-            inProgress: $inProgress,
-            error: $error
-        )
+                    if name.isEmpty {
+                        error = "Please specify a folder name"
+                        return
+                    }
+
+                    guard let accountId = accountId else {
+                        error = "Pleae select an account"
+                        return
+                    }
+
+                    error = nil
+                    inProgress = true
+
+                    tasks.append(Task {
+                        do {
+                            try await NoteViewModel().createFolder(accountId, name)
+                            dismiss()
+                        } catch {
+                            print("failed to create folder", error)
+                        }
+
+                        inProgress = false
+                    })
+                },
+                accounts: accounts,
+                inProgress: $inProgress,
+                error: $error
+            )
+        }
         .navigationTitle("Create Folder")
         .onAppear {
             tasks.append(Task {
@@ -61,7 +67,9 @@ struct FolderCreateView : View {
 }
 
 private struct _FolderCreateView: View {
-    let onCreate: (_ name: String) -> ()
+    typealias OnCreate = (_ accountId: Int32?, _ name: String) -> ()
+
+    let onCreate: OnCreate
 
     @Binding var accounts: [Account]
     @Binding var inProgress: Bool
@@ -71,52 +79,54 @@ private struct _FolderCreateView: View {
     @State var accountId: Int32?
 
     var body: some View {
-        VStack(alignment: .leading) {
-            Text("Folder Name")
-                .font(.title2)
-                .padding(.bottom, 8)
-                .padding(.top, 32)
+        ScrollView {
+            VStack(alignment: .leading) {
+                Text("Folder Name")
+                    .font(.callout)
+                    .padding(.bottom, 8)
+                    .padding(.top, 16)
 
-            TextField("Name", text: $name)
-                .textContentType(.name)
-                .padding(10)
-                .accentColor(.red)
-                .background(Color(red: 242 / 255, green: 242 / 255, blue: 242 / 255))
-                .cornerRadius(5)
-                .padding(.bottom, 12)
+                TextField("Name", text: $name)
+                    .padding(10)
+                    .background(InputBackground)
+                    .cornerRadius(5)
+                    .padding(.bottom, 16)
 
-            if accounts.count > 1 {
-                 Text("Account this folder be created in")
-                    .font(.title3)
-                    .padding(.top, 32)
+                if accounts.count > 1 {
+                    Text("Account this folder be created in")
+                        .font(.callout)
+                        .padding(.bottom, 8)
 
-                Picker(selection: $accountId, label: Text("Account")) {
                     ForEach(accounts, id: \.self.id) { account in
-                        Text(account.name)
-                            .tag(account.id)
+                        HStack {
+                            Image(systemName: accountId == account.id ? "circle.inset.filled" : "circle")
+                            Text(account.name).tag(account.id as Int32?)
+                        }
+                        .onTapGesture {
+                            accountId = account.id
+                        }
                     }
-                }.pickerStyle(.menu)
-            }
+                    .padding(.bottom, 12)
+                }
 
-            Spacer()
+                if let error = error {
+                    Text(error)
+                        .foregroundColor(.red)
+                }
 
-            if let error = error {
-                Text(error)
-                    .foregroundColor(.red)
+                Button(action: {
+                    onCreate(accountId, name)
+                }) {
+                    Text("Create Folder")
+                        .frame(maxWidth: .infinity)
+                        .foregroundColor(.white)
+                }
+                .frame(maxWidth: .infinity)
+                .padding(12)
+                .background(.blue)
+                .cornerRadius(8)
+                .padding(.bottom, 12)
             }
-
-            Button(action: {
-                onCreate(name)
-            }) {
-                Text("Create Folder")
-                    .frame(maxWidth: .infinity)
-                    .foregroundColor(.white)
-            }
-            .frame(maxWidth: .infinity)
-            .padding(12)
-            .background(.blue)
-            .cornerRadius(8)
-            .padding(.bottom, 12)
         }
         .padding([.leading, .trailing], 18)
         .onAppear {
@@ -135,12 +145,12 @@ struct FolderCreateView_Previews: PreviewProvider {
 
         NavigationView {
             _FolderCreateView(
-                onCreate: { name in },
+                onCreate: { accountId, name in },
                 accounts: .constant(accounts),
                 inProgress: .constant(false),
                 error: .constant("Please specify a name")
             )
-                .navigationTitle("Create Folder")
+            .navigationTitle("Create Folder")
         }
     }
 }

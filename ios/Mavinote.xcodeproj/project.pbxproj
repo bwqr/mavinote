@@ -8,6 +8,10 @@
 
 /* Begin PBXBuildFile section */
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
+		84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13728B268820044A5D4 /* AccountsView.swift */; };
+		84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13928B269B30044A5D4 /* AccountView.swift */; };
+		84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13B28B294690044A5D4 /* AccountAddView.swift */; };
+		84FF86E728B3A16D00CDC922 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FF86E628B3A16D00CDC922 /* Input.swift */; };
 		AC46C86828B1299F00387A72 /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC7A67A828AD23F900D7FAEC /* libreax.a */; };
 		AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = AC46C86A28B1325200387A72 /* AsyncAlgorithms */; };
 		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
@@ -50,6 +54,10 @@
 
 /* Begin PBXFileReference section */
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
+		84A3B13728B268820044A5D4 /* AccountsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
+		84A3B13928B269B30044A5D4 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
+		84A3B13B28B294690044A5D4 /* AccountAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddView.swift; sourceTree = "<group>"; };
+		84FF86E628B3A16D00CDC922 /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
 		AC46C86428B1230500387A72 /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../reax/target/aarch64-apple-ios/debug/libreax.a"; sourceTree = "<group>"; };
 		AC6CAA5128AD1C17005F2A15 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		AC6CAA5228AD1C17005F2A15 /* Folder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
@@ -147,6 +155,7 @@
 			children = (
 				ACA8F73628AEAB4C0015F71E /* Note */,
 				ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */,
+				84FF86E628B3A16D00CDC922 /* Input.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -154,10 +163,13 @@
 		ACA8F73628AEAB4C0015F71E /* Note */ = {
 			isa = PBXGroup;
 			children = (
+				84A3B13728B268820044A5D4 /* AccountsView.swift */,
 				ACA8F73728AEAB4C0015F71E /* NoteView.swift */,
 				ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */,
 				ACA8F73928AEAB4C0015F71E /* FoldersView.swift */,
 				ACA8F73A28AEAB4C0015F71E /* NotesView.swift */,
+				84A3B13928B269B30044A5D4 /* AccountView.swift */,
+				84A3B13B28B294690044A5D4 /* AccountAddView.swift */,
 			);
 			path = Note;
 			sourceTree = "<group>";
@@ -364,9 +376,13 @@
 				ACA8F74328AEAB4C0015F71E /* BackgroundFeaturesView.swift in Sources */,
 				AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */,
 				ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */,
+				84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */,
 				ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */,
+				84FF86E728B3A16D00CDC922 /* Input.swift in Sources */,
+				84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */,
 				AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */,
 				AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */,
+				84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */,
 				ACC07B9E28AD197700305FC6 /* MavinoteApp.swift in Sources */,
 				AC6CAA5828AD1C17005F2A15 /* TraitHelpers.swift in Sources */,
 				AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */,

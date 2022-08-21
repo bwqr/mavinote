@@ -1,5 +1,19 @@
 import SwiftUI
 
+struct SafeContainer<T, Content: View> : View {
+    @Binding var value: T?
+
+    @ViewBuilder var content: (_ value: Binding<T>) -> Content
+
+    var body: some View {
+        if value != nil {
+            content(Binding($value)!)
+        } else {
+            ZStack { }
+        }
+    }
+}
+
 enum Screen {
     case Login
     case BackgroundFeatures

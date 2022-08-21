@@ -1,7 +1,7 @@
 import SwiftUI
 import AsyncAlgorithms
 
-struct AccountWithFolders: Identifiable {
+private struct AccountWithFolders: Identifiable {
     let account: Account
     let folders: [Folder]
 
@@ -12,7 +12,7 @@ struct AccountWithFolders: Identifiable {
 
 struct FoldersView: View {
     @State var tasks: [Task<(), Never>] = []
-    @State var accounts: [AccountWithFolders] = []
+    @State private var accounts: [AccountWithFolders] = []
 
     @EnvironmentObject var appState: AppState
 
@@ -37,9 +37,7 @@ struct FoldersView: View {
     }
 }
 
-struct _FoldersView : View {
-    @State var showFolderCreate = false
-
+private struct _FoldersView : View {
     @Binding var accounts: [AccountWithFolders]
 
     var body: some View {
@@ -50,9 +48,10 @@ struct _FoldersView : View {
                         Text(accountWithFolder.account.name)
                         Spacer()
                         Text("\(accountWithFolder.folders.count)")
+                            .font(.footnote)
                     }) {
                         ForEach(accountWithFolder.folders) { folder in
-                            NavigationLink(destination: NotesView(folderId: folder.id)) {
+                            NavigationLink(destination: NotesView(folderName: folder.name, folderId: folder.id)) {
                                 Text(folder.name)
                             }
                         }
@@ -60,11 +59,10 @@ struct _FoldersView : View {
                     .padding(12)
                 }
 
-                HStack() {
+                HStack {
                     Spacer()
                     NavigationLink(
-                        destination: FolderCreateView { showFolderCreate = false },
-                        isActive: $showFolderCreate
+                        destination: FolderCreateView()
                     ) {
                         Image(systemName: "folder.badge.plus")
                             .padding(EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 24))
@@ -73,6 +71,11 @@ struct _FoldersView : View {
                 }
             }
             .navigationTitle("Folders")
+            .toolbar {
+                NavigationLink(destination: AccountsView()) {
+                    Text("Accounts")
+                }
+            }
         }
     }
 }

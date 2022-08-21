@@ -34,6 +34,54 @@ pub extern "C" fn reax_note_accounts(stream_id: c_int) -> * mut JoinHandle<()> {
 }
 
 #[no_mangle]
+pub extern "C" fn reax_note_account(once_id: c_int, account_id: c_int) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let res = note::account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
+pub extern "C" fn reax_note_mavinote_account(once_id: c_int, account_id: c_int) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let res = note::mavinote_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
+pub extern "C" fn reax_note_add_account(once_id: c_int, name: * const c_char, email: * const c_char, password: * const c_char, create_account: bool) -> * mut JoinHandle<()> {
+    let name = unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() };
+    let email = unsafe { CStr::from_ptr(email).to_str().unwrap().to_string() };
+    let password = unsafe { CStr::from_ptr(password).to_str().unwrap().to_string() };
+
+    let handle = spawn(async move {
+        let res = note::add_account(name, email, password, create_account).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
+pub extern "C" fn reax_note_delete_account(once_id: c_int, account_id: c_int) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let res = note::delete_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
 pub extern "C" fn reax_note_sync(once_id: c_int) -> * mut JoinHandle<()> {
     let handle = spawn(async move {
         let res = note::sync::sync().await;
@@ -81,11 +129,11 @@ pub extern "C" fn reax_note_folder(once_id: c_int, folder_id: c_int) -> * mut Jo
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_create_folder(once_id: c_int, name: *const c_char) -> * mut JoinHandle<()>  {
+pub extern "C" fn reax_note_create_folder(once_id: c_int, account_id: c_int, name: *const c_char) -> * mut JoinHandle<()>  {
     let name = unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() };
 
     let handle = spawn(async move {
-        let res = note::create_folder(1, name).await;
+        let res = note::create_folder(account_id, name).await;
 
         send_once(once_id, res);
     });

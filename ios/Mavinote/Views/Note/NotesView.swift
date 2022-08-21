@@ -1,24 +1,45 @@
 import SwiftUI
 
 struct NotesView: View {
+    let folderName: String
     let folderId: Int32
-    @State var task: Task<(), Never>?
+    @State var tasks: [Task<(), Never>] = []
+    @State var folder: Folder?
     @State var notes: [Note] = []
+    @State var inProgress = false
+
     @EnvironmentObject var appState: AppState
 
+    @Environment(\.dismiss) var dismiss: DismissAction
+
     var body: some View {
-        List(notes) { note in
-            NavigationLink(destination: {
-                NoteView(folderId: folderId, noteId: note.id)
-            }) {
-                if let title = note.title {
-                    Text(title)
-                } else {
-                    Text("New title")
+        SafeContainer(value: $folder) { folder in
+            _NotesView(
+                folder: folder,
+                notes: $notes,
+                onDelete: {
+                    if inProgress {
+                        return
+                    }
+
+                    inProgress = true
+
+                    tasks.append(Task {
+                        do {
+                            try await NoteViewModel().deleteFolder(folderId)
+                            dismiss()
+                        } catch {
+                            print("failed to delete folder \(folderId)")
+                        }
+
+                        inProgress = false
+                    })
                 }
-            }
-        }.onAppear {
-            task = Task {
+            )
+        }
+        .navigationTitle(folderName)
+        .onAppear {
+            tasks.append(Task {
                 let stream = NoteViewModel().noteSummaries(self.folderId)
 
                 for await result in stream {
@@ -27,13 +48,85 @@ struct NotesView: View {
                     case .failure(let error): debugPrint("failed to fetch note summaries", error)
                     }
                 }
+            })
+
+            tasks.append(Task {
+                do {
+                    folder = try await NoteViewModel().folder(folderId)
+                } catch {
+                    print("failed to fetch folder \(folderId)")
+                }
+            })
+        }
+        .onDisappear {
+            tasks.forEach { $0.cancel() }
+        }
+    }
+}
+
+private struct _NotesView : View {
+    @Binding var folder: Folder
+    @Binding var notes: [Note]
+
+    let onDelete: () -> ()
+
+    @State var showEdit = false
+
+    var body: some View {
+        VStack {
+            if notes.count == 0 {
+                Text("There is no note in this folder")
+                Spacer()
+            } else {
+                List(notes) { note in
+                    NavigationLink(destination: NoteView(folderId: folder.id, noteName: note.title ?? "New Note", noteId: note.id)) {
+                        Text(note.title ?? "New Note")
+                    }
+                }
+                    }
+
+            HStack {
+                Spacer()
+                NavigationLink(
+                    destination: NoteView(folderId: folder.id, noteName: "New Note", noteId: nil)
+                ) {
+                    Image(systemName: "square.and.pencil")
+                        .padding(EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 24))
+                        .foregroundColor(.blue)
+                }
             }
-        }.onDisappear {
-            task?.cancel()
-        }.toolbar {
-            NavigationLink(destination: NoteView(folderId: folderId, noteId: nil)) {
-                Text("Add Note")
+
+        }
+        .toolbar {
+            Button("Edit") {
+                showEdit = true
             }
+            .confirmationDialog("Edit Account", isPresented: $showEdit)  {
+                Button("Delete", role: .destructive) {
+                    onDelete()
+                }
+            }
+        }
+
+    }
+}
+
+struct NotesView_Preview : PreviewProvider {
+    static var previews : some View {
+        let folder = Folder(id: 1, accountId: 1, remoteId: nil, name: "My Folder", state: .Clean)
+        let notes = [
+            Note(id: 1, folderId: 1, remoteId: nil, title: "Little Note", text: "Empty text", commitId: 1, state: .Clean),
+            Note(id: 2, folderId: 1, remoteId: nil, title: "Hacky Solutions", text: "Empty text", commitId: 1, state: .Clean),
+            Note(id: 3, folderId: 1, remoteId: nil, title: "No Surprise", text: "Empty text", commitId: 1, state: .Clean)
+        ]
+
+        NavigationView {
+            _NotesView(
+                folder: .constant(folder),
+                notes: .constant(notes),
+                onDelete: { }
+            )
+            .navigationTitle(folder.name)
         }
     }
 }

@@ -14,6 +14,54 @@ class NoteViewModel {
         }
     }
 
+    func account(_ accountId: Int32) async throws -> Account? {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in
+                    continuation.resume(returning: try deserializeOption(deserializer) {
+                        try Account.deserialize($0)
+                    })
+                },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_account($0, accountId) }
+            ))
+        }
+    }
+
+    func mavinoteAccount(_ accountId: Int32) async throws -> Mavinote? {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in
+                    continuation.resume(returning: try deserializeOption(deserializer) {
+                        try Mavinote.deserialize($0)
+                    })
+                },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_mavinote_account($0, accountId) }
+            ))
+        }
+    }
+
+    func addAccount(_ name: String, _ email: String, _ password: String, _ createAccount: Bool) async throws -> () {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_add_account($0, name, email, password, createAccount) }
+            ))
+        }
+    }
+
+    func deleteAccount(_ accountId: Int32) async throws -> () {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_delete_account($0, accountId) }
+            ))
+        }
+    }
+
     func sync() async throws -> () {
         return try await withCheckedThrowingContinuation { continuation in
             Runtime.instance().startOnce(Once(
@@ -39,22 +87,36 @@ class NoteViewModel {
         }
     }
 
-    func folder(_ folderId: Int32) async throws -> () {
+    func folder(_ folderId: Int32) async throws -> Folder? {
         return try await withCheckedThrowingContinuation { continuation in
             Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
+                onNext: { deserializer in
+                    continuation.resume(returning: try deserializeOption(deserializer) {
+                        try Folder.deserialize($0)
+                    })
+                },
                 onError: { continuation.resume(throwing: $0)},
                 onStart: { reax_note_folder($0, folderId) }
             ))
         }
     }
 
-    func createFolder(_ name: String) async throws -> () {
+    func createFolder(_ accountId: Int32, _ name: String) async throws -> () {
         return try await withCheckedThrowingContinuation { continuation in
             Runtime.instance().startOnce(Once(
                 onNext: { deserializer in continuation.resume(returning: ()) },
                 onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_create_folder($0, name) }
+                onStart: { reax_note_create_folder($0, accountId, name) }
+            ))
+        }
+    }
+
+    func deleteFolder(_ folderId: Int32) async throws -> () {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_delete_folder($0, folderId) }
             ))
         }
     }
