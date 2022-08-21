@@ -1,9 +1,13 @@
 import SwiftUI
 import AsyncAlgorithms
 
-struct AccountWithFolders {
+struct AccountWithFolders: Identifiable {
     let account: Account
     let folders: [Folder]
+
+    var id: Int32 {
+        get { self.account.id }
+    }
 }
 
 struct FoldersView: View {
@@ -40,12 +44,59 @@ struct _FoldersView : View {
 
     var body: some View {
         NavigationView {
+            VStack {
+                List(accounts) { accountWithFolder in
+                    Section(header: HStack {
+                        Text(accountWithFolder.account.name)
+                        Spacer()
+                        Text("\(accountWithFolder.folders.count)")
+                    }) {
+                        ForEach(accountWithFolder.folders) { folder in
+                            NavigationLink(destination: NotesView(folderId: folder.id)) {
+                                Text(folder.name)
+                            }
+                        }
+                    }
+                    .padding(12)
+                }
+
+                HStack() {
+                    Spacer()
+                    NavigationLink(
+                        destination: FolderCreateView { showFolderCreate = false },
+                        isActive: $showFolderCreate
+                    ) {
+                        Image(systemName: "folder.badge.plus")
+                            .padding(EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 24))
+                            .foregroundColor(.blue)
+                    }
+                }
+            }
+            .navigationTitle("Folders")
         }
     }
 }
 
 struct FoldersView_Preview: PreviewProvider {
     static  var previews: some View {
-        _FoldersView(accounts: .constant([]))
+        let accounts = [
+            AccountWithFolders(
+                account: Account(id: 1, name: "Local", kind: .Local),
+                folders: [
+                    Folder(id: 1, accountId: 1, remoteId: nil, name: "Favorites", state: .Clean),
+                    Folder(id: 2, accountId: 1, remoteId: nil, name: "Todos", state: .Clean),
+                    Folder(id: 4, accountId: 1, remoteId: nil, name: "Projects", state: .Clean),
+                    Folder(id: 5, accountId: 1, remoteId: nil, name: "Kernel", state: .Clean),
+               ]
+            ),
+            AccountWithFolders(
+                account: Account(id: 2, name: "Mavinote", kind: .Mavinote),
+                folders: [
+                    Folder(id: 3, accountId: 2, remoteId: nil, name: "Race Cars", state: .Clean),
+               ]
+            )
+        ]
+
+        _FoldersView(accounts: .constant(accounts))
     }
 }

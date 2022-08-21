@@ -85,16 +85,17 @@ private struct _FolderCreateView: View {
                 .cornerRadius(5)
                 .padding(.bottom, 12)
 
-            if accounts.capacity > 1 {
+            if accounts.count > 1 {
                  Text("Account this folder be created in")
                     .font(.title3)
                     .padding(.top, 32)
 
                 Picker(selection: $accountId, label: Text("Account")) {
                     ForEach(accounts, id: \.self.id) { account in
-                        Text(account.name).tag(account.id)
+                        Text(account.name)
+                            .tag(account.id)
                     }
-                }.pickerStyle(.automatic)
+                }.pickerStyle(.menu)
             }
 
             Spacer()
