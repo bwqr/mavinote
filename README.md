@@ -11,7 +11,7 @@ Contents of this Readme
 
 ### Availability
 
-Anyone can build the project by himself/herself and start using the application. If you want to try it or just want to use it, first store planned to be released on will be [f-droid](https://f-droid.org/) (it is not yet released). A Merge Request will be sent to [fdroiddata](https://gitlab.com/fdroid/fdroiddata) very soon.
+Anyone can build the project by himself/herself and start using the application. The app is also released on [F-Droid](https://f-droid.org/packages/com.bwqr.mavinote/).
 
 Since releasing applications on [Google Play](https://play.google.com/) and [App Store](https://www.apple.com/app-store/) requires paid developer accounts, I am not planning to release on these stores until users request it.
 
