@@ -1,6 +1,6 @@
 import Serde
 
-struct Account {
+struct Account : Identifiable {
     let id: Int32
     let name: String
     let kind: AccountKind

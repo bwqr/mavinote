@@ -1,46 +1,51 @@
 import SwiftUI
+import AsyncAlgorithms
+
+struct AccountWithFolders {
+    let account: Account
+    let folders: [Folder]
+}
 
 struct FoldersView: View {
-    @State var task: Task<(), Never>?
-    @State var folders: [Folder] = []
-    @State var showFolderCreate = false
+    @State var tasks: [Task<(), Never>] = []
+    @State var accounts: [AccountWithFolders] = []
 
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        NavigationView {
-            List(folders) { folder in
-                NavigationLink(destination: {
-                    NotesView(folderId: folder.id)
-                        .navigationTitle(folder.name)
-                }) {
-                    Text(folder.name)
-                        .padding()
-                }
-            }
-            .toolbar {
-                NavigationLink(destination: FolderCreateView(onClose: { showFolderCreate = false }), isActive: $showFolderCreate) {
-                    Text("Add Folder")
-                }
-            }
-            .navigationBarTitle("Folders")
+        _FoldersView(accounts: $accounts)
             .onAppear {
-                task = Task {
-                    let stream = NoteViewModel().folders()
-
-                    for await result in stream {
+                tasks.append(Task {
+                    for await result in combineLatest(NoteViewModel().accounts(), NoteViewModel().folders()) {
                         switch result {
-                        case .success(let f): folders = f
-                        case .failure(_): appState.navigate(Screen.Login)
+                        case (.success(let a), .success(let f)):
+                            accounts = a.map { account in
+                                AccountWithFolders(account: account, folders: f.filter{ folder in folder.accountId == account.id })
+                            }
+                        default: appState.navigate(Screen.Login)
                         }
                     }
-                }
+                })
             }
             .onDisappear {
-                if let task = task {
-                    task.cancel()
-                }
+                tasks.forEach { task in task.cancel() }
             }
+    }
+}
+
+struct _FoldersView : View {
+    @State var showFolderCreate = false
+
+    @Binding var accounts: [AccountWithFolders]
+
+    var body: some View {
+        NavigationView {
         }
+    }
+}
+
+struct FoldersView_Preview: PreviewProvider {
+    static  var previews: some View {
+        _FoldersView(accounts: .constant([]))
     }
 }

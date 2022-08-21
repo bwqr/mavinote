@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
+		AC46C86828B1299F00387A72 /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC7A67A828AD23F900D7FAEC /* libreax.a */; };
+		AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = AC46C86A28B1325200387A72 /* AsyncAlgorithms */; };
 		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
 		AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5228AD1C17005F2A15 /* Folder.swift */; };
 		AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5328AD1C17005F2A15 /* Note.swift */; };
@@ -15,7 +17,6 @@
 		AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */; };
 		AC6CAA5D28AD1C1F005F2A15 /* NoteViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */; };
 		AC7A67A728AD21C000D7FAEC /* Serde in Frameworks */ = {isa = PBXBuildFile; productRef = AC7A67A628AD21C000D7FAEC /* Serde */; };
-		AC7A67A928AD240700D7FAEC /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC7A67A828AD23F900D7FAEC /* libreax.a */; };
 		ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73728AEAB4C0015F71E /* NoteView.swift */; };
 		ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */; };
 		ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73928AEAB4C0015F71E /* FoldersView.swift */; };
@@ -49,6 +50,7 @@
 
 /* Begin PBXFileReference section */
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
+		AC46C86428B1230500387A72 /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../reax/target/aarch64-apple-ios/debug/libreax.a"; sourceTree = "<group>"; };
 		AC6CAA5128AD1C17005F2A15 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		AC6CAA5228AD1C17005F2A15 /* Folder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		AC6CAA5328AD1C17005F2A15 /* Note.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
@@ -80,7 +82,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC7A67A728AD21C000D7FAEC /* Serde in Frameworks */,
-				AC7A67A928AD240700D7FAEC /* libreax.a in Frameworks */,
+				AC46C86828B1299F00387A72 /* libreax.a in Frameworks */,
+				AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -133,6 +136,7 @@
 		AC7A67A528AD21C000D7FAEC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				AC46C86428B1230500387A72 /* libreax.a */,
 				AC7A67A828AD23F900D7FAEC /* libreax.a */,
 			);
 			name = Frameworks;
@@ -237,6 +241,7 @@
 			name = Mavinote;
 			packageProductDependencies = (
 				AC7A67A628AD21C000D7FAEC /* Serde */,
+				AC46C86A28B1325200387A72 /* AsyncAlgorithms */,
 			);
 			productName = Mavinote;
 			productReference = ACC07B9A28AD197700305FC6 /* Mavinote.app */;
@@ -310,6 +315,9 @@
 				Base,
 			);
 			mainGroup = ACC07B9128AD197700305FC6;
+			packageReferences = (
+				AC46C86928B1325200387A72 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */,
+			);
 			productRefGroup = ACC07B9B28AD197700305FC6 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -536,7 +544,7 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "../reax/target/apple-ios/debug";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -566,7 +574,7 @@
 					"@executable_path/Frameworks",
 				);
 				LIBRARY_SEARCH_PATHS = "../reax/target/apple-ios/release";
-				MARKETING_VERSION = 1.0;
+				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -689,7 +697,23 @@
 		};
 /* End XCConfigurationList section */
 
+/* Begin XCRemoteSwiftPackageReference section */
+		AC46C86928B1325200387A72 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/apple/swift-async-algorithms";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 0.0.3;
+			};
+		};
+/* End XCRemoteSwiftPackageReference section */
+
 /* Begin XCSwiftPackageProductDependency section */
+		AC46C86A28B1325200387A72 /* AsyncAlgorithms */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = AC46C86928B1325200387A72 /* XCRemoteSwiftPackageReference "swift-async-algorithms" */;
+			productName = AsyncAlgorithms;
+		};
 		AC7A67A628AD21C000D7FAEC /* Serde */ = {
 			isa = XCSwiftPackageProductDependency;
 			productName = Serde;

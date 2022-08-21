@@ -8,6 +8,7 @@ struct FolderCreateView : View {
     @State var tasks: [Task<(), Never>] = []
     @State var accounts: [Account] = []
     @State var inProgress = false
+    @State var error: String?
 
 
     var body: some View {
@@ -17,6 +18,12 @@ struct FolderCreateView : View {
                     return
                 }
 
+                if name.isEmpty {
+                    error = "Please specify a folder name"
+                    return
+                }
+
+                error = nil
                 inProgress = true
 
                 Task {
@@ -31,7 +38,8 @@ struct FolderCreateView : View {
                 }
             },
             accounts: $accounts,
-            inProgress: $inProgress
+            inProgress: $inProgress,
+            error: $error
         )
         .navigationTitle("Create Folder")
         .onAppear {
@@ -46,6 +54,9 @@ struct FolderCreateView : View {
                 }
             })
         }
+        .onDisappear {
+            tasks.forEach { task in task.cancel() }
+        }
     }
 }
 
@@ -54,14 +65,17 @@ private struct _FolderCreateView: View {
 
     @Binding var accounts: [Account]
     @Binding var inProgress: Bool
+    @Binding var error: String?
 
     @State var name = ""
+    @State var accountId: Int32?
 
     var body: some View {
         VStack(alignment: .leading) {
             Text("Folder Name")
                 .font(.title2)
                 .padding(.bottom, 8)
+                .padding(.top, 32)
 
             TextField("Name", text: $name)
                 .textContentType(.name)
@@ -71,25 +85,60 @@ private struct _FolderCreateView: View {
                 .cornerRadius(5)
                 .padding(.bottom, 12)
 
+            if accounts.capacity > 1 {
+                 Text("Account this folder be created in")
+                    .font(.title3)
+                    .padding(.top, 32)
+
+                Picker(selection: $accountId, label: Text("Account")) {
+                    ForEach(accounts, id: \.self.id) { account in
+                        Text(account.name).tag(account.id)
+                    }
+                }.pickerStyle(.automatic)
+            }
+
             Spacer()
 
-            Button("Add") {
-                onCreate(name)
+            if let error = error {
+                Text(error)
+                    .foregroundColor(.red)
             }
+
+            Button(action: {
+                onCreate(name)
+            }) {
+                Text("Create Folder")
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
             .padding(12)
+            .background(.blue)
+            .cornerRadius(8)
+            .padding(.bottom, 12)
         }
-        .padding([.leading, .trailing], 12)
+        .padding([.leading, .trailing], 18)
+        .onAppear {
+            accountId = accounts.first?.id
+        }
     }
 }
 
 struct FolderCreateView_Previews: PreviewProvider {
     static var previews: some View {
         let accounts = [
-            Account(id: 1, name: "Local", kind: .Local)
+            Account(id: 1, name: "Local", kind: .Local),
+            Account(id: 2, name: "First Mavinote", kind: .Mavinote),
+            Account(id: 3, name: "Second Mavinote", kind: .Mavinote),
         ]
 
         NavigationView {
-            _FolderCreateView(onCreate: { name in }, accounts: .constant(accounts), inProgress: .constant(false))
+            _FolderCreateView(
+                onCreate: { name in },
+                accounts: .constant(accounts),
+                inProgress: .constant(false),
+                error: .constant("Please specify a name")
+            )
                 .navigationTitle("Create Folder")
         }
     }
