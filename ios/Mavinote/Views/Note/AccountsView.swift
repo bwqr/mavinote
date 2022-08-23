@@ -15,7 +15,7 @@ struct AccountsView : View {
                     for await result in stream {
                         switch result {
                         case .success(let a): accounts = a
-                        case .failure(_): appState.navigate(Screen.Login)
+                        case .failure(let e): e.handle(appState)
                         }
                     }
                 })

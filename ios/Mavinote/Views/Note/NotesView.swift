@@ -45,7 +45,7 @@ struct NotesView: View {
                 for await result in stream {
                     switch result {
                     case .success(let n): notes = n
-                    case .failure(let error): debugPrint("failed to fetch note summaries", error)
+                    case .failure(let e): e.handle(appState)
                     }
                 }
             })
@@ -53,8 +53,10 @@ struct NotesView: View {
             tasks.append(Task {
                 do {
                     folder = try await NoteViewModel().folder(folderId)
+                } catch let e as ReaxError {
+                    e.handle(appState)
                 } catch {
-                    print("failed to fetch folder \(folderId)")
+                    fatalError("\(error)")
                 }
             })
         }

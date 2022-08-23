@@ -14,22 +14,17 @@ struct SafeContainer<T, Content: View> : View {
     }
 }
 
-enum Screen {
-    case Login
-    case BackgroundFeatures
-}
-
 enum BusEvent {
+    case RequireAuthorization(AccountId)
     case NoConnection
+
+    struct AccountId : Identifiable {
+        let id: Int32
+    }
 }
 
 class AppState : ObservableObject {
     private var eventContinuation: CheckedContinuation<BusEvent, Never>?
-    @Published var activeScreen: Screen?
-
-    func navigate(_ screen: Screen) {
-        activeScreen = screen
-    }
 
     func emit(_ event: BusEvent) {
         eventContinuation?.resume(returning: event)
@@ -44,12 +39,37 @@ class AppState : ObservableObject {
 
 struct ContentView: View {
     @StateObject private var appState = AppState()
+    @State var tasks: [Task<(), Never>] = []
+    @State var accountToAuthorize: BusEvent.AccountId?
 
     var body: some View {
-        BackgroundFeaturesView()
+        FoldersView()
+            .sheet(item: $accountToAuthorize) { accountId in
+                AccountAuthorizeView(accountId: accountId.id)
+            }
             .environmentObject(appState)
             .onAppear {
-                appState.activeScreen = Screen.BackgroundFeatures
+                tasks.append(Task {
+                    while (true) {
+                        switch await appState.listenEvent() {
+                        case BusEvent.NoConnection: print("No connection")
+                        case BusEvent.RequireAuthorization(let accountId): accountToAuthorize = accountId
+                        }
+                    }
+                })
+
+                tasks.append(Task {
+                    do {
+                        try await NoteViewModel().sync()
+                    } catch let error as ReaxError {
+                        error.handle(appState)
+                    } catch {
+                        fatalError("\(error)")
+                    }
+                })
+            }
+            .onDisappear {
+                tasks.forEach { $0.cancel() }
             }
     }}
 

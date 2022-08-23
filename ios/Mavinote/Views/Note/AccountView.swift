@@ -4,6 +4,7 @@ struct AccountView : View {
     let accountName: String
     let accountId: Int32
 
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss: DismissAction
 
     @State var tasks: [Task<(), Never>] = []
@@ -28,8 +29,10 @@ struct AccountView : View {
                         do {
                             try await NoteViewModel().deleteAccount(accountId)
                             dismiss()
+                        } catch let e as ReaxError {
+                            e.handle(appState)
                         } catch {
-                            print("failed to delete account \(accountId)")
+                            fatalError("\(error)")
                         }
 
                         inProgress = false
@@ -46,8 +49,10 @@ struct AccountView : View {
                     if let acc = account, acc.kind == AccountKind.Mavinote {
                         mavinote = try await NoteViewModel().mavinoteAccount(acc.id)
                     }
+                } catch let e as ReaxError {
+                    e.handle(appState)
                 } catch {
-                    print("failed to fetch account note", error)
+                    fatalError("\(error)")
                 }
             })
         }

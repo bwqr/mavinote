@@ -34,9 +34,11 @@ struct NoteView : View {
                         }
 
                         dismiss()
-                    } catch {
-                        print("failed to delete note \(noteId ?? 0)", error)
+                    } catch let e as ReaxError {
+                        e.handle(appState)
                         deleting = false
+                    } catch {
+                        fatalError("\(error)")
                     }
                 })
             }
@@ -53,8 +55,10 @@ struct NoteView : View {
                         text = note.text
                         modified = false
                     }
+                } catch let e as ReaxError {
+                    e.handle(appState)
                 } catch {
-                    print("failed to fetch note", error)
+                    fatalError("\(error)")
                 }
             })
         }.onDisappear {

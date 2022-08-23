@@ -19,7 +19,9 @@ enum ReaxError : Error {
 
     func handle(_ appState: AppState) {
         switch self {
-        case .Http(.Unauthorized): appState.navigate(Screen.Login)
+        case .Http(.Unauthorized(let accountId)): if let accountId = accountId {
+            appState.emit(BusEvent.RequireAuthorization(BusEvent.AccountId(id: accountId)))
+        }
         case .Http(.NoConnection): appState.emit(BusEvent.NoConnection)
         default: debugPrint("Unhandled ReaxError \(self)")
         }

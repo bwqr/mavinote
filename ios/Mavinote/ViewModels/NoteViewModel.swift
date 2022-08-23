@@ -121,6 +121,16 @@ class NoteViewModel {
         }
     }
 
+    func authorizeAccount(_ accountId: Int32, password: String) async throws -> () {
+        return try await withCheckedThrowingContinuation { continuation in
+            Runtime.instance().startOnce(Once(
+                onNext: { deserializer in continuation.resume(returning: ()) },
+                onError: { continuation.resume(throwing: $0)},
+                onStart: { reax_note_authorize_account($0, accountId, password) }
+            ))
+        }
+    }
+
     func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], ReaxError>> {
         return AsyncStream { continuation in
             let streamId = Runtime.instance().startStream(Stream(

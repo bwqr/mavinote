@@ -26,7 +26,8 @@ struct FoldersView: View {
                             accounts = a.map { account in
                                 AccountWithFolders(account: account, folders: f.filter{ folder in folder.accountId == account.id })
                             }
-                        default: appState.navigate(Screen.Login)
+                        case (.failure(let e), _): e.handle(appState)
+                        case (_, .failure(let e)): e.handle(appState)
                         }
                     }
                 })

@@ -7,6 +7,7 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		841C3D0728B536D5009021E8 /* AccountAuthorizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */; };
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
 		84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13728B268820044A5D4 /* AccountsView.swift */; };
 		84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13928B269B30044A5D4 /* AccountView.swift */; };
@@ -25,7 +26,6 @@
 		ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */; };
 		ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73928AEAB4C0015F71E /* FoldersView.swift */; };
 		ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73A28AEAB4C0015F71E /* NotesView.swift */; };
-		ACA8F74328AEAB4C0015F71E /* BackgroundFeaturesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */; };
 		ACC07B9E28AD197700305FC6 /* MavinoteApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07B9D28AD197700305FC6 /* MavinoteApp.swift */; };
 		ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = ACC07B9F28AD197700305FC6 /* ContentView.swift */; };
 		ACC07BA228AD197900305FC6 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = ACC07BA128AD197900305FC6 /* Assets.xcassets */; };
@@ -53,6 +53,7 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAuthorizeView.swift; sourceTree = "<group>"; };
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		84A3B13728B268820044A5D4 /* AccountsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		84A3B13928B269B30044A5D4 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -71,7 +72,6 @@
 		ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FolderCreateView.swift; sourceTree = "<group>"; };
 		ACA8F73928AEAB4C0015F71E /* FoldersView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = FoldersView.swift; sourceTree = "<group>"; };
 		ACA8F73A28AEAB4C0015F71E /* NotesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = NotesView.swift; sourceTree = "<group>"; };
-		ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = BackgroundFeaturesView.swift; sourceTree = "<group>"; };
 		ACC07B9A28AD197700305FC6 /* Mavinote.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Mavinote.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		ACC07B9D28AD197700305FC6 /* MavinoteApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MavinoteApp.swift; sourceTree = "<group>"; };
 		ACC07B9F28AD197700305FC6 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
@@ -154,7 +154,6 @@
 			isa = PBXGroup;
 			children = (
 				ACA8F73628AEAB4C0015F71E /* Note */,
-				ACA8F73D28AEAB4C0015F71E /* BackgroundFeaturesView.swift */,
 				84FF86E628B3A16D00CDC922 /* Input.swift */,
 			);
 			path = Views;
@@ -170,6 +169,7 @@
 				ACA8F73A28AEAB4C0015F71E /* NotesView.swift */,
 				84A3B13928B269B30044A5D4 /* AccountView.swift */,
 				84A3B13B28B294690044A5D4 /* AccountAddView.swift */,
+				841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */,
 			);
 			path = Note;
 			sourceTree = "<group>";
@@ -373,13 +373,13 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC6CAA5D28AD1C1F005F2A15 /* NoteViewModel.swift in Sources */,
-				ACA8F74328AEAB4C0015F71E /* BackgroundFeaturesView.swift in Sources */,
 				AC6CAA5728AD1C17005F2A15 /* Note.swift in Sources */,
 				ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */,
 				84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */,
 				ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */,
 				84FF86E728B3A16D00CDC922 /* Input.swift in Sources */,
 				84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */,
+				841C3D0728B536D5009021E8 /* AccountAuthorizeView.swift in Sources */,
 				AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */,
 				AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */,
 				84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */,

@@ -82,6 +82,19 @@ pub extern "C" fn reax_note_delete_account(once_id: c_int, account_id: c_int) ->
 }
 
 #[no_mangle]
+pub extern "C" fn reax_note_authorize_account(once_id: c_int, account_id: c_int, password: * const c_char) -> * mut JoinHandle<()> {
+    let password = unsafe { CStr::from_ptr(password).to_str().unwrap().to_string() };
+
+    let handle = spawn(async move {
+        let res = note::authorize_mavinote_account(account_id, password).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+#[no_mangle]
 pub extern "C" fn reax_note_sync(once_id: c_int) -> * mut JoinHandle<()> {
     let handle = spawn(async move {
         let res = note::sync::sync().await;

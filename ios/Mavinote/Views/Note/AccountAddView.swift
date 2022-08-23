@@ -1,6 +1,7 @@
 import SwiftUI
 
 struct AccountAddView : View {
+    @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss: DismissAction
 
     @State var tasks: [Task<(), Never>] = []
@@ -26,8 +27,14 @@ struct AccountAddView : View {
                     do {
                         try await NoteViewModel().addAccount(name, email, password, createAccount)
                         dismiss()
+                    } catch let e as ReaxError {
+                        switch e {
+                        case .Http(.Unauthorized): error = "Invalid credentials. If you do not have a Mavinote account, you can create a new one by checking the box above"
+                        case .Message(let message): error = message
+                        default: e.handle(appState)
+                        }
                     } catch {
-                        print("failed to add an account")
+                        fatalError("\(error)")
                     }
 
                     inProgress = false

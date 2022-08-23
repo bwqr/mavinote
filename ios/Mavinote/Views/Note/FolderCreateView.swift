@@ -35,8 +35,10 @@ struct FolderCreateView : View {
                         do {
                             try await NoteViewModel().createFolder(accountId, name)
                             dismiss()
+                        } catch let e as ReaxError {
+                            e.handle(appState)
                         } catch {
-                            print("failed to create folder", error)
+                            fatalError("\(error)")
                         }
 
                         inProgress = false
@@ -55,7 +57,7 @@ struct FolderCreateView : View {
                 for await result in stream {
                     switch result {
                     case .success(let a): accounts = a
-                    case .failure(_): appState.navigate(Screen.Login)
+                    case .failure(let e): e.handle(appState)
                     }
                 }
             })
