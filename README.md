@@ -2,16 +2,20 @@
 
 Simple and open source note-taking application. You can take notes that reside only in your device or use a Mavinote account to synchronize your notes across your devices.
 
+**### Please note that your notes are not stored as encrypted both on your device and on Mavinote servers. Storing notes as encrpyted is in the TODO list.**
+
 Contents of this Readme
 
 1. [Avaialability](#availability)
 2. [Project Goals](#project-goals)
 3. [Project Structure](#project-structure)
-4. [Building the Project](#building-the-project)
+4. [Running Mavinote Application](#running-mavinote-application)
 
 ### Availability
 
 Anyone can build the project by himself/herself and start using the application. The app is also released on [F-Droid](https://f-droid.org/packages/com.bwqr.mavinote/).
+
+[<img src="https://fdroid.gitlab.io/artwork/badge/get-it-on.png" height="80"/>](https://f-droid.org/packages/com.bwqr.mavinote/)
 
 Since releasing applications on [Google Play](https://play.google.com/) and [App Store](https://www.apple.com/app-store/) requires paid developer accounts, I am not planning to release on these stores until users request it.
 
@@ -35,7 +39,8 @@ Besides the main points, The project also aims to develop a fully functional not
 - [ ] Note taking
     - [ ] Implement a basic markdown editor
     - [ ] Improve conflict resolution
-- [ ] Finish iOS application
+    - [ ] Store notes as encrypted for both local notes and Mavinote account notes
+- [x] Finish iOS application
 - [ ] Finish desktop application
 - [ ] Finish web application
 
@@ -75,5 +80,8 @@ Mavinote contains multiple projects seperated by being a library, backend and fr
 
 ### Running Mavinote application
 
-You can refer to frontend applications' README files. For example, if you want to run android application, you can checkout [android/README.md](https://github.com/bwqr/mavinote/tree/main/android) file.
-If you want to synchronize your notes across multiple applications, you need a running backend service.
+This project contains more than one application like android and ios.
+To run one of them, you can refer to frontend applications' README files.
+For example, if you want to run android application, you can checkout [android/README.md](https://github.com/bwqr/mavinote/tree/main/android) file.
+
+If you want to synchronize your notes across multiple applications, you need to run the [backend](https://github.com/bwqr/mavinote/tree/main/backend) project.

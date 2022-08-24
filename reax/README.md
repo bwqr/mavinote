@@ -21,3 +21,26 @@ rustup target add <target>
 ```
 
 Currently, only 64 bit builds are supported. 32 bit builds are not tested.
+
+
+### iOS
+
+Build reax for ios requires to have macOS environment. You also need to have a set of different targets based on your device architecture.
+For devices with an arm64 CPU, you should have
+
+* **aarch64-apple-ios** both for running on iOS Simulator and arm64 build
+
+For devices with x86_64 CPU, you should have
+
+* **x86_64-apple-ios** for running on iOS Simulator
+* **aarch64-apple-ios** for an arm64 build
+
+If you have rustup installed on your system, you can install them by typing
+```sh
+rustup target add <target>
+```
+
+Then you have to build the project by running
+```bash
+cargo build --package ios --target <target-you-want-to-build>
+```
