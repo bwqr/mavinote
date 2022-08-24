@@ -1,6 +1,6 @@
 use std::{os::raw::{c_char, c_int, c_uchar}, ffi::{CStr, c_void}, sync::{Mutex, mpsc::Sender, Arc}, future::Future, str::FromStr};
 
-use base::{Store, Config};
+use base::Config;
 use once_cell::sync::OnceCell;
 use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;

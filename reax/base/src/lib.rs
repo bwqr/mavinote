@@ -3,9 +3,6 @@ use serde::Serialize;
 
 pub mod models;
 pub mod observable_map;
-mod store;
-
-pub use store::Store;
 
 #[derive(Clone, Debug)]
 pub enum State<T, E> {

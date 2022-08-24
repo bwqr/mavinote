@@ -1,6 +1,5 @@
-use std::sync::{Mutex, Arc};
+use std::sync::Mutex;
 
-use base::Store;
 use futures_util::StreamExt;
 use once_cell::sync::OnceCell;
 use tokio::task::JoinHandle;
@@ -49,15 +48,8 @@ impl Connection {
         let ws_url = self.ws_url.clone();
 
         self.join_handle = Some(tokio::spawn(async move {
-            let store = runtime::get::<Arc<dyn Store>>().unwrap();
             loop {
-                let token = store
-                    .get("token")
-                    .await
-                    .map(|opt| opt.unwrap_or("".to_string()))
-                    .unwrap_or("".to_string());
-
-                if let Err(e) = Self::connect(format!("{}?token={}", ws_url, token).as_str()).await {
+                if let Err(e) = Self::connect(ws_url.as_str()).await {
                     log::debug!("connect is failed, {e:?}");
                 }
 

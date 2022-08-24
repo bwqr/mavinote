@@ -5,7 +5,7 @@ use once_cell::sync::OnceCell;
 use sqlx::{Pool, Sqlite, types::Json};
 use tokio::sync::watch::{channel, Sender};
 
-use base::{Error, State, observable_map::{ObservableMap, Receiver}, Store, Config};
+use base::{Error, State, observable_map::{ObservableMap, Receiver}, Config};
 
 use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
@@ -78,7 +78,6 @@ pub async fn add_account(name: String, email: String, password: String, create_a
 
 pub async fn delete_account(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
-    let store = runtime::get::<Arc<dyn Store>>().unwrap();
 
     let account = storage::fetch_account(&mut conn, account_id).await?
         .ok_or_else(|| {
@@ -94,8 +93,6 @@ pub async fn delete_account(account_id: i32) -> Result<(), Error> {
     }
 
     storage::delete_account(&mut conn, account_id).await?;
-    store.remove("token").await?;
-    store.remove("mavinote_email").await?;
 
     ACCOUNTS.get().unwrap().send_replace(storage::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
     FOLDERS.get().unwrap().send_replace(storage::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());

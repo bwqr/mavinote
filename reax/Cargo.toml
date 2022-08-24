@@ -8,7 +8,6 @@ members = [
     "note",
     "notify",
     "runtime",
-    "util",
 ]
 
 [package]

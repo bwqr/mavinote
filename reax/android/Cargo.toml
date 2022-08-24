@@ -10,7 +10,6 @@ auth = { path = "../auth" }
 base = { path = "../base" }
 note = { path = "../note" }
 notify = { path = "../notify" }
-util = { path = "../util" }
 runtime = { path = "../runtime" }
 
 bincode = "1.3.3"

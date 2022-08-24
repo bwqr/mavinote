@@ -6,7 +6,7 @@ use std::{
     sync::{mpsc::Sender, Mutex, Arc}, future::Future,
 };
 
-use base::{Config, Store};
+use base::Config;
 use jni::{
     objects::{JObject, JString, JValue},
     signature::{JavaType, Primitive},
@@ -155,8 +155,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
     });
 
     runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
-
-    runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
 
     runtime::put::<Arc<Config>>(Arc::new(Config {
         api_url,
