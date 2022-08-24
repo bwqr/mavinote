@@ -1,4 +1,4 @@
-## User settings
-xcuserdata/
+Mavinote.xcodeproj/*
+!Mavinote.xcodeproj/project.pbxproj
 
 Mavinote/BuildConfs.swift
