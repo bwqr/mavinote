@@ -4,7 +4,7 @@ use account::Mavinote;
 use futures::stream::AbortHandle;
 use js_sys::Uint8Array;
 use serde::Serialize;
-use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
+use wasm_bindgen::prelude::*;
 
 mod log;
 pub mod auth;
@@ -33,6 +33,8 @@ pub fn init_wasm(api_url: String) {
     runtime::init();
     runtime::put::<Mavinote>(Mavinote::new(api_url, getItem("token").unwrap_or("".to_string())));
 
+    note::init();
+
     ::log::info!("reax runtime is initialized");
 }
 
@@ -43,6 +45,19 @@ pub fn abort_stream(pointer: u32) {
     ::log::debug!("received abort, {:p}", handle);
 
     handle.abort();
+}
+
+#[derive(Serialize)]
+pub(crate) enum Message<T: Serialize> {
+    Ok(T),
+    Err(base::Error),
+    Complete,
+}
+
+pub(crate) fn send_stream<T: Serialize>(stream_id: u32, value: Message<T>) {
+    let bytes = bincode::serialize(&value).unwrap();
+
+    WasmRuntime::handleStream(stream_id, bytes);
 }
 
 pub(crate) fn serialize_to_buffer<T: Serialize>(value: T) -> Uint8Array {

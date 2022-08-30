@@ -4,20 +4,51 @@ import type { Deserializer } from "./serde/serde/deserializer";
 export interface Folder {
     id: number;
     name: String;
+    state: State;
 }
 
 export function deserializeFolder(deserializer: Deserializer): Folder {
     return {
         id: deserializer.deserializeI32(),
         name: deserializer.deserializeStr(),
+        state: deserializeState(deserializer),
     };
 }
 
 export interface Note {
     id: number;
     folderId: number;
-    title: string;
+    title: string | null;
     text: string;
+    state: State;
+}
+
+export function deserializeNote(deserializer: Deserializer): Note {
+    return {
+        id: deserializer.deserializeI32(),
+        folderId: deserializer.deserializeI32(),
+        title: deserializeOption(deserializer, (d) => d.deserializeStr()),
+        text: deserializer.deserializeStr(),
+        state: deserializeState(deserializer),
+    };
+}
+
+export enum State {
+    Clean,
+    Deleted
+}
+
+function deserializeState(deserializer: Deserializer): State {
+    const index = deserializer.deserializeVariantIndex();
+
+    switch (index) {
+        case 0:
+            return State.Clean;
+        case 1:
+            return State.Deleted;
+        default:
+            throw new Error('Unknown index for State');
+    }
 }
 
 export class ReaxError {
