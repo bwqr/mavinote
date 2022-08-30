@@ -1,6 +1,16 @@
+import { deserializeOption } from "./serde";
+import type { Deserializer } from "./serde/serde/deserializer";
+
 export interface Folder {
     id: number;
     name: String;
+}
+
+export function deserializeFolder(deserializer: Deserializer): Folder {
+    return {
+        id: deserializer.deserializeI32(),
+        name: deserializer.deserializeStr(),
+    };
 }
 
 export interface Note {
@@ -11,52 +21,59 @@ export interface Note {
 }
 
 export class ReaxError {
-    static deserialize(obj: Record<string, any> | string): ReaxError {
-        if (typeof obj !== 'object') {
-            throw new Error(`expected object, got ${typeof obj}`);
-        }
+    static deserialize(deserializer: Deserializer): ReaxError {
+        const index = deserializer.deserializeVariantIndex();
 
-        if ('Http' in obj) {
-            return HttpError.deserialize(obj['Http']);
-        } else if ('Message' in obj) {
-            return MessageError.deserialize(obj['Message']);
+        switch (index) {
+            case 0:
+                return HttpError.deserialize(deserializer);
+            case 1:
+                return MessageError.deserialize(deserializer);
+            default:
+                throw new Error('Unknown variant on ReaxError');
         }
-
-        throw new Error(`unknown variant for ReaxError, ${Object.keys(obj)}`);
     }
 }
 
-export class HttpError extends ReaxError {
+export abstract class HttpError extends ReaxError {
+    abstract name: string;
+
     static NoConnection = new class extends HttpError { name = 'NoConnection' };
     static UnexpectedResponse = new class extends HttpError { name = 'UnexpectedResponse' };
-    static Unauthorized = new class extends HttpError { name = 'Unauthorized' };
     static Unknown = new class extends HttpError { name = 'Unknown' };
 
-    static deserialize(str: string): HttpError {
-        if (str === this.NoConnection.name) {
-            return this.NoConnection;
-        } else if (str === this.UnexpectedResponse.name) {
-            return this.UnexpectedResponse;
-        } else if (str === this.Unauthorized.name) {
-            return this.Unauthorized;
-        } else if (str === this.Unknown.name) {
-            return this.Unknown;
-        }
+    static deserialize(deserializer: Deserializer): HttpError {
+        const index = deserializer.deserializeVariantIndex();
 
-        throw new Error(`unknown variant for HttpError ${str}`);
+        switch (index) {
+            case 0:
+                return this.NoConnection;
+            case 1:
+                return this.UnexpectedResponse;
+            case 2:
+                return new Unauthorized(deserializeOption(deserializer, (d) => d.deserializeI32()));
+            case 3:
+                return this.Unknown;
+            default:
+                throw new Error('Unknown variant on HttpError');
+        }
     }
 }
+
+export class Unauthorized extends HttpError {
+    name = 'Unauthorized'
+
+    constructor(public accountId: number | null) {
+        super();
+    }
+};
 
 export class MessageError extends ReaxError {
     constructor(public message: string) {
         super();
     }
 
-    static deserialize(str: string): MessageError {
-        if (typeof str !== 'string') {
-            throw new Error(`expected string, got ${typeof str}`);
-        }
-
-        return new this(str);
+    static deserialize(deserializer: Deserializer): MessageError {
+        return new MessageError(deserializer.deserializeStr());
     }
 }

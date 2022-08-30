@@ -1,15 +1,14 @@
 <script lang="ts">
     import { goto } from '$app/navigation';
     import { onMount } from 'svelte';
-    import init from '$lib/wasm';
-
     import * as authStore from '$lib/stores/auth';
+    import init from '$lib/wasm';
 
     let email = '';
     let password = '';
     let inProgress = false;
 
-    onMount(async () => init());
+    onMount(() => init());
 
     function login() {
         if (inProgress) {
@@ -20,12 +19,10 @@
 
         authStore
             .login(email, password)
-            .then(() => goto('/'))
+            .then(() => goto('/app'))
             .finally(() => (inProgress = false));
     }
 </script>
-
-<h1>Login</h1>
 
 <form on:submit|preventDefault={login}>
     <input type="email" placeholder="Email" bind:value={email} required />

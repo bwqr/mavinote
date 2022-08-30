@@ -1,11 +1,12 @@
 import { goto } from "$app/navigation";
-import { HttpError, ReaxError } from "../models";
+import { BincodeDeserializer } from "$lib/serde/bincode/bincodeDeserializer";
+import { ReaxError, Unauthorized } from "../models";
 
-export function handleError(e: string): Promise<any> {
-    const error = ReaxError.deserialize(JSON.parse(e));
+export function handleError(buffer: Uint8Array): Promise<any> {
+    const error = ReaxError.deserialize(new BincodeDeserializer(buffer));
 
-    if (error instanceof HttpError && error === HttpError.Unauthorized) {
-        goto('/login');
+    if (error instanceof Unauthorized) {
+        goto('/auth/login');
     }
 
     return Promise.reject(error);

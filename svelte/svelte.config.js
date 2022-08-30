@@ -6,15 +6,11 @@ const config = {
     // Consult https://github.com/sveltejs/svelte-preprocess
     // for more information about preprocessors
     preprocess: preprocess(),
-
     kit: {
         adapter: adapter(),
-        vite: {
-            server: {
-                fs: {
-                    allow: ['../reax/wasm/pkg'],
-                },
-            },
+        alias: {
+            '$components': 'src/components',
+            '$components/*': 'src/components/*',
         },
     },
 };
