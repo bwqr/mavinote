@@ -1,72 +1,54 @@
-use std::{panic, sync::Arc};
+use std::panic;
 
-use base::{Config, Store};
-
-use reqwest::{
-    header::{HeaderMap, HeaderValue}, ClientBuilder,
-};
-use wasm_bindgen::prelude::*;
+use account::Mavinote;
+use futures::stream::AbortHandle;
+use js_sys::Uint8Array;
+use serde::Serialize;
+use wasm_bindgen::{JsValue, prelude::wasm_bindgen};
 
 mod log;
 pub mod auth;
 pub mod note;
 
-pub struct LocalStorage;
+#[wasm_bindgen]
+extern "C" {
+    type WasmRuntime;
 
-impl Store for LocalStorage {
-    fn get<'a>(&'a self, key: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<Option<String>, base::Error>> + Send + 'a>> {
-        Box::pin(async move {
-            Ok(getItem(key))
-        })
-    }
+    #[wasm_bindgen(static_method_of = WasmRuntime)]
+    fn handleStream(stream_id: u32, bytes: Vec<u8>);
 
-    fn put<'a>(&'a self, key: &'a str, value: &'a str) -> std::pin::Pin<Box<dyn std::future::Future<Output = Result<(), base::Error>> + Send + 'a>> {
-        Box::pin(async move {
-            setItem(key, value);
-            Ok(())
-        })
-    }
+    #[wasm_bindgen(js_namespace = localStorage)]
+    pub(crate) fn getItem(key: &str) -> Option<String>;
+
+    #[wasm_bindgen(js_namespace = localStorage)]
+    pub(crate) fn setItem(key: &str, value: &str);
 }
 
-
-#[wasm_bindgen(start)]
-pub fn main() -> Result<(), JsValue> {
+#[wasm_bindgen]
+pub fn init_wasm(api_url: String) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     log::init();
 
     runtime::init();
-    runtime::put::<Arc<dyn Store>>(Arc::new(LocalStorage));
-
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-    let client = ClientBuilder::new()
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
-    runtime::put(Arc::new(client));
-
-    runtime::put(Arc::new(Config {
-        api_url: "http://127.0.0.1:8050/api".to_string(),
-        storage_dir: "".to_string(),
-    }));
+    runtime::put::<Mavinote>(Mavinote::new(api_url, getItem("token").unwrap_or("".to_string())));
 
     ::log::info!("reax runtime is initialized");
-
-    Ok(())
 }
 
 #[wasm_bindgen]
-extern "C" {
-    #[wasm_bindgen(js_namespace = localStorage)]
-    fn getItem(key: &str) -> Option<String>;
+pub fn abort_stream(pointer: u32) {
+    let handle = unsafe { Box::from_raw(pointer as *mut AbortHandle) };
 
-    #[wasm_bindgen(js_namespace = localStorage)]
-    fn setItem(key: &str, value: &str);
+    ::log::debug!("received abort, {:p}", handle);
+
+    handle.abort();
 }
 
-#[wasm_bindgen]
-pub fn set_local(key: String, value: String) {
-    setItem(key.as_str(), value.as_str());
+pub(crate) fn serialize_to_buffer<T: Serialize>(value: T) -> Uint8Array {
+    let bytes = bincode::serialize(&value).unwrap();
+    let array = Uint8Array::new_with_length(bytes.len() as u32);
+    array.copy_from(&bytes);
+
+    array
 }
