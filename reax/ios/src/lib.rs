@@ -100,14 +100,12 @@ pub extern fn reax_init(api_url: *const c_char, notify_url: *const c_char, stora
 
     runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
 
-    runtime::put::<Arc<dyn Store>>(Arc::new(util::store::FileStore::new(pool)));
-
     runtime::put::<Arc<Config>>(Arc::new(Config {
         api_url,
         storage_dir,
     }));
 
-    ::note::init();
+    ::note::storage::init();
     ::notify::init(notify_url);
     ::log::info!("reax runtime is initialized");
 }

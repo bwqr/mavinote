@@ -35,7 +35,7 @@ impl MavinoteClient {
         Self::new(self.account_id, self.api_url.clone(), token)
     }
 
-    pub async fn login(&self, email: String, password: String) -> Result<Token, Error> {
+    pub async fn login(&self, email: &str, password: &str) -> Result<Token, Error> {
         let email = email.trim();
         let password = password.trim();
 
@@ -51,6 +51,30 @@ impl MavinoteClient {
             .await
             .map_err(|e| e.into())
 
+    }
+
+    pub async fn sign_up(&self, name: &str, email: &str, password: &str) -> Result<Token, Error> {
+        let name = name.trim();
+        let email = email.trim();
+        let password = password.trim();
+
+        let request_body = serde_json::to_string(&requests::SignUp { name, email, password }).unwrap();
+
+        let response = self.client
+            .post(format!("{}/auth/sign-up", self.api_url))
+            .body(request_body)
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::CONFLICT {
+            return Err(Error::Message("user_with_given_email_already_exists".to_string()))
+        }
+
+        response
+            .error_for_status()?
+            .json::<Token>()
+            .await
+            .map_err(|e| e.into())
     }
 
     fn error(&self, e: reqwest::Error) -> Error {
@@ -223,9 +247,16 @@ mod requests {
         pub title: Option<&'a str>,
         pub text: &'a str,
     }
+
+    #[derive(Serialize)]
+    pub struct SignUp<'a> {
+        pub name: &'a str,
+        pub email: &'a str,
+        pub password: &'a str,
+    }
 }
 
-mod responses {
+pub mod responses {
     use serde::{Deserialize, Serialize};
 
     use crate::models::{RemoteId, State};
@@ -249,10 +280,9 @@ mod responses {
     pub struct Note {
         pub id: i32,
         pub folder_id: i32,
-        pub remote_id: Option<i32>,
+        pub commit_id: i32,
         pub title: Option<String>,
         pub text: String,
-        pub commit_id: i32,
         pub state: State,
     }
 

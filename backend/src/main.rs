@@ -27,7 +27,7 @@ async fn main() -> std::io::Result<()> {
 
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin("http://127.0.0.1:3000")
+            .allowed_origin(std::env::var("CORS_ORIGIN").expect("CORS_ORIGIN is not provided in env").as_str())
             .allow_any_method()
             .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
             .allowed_header("enctype")

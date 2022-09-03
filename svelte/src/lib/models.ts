@@ -18,6 +18,7 @@ export function deserializeFolder(deserializer: Deserializer): Folder {
 export interface Note {
     id: number;
     folderId: number;
+    commitId: number;
     title: string | null;
     text: string;
     state: State;
@@ -27,6 +28,7 @@ export function deserializeNote(deserializer: Deserializer): Note {
     return {
         id: deserializer.deserializeI32(),
         folderId: deserializer.deserializeI32(),
+        commitId: deserializer.deserializeI32(),
         title: deserializeOption(deserializer, (d) => d.deserializeStr()),
         text: deserializer.deserializeStr(),
         state: deserializeState(deserializer),
@@ -35,6 +37,7 @@ export function deserializeNote(deserializer: Deserializer): Note {
 
 export enum State {
     Clean,
+    Modified,
     Deleted
 }
 
@@ -45,6 +48,8 @@ function deserializeState(deserializer: Deserializer): State {
         case 0:
             return State.Clean;
         case 1:
+            return State.Modified;
+        case 2:
             return State.Deleted;
         default:
             throw new Error('Unknown index for State');

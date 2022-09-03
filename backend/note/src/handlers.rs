@@ -84,6 +84,39 @@ pub async fn delete_folder(
     Ok("")
 }
 
+#[get("folder/{folder_id}/notes")]
+pub async fn fetch_notes(
+    pool: Data<Pool>,
+    folder_id: Path<i32>,
+    user: User,
+) -> Result<Json<Vec<NoteResponse>>, HttpError> {
+    let notes = block(move || {
+        let conn = pool.get().unwrap();
+
+        let folder_id = folders::table
+            .filter(folders::id.eq(folder_id.into_inner()))
+            .filter(folders::user_id.eq(user.id))
+            .filter(folders::state.eq(State::Clean))
+            .select(folders::id)
+            .first::<i32>(&conn)?;
+
+        notes::table
+            .filter(notes::folder_id.eq(folder_id))
+            .left_join(commits::table)
+            .order((notes::id.desc(), commits::id.desc()))
+            .select((notes::all_columns, commits::all_columns.nullable()))
+            .distinct_on(notes::id)
+            .load(&conn)
+    })
+    .await??
+    .into_iter()
+    .filter(|note: &(Note, Option<Commit>)| note.1.is_some())
+    .map(|note| NoteResponse::from((note.0, note.1.unwrap())))
+    .collect();
+
+    Ok(Json(notes))
+}
+
 #[get("folder/{folder_id}/commits")]
 pub async fn fetch_commits(
     pool: Data<Pool>,

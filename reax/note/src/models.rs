@@ -1,4 +1,5 @@
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
+#[cfg(feature = "storage")]
 use sqlx::{FromRow, Type};
 
 #[derive(Copy, Clone)]
@@ -6,15 +7,17 @@ pub struct LocalId(pub i32);
 #[derive(Copy, Clone)]
 pub struct RemoteId(pub i32);
 
-#[derive(Debug, FromRow, Serialize)]
+#[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Account {
     pub id: i32,
     pub name: String,
     pub kind: AccountKind,
 }
 
-#[derive(Debug, PartialEq, Serialize, Type)]
+#[derive(Debug, PartialEq, Serialize)]
+#[cfg_attr(feature = "storage", derive(Type))]
 pub enum AccountKind {
     Mavinote,
     Local
@@ -26,8 +29,9 @@ pub struct Mavinote {
     pub token: String,
 }
 
-#[derive(Clone, Debug, FromRow, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Folder {
     pub id: i32,
     pub account_id: i32,
@@ -46,8 +50,9 @@ impl Folder {
     }
 }
 
-#[derive(Clone, Debug, FromRow, Serialize)]
+#[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
+#[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Note {
     pub id: i32,
     pub folder_id: i32,
@@ -68,7 +73,8 @@ impl Note {
     }
 }
 
-#[derive(Clone, Debug, Deserialize, PartialEq, Serialize, Type)]
+#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[cfg_attr(feature = "storage", derive(Type))]
 pub enum State {
     Clean,
     Modified,

@@ -14,7 +14,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
     once_id: jint
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::sync::sync().await;
+        let res = note::storage::sync::sync().await;
 
         send_once(once_id, res);
     });
@@ -29,7 +29,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1accounts(
     stream_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let mut rx = note::accounts().await;
+        let mut rx = note::storage::accounts().await;
 
         match &*rx.borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
@@ -59,7 +59,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1account(
     account_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::account(account_id).await;
+        let res = note::storage::account(account_id).await;
 
         send_once(once_id, res);
     });
@@ -75,7 +75,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1mavinoteAcco
     account_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::mavinote_account(account_id).await;
+        let res = note::storage::mavinote_account(account_id).await;
 
         send_once(once_id, res);
     });
@@ -98,7 +98,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
     let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::add_account(name, email, password, create_account > 0).await;
+        let res = note::storage::add_account(name, email, password, create_account > 0).await;
 
         send_once(once_id, res);
     });
@@ -114,7 +114,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteAccoun
     account_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::delete_account(account_id).await;
+        let res = note::storage::delete_account(account_id).await;
 
         send_once(once_id, res);
     });
@@ -133,7 +133,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1authorizeMav
     let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::authorize_mavinote_account(account_id, password).await;
+        let res = note::storage::authorize_mavinote_account(account_id, password).await;
 
         send_once(once_id, res);
     });
@@ -148,7 +148,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
     stream_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let mut rx = note::folders().await;
+        let mut rx = note::storage::folders().await;
 
         match &*rx.borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
@@ -178,7 +178,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folder(
     folder_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::folder(folder_id).await;
+        let res = note::storage::folder(folder_id).await;
 
         send_once(once_id, res);
     });
@@ -197,7 +197,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createFolder
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::create_folder(account_id, name).await;
+        let res = note::storage::create_folder(account_id, name).await;
 
         send_once(once_id, res);
     });
@@ -213,7 +213,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteFolder
     folder_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::delete_folder(folder_id).await;
+        let res = note::storage::delete_folder(folder_id).await;
 
         send_once(once_id, res);
     });
@@ -229,7 +229,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummarie
     folder_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let mut rx = note::notes(folder_id).await;
+        let mut rx = note::storage::notes(folder_id).await;
 
         match &*rx.inner().borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
@@ -257,7 +257,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
     note_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::note(note_id).await;
+        let res = note::storage::note(note_id).await;
 
         send_once(once_id, res);
     });
@@ -276,7 +276,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::create_note(folder_id, text).await;
+        let res = note::storage::create_note(folder_id, text).await;
 
         send_once(once_id, res);
     });
@@ -295,7 +295,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::update_note(note_id, text).await;
+        let res = note::storage::update_note(note_id, text).await;
 
         send_once(once_id, res);
     });
@@ -311,7 +311,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteNote(
     note_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
-        let res = note::delete_note(note_id).await;
+        let res = note::storage::delete_note(note_id).await;
 
         send_once(once_id, res);
     });

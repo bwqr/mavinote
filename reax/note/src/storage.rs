@@ -1,238 +1,394 @@
-use serde::de::DeserializeOwned;
-use sqlx::Connection;
-use sqlx::types::Json;
-use sqlx::{Sqlite, pool::PoolConnection, Error};
+use std::sync::Arc;
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote};
+use once_cell::sync::OnceCell;
+use sqlx::{Pool, Sqlite, types::Json};
+use tokio::sync::watch::{channel, Sender};
 
-pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
-    sqlx::query_as("select id, name, kind from accounts order by id")
-        .fetch_all(conn)
-        .await
+use base::{Error, State, observable_map::{ObservableMap, Receiver}, Config};
+
+use crate::accounts::mavinote::MavinoteClient;
+use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
+
+
+pub mod db;
+pub mod sync;
+
+static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
+pub(crate) static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
+static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
+
+pub fn init() {
+    ACCOUNTS.set(channel(State::default()).0).unwrap();
+    FOLDERS.set(channel(State::default()).0).unwrap();
+    NOTES_MAP.set(Arc::new(ObservableMap::new())).unwrap();
 }
 
-pub async fn fetch_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<Account>, Error> {
-    sqlx::query_as("select id, name, kind from accounts where id = ?")
-        .bind(account_id)
-        .fetch_optional(conn)
-        .await
-}
+pub async fn accounts() -> tokio::sync::watch::Receiver<State<Vec<Account>, Error>> {
+    let sender = ACCOUNTS.get().unwrap();
+    let load = match *sender.borrow() {
+        State::Initial | State::Err(_) => true,
+        _ => false,
+    };
 
-pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<T>, Error> {
-    sqlx::query_as::<Sqlite, (Json<T>,)>("select data from accounts where id = ?")
-        .bind(account_id)
-        .fetch_optional(conn)
-        .await
-        .map(|opt| opt.map(|json| json.0.0))
-}
+    if load {
+        sender.send_replace(State::Loading);
 
-pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
-    sqlx::query_as::<Sqlite, (i32,)>("select id from accounts where name = ?")
-        .bind(name)
-        .fetch_optional(conn)
-        .await
-        .map(|opt| opt.is_some())
-}
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
-pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {
-    sqlx::query_as("select * from folders where account_id = ? order by id")
-        .bind(account_id)
-        .fetch_all(conn)
-        .await
-}
+        sender.send_replace(db::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
+    }
 
-pub async fn create_account(conn: &mut PoolConnection<Sqlite>, name: String, kind: AccountKind, data: Option<Json<Mavinote>>) -> Result<Account, Error> {
-    conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into accounts (name, kind, data) values(?, ?, ?)")
-            .bind(name)
-            .bind(kind)
-            .bind(data)
-            .execute(&mut *conn)
-            .await
-            .map(|_| ())?;
-
-        sqlx::query_as("select id, name, kind from accounts order by id desc")
-            .fetch_optional(conn)
-            .await
-            .map(|opt| opt.unwrap())
-    }))
-     .await
-}
-
-pub async fn update_account_data(conn: &mut PoolConnection<Sqlite>, account_id: i32, data: Option<Json<Mavinote>>) -> Result<(), Error> {
-    sqlx::query("update accounts set data = ? where id = ?")
-        .bind(data)
-        .bind(account_id)
-        .execute(&mut *conn)
-        .await
-        .map(|_| ())
-}
-
-pub async fn delete_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
-    sqlx::query("delete from accounts where id = ?")
-        .bind(account_id)
-        .execute(&mut *conn)
-        .await
-        .map(|_| ())
-}
-
-pub async fn fetch_folders(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Folder>, Error> {
-    sqlx::query_as("select * from folders where state != ? order by id")
-        .bind(State::Deleted)
-        .fetch_all(conn)
-        .await
+    sender.subscribe()
 
 }
 
-pub async fn fetch_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<Option<Folder>, Error> {
-    sqlx::query_as("select * from folders where id = ?")
-        .bind(local_id.0)
-        .fetch_optional(conn)
-        .await
+pub async fn account(account_id: i32) -> Result<Option<Account>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    db::fetch_account(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
-pub async fn fetch_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<Option<Folder>, Error> {
-    sqlx::query_as("select * from folders where remote_id = ? and account_id = ?")
-        .bind(remote_id.0)
-        .bind(account_id)
-        .fetch_optional(conn)
-        .await
+pub async fn mavinote_account(account_id: i32) -> Result<Option<Mavinote>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    db::fetch_account_data::<Mavinote>(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
-pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<RemoteId>, account_id: i32, name: String) -> Result<Folder, Error> {
-    conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into folders (remote_id, account_id, name) values(?, ?, ?)")
-            .bind(remote_id.map(|id| id.0))
-            .bind(account_id)
-            .bind(name.as_str())
-            .execute(&mut *conn)
-            .await
-            .map(|_| ())?;
+pub async fn add_account(name: String, email: String, password: String, create_account: bool) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-        sqlx::query_as("select * from folders order by id desc")
-            .fetch_optional(conn)
-            .await
-            .map(|opt| opt.unwrap())
-    }))
-     .await
+    if db::account_with_name_exists(&mut conn, name.as_str()).await? {
+        return Err(Error::Message("account_with_given_name_already_exists".to_string()));
+    }
+
+    let config = runtime::get::<Arc<Config>>().unwrap();
+    let client = MavinoteClient::new(None, config.api_url.clone(), "".to_string());
+
+    let token = if create_account {
+        client.sign_up(name.as_str(), email.as_str(), password.as_str()).await?
+    } else {
+        client.login(email.as_str(), password.as_str()).await?
+    };
+
+    db::create_account(&mut conn, name, AccountKind::Mavinote, Some(Json(Mavinote { token: token.token, email}))).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(db::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
+
+    Ok(())
 }
 
-pub async fn delete_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
-    sqlx::query("delete from folders where id = ?")
-        .bind(local_id.0)
-        .execute(&mut *conn)
-        .await
-        .map(|_| ())
+pub async fn delete_account(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let account = db::fetch_account(&mut conn, account_id).await?
+        .ok_or_else(|| {
+            log::error!("trying to delete an unknown account, {account_id}");
+
+            Error::Message("unknown account".to_string())
+        })?;
+
+    if account.kind != AccountKind::Mavinote {
+        log::error!("can delete only mavinote account");
+
+        return Err(Error::Message("can delete only mavinote account".to_string()));
+    }
+
+    db::delete_account(&mut conn, account_id).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(db::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
+    FOLDERS.get().unwrap().send_replace(db::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
+
+    Ok(())
 }
 
-pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
-    sqlx::query("update folders set state = ? where id = ?")
-        .bind(State::Deleted)
-        .bind(local_id.0)
-        .execute(&mut *conn)
-        .await?;
+pub async fn authorize_mavinote_account(account_id: i32, password: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
-    sqlx::query("delete from notes where folder_id = ?")
-        .bind(local_id.0)
-        .execute(conn)
-        .await
-        .map(|_| ())
+    let account = db::fetch_account(&mut conn, account_id).await?
+        .ok_or(Error::Message(format!("given account id {account_id} does not exist")))?;
+
+    if AccountKind::Mavinote != account.kind {
+        return Err(Error::Message("cannot authorize non mavinote accounts".to_string()));
+    }
+
+    let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account_id).await?
+        .ok_or(Error::Message(format!("mavinote account data does not exist for {account_id}")))?;
+
+    let token = auth::login(account_data.email.as_str(), password.as_str()).await?;
+
+    db::update_account_data(&mut conn, account_id, Some(Json(Mavinote { email: account_data.email, token: token.token }))).await?;
+
+    Ok(())
 }
 
-pub async fn delete_folder_by_remote_id(conn: &mut PoolConnection<Sqlite>, remote_id: RemoteId, account_id: i32) -> Result<(), Error> {
-    sqlx::query("delete from folders where remote_id = ? and account_id = ?")
-        .bind(remote_id.0)
-        .bind(account_id)
-        .execute(conn)
-        .await
-        .map(|_| ())
+pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
+    let sender = FOLDERS.get().unwrap();
+    let load = match *sender.borrow() {
+        State::Initial | State::Err(_) => true,
+        _ => false,
+    };
+
+    if load {
+        sender.send_replace(State::Loading);
+
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+        sender.send_replace(db::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
+    }
+
+    sender.subscribe()
 }
 
-pub async fn fetch_all_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) -> Result<Vec<Note>, Error> {
-    sqlx::query_as("select * from notes where folder_id = ? order by id")
-        .bind(folder_id.0)
-        .fetch_all(conn)
-        .await
+pub async fn folder(folder_id: i32) -> Result<Option<Folder>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    db::fetch_folder(&mut conn, LocalId(folder_id)).await.map_err(|e| e.into())
 }
 
-pub async fn fetch_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) -> Result<Vec<Note>, Error> {
-    sqlx::query_as("select * from notes where folder_id = ? and state != ? order by id")
-        .bind(folder_id.0)
-        .bind(State::Deleted)
-        .fetch_all(conn)
-        .await
+pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let account = db::fetch_account(&mut conn, account_id)
+        .await?
+        .ok_or_else(|| {
+            log::error!("trying to create a folder in an unknown account, {account_id}");
+
+            return Error::Message("unknown account".to_string());
+        })?;
+
+    let remote_id = if account.kind == AccountKind::Mavinote {
+        let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+        let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+
+        match mavinote.create_folder(name.as_str()).await {
+            Ok(folder) => Some(folder.id()),
+            Err(e) => {
+                log::debug!("failed to create folder in remote {e:?}");
+                None
+            },
+        }
+    } else {
+        None
+    };
+
+    let folder = db::create_folder(&mut conn, remote_id, account_id, name).await?;
+
+    FOLDERS.get().unwrap().send_modify(move |state| {
+        if let State::Ok(folders) = state {
+            folders.push(folder);
+        }
+    });
+
+    Ok(())
 }
 
-pub async fn fetch_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId) -> Result<Option<Note>, Error> {
-    sqlx::query_as("select * from notes where id = ?")
-        .bind(note_id.0)
-        .fetch_optional(conn)
-        .await
+pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let folder = if let Some(folder) = db::fetch_folder(&mut conn, LocalId(folder_id)).await? {
+        folder
+    } else {
+        log::error!("trying to delete folder with id {folder_id} which does not exist in storage");
+
+        return Ok(());
+    };
+
+    let mut delete = true;
+
+    if let Some(remote_id) = folder.remote_id() {
+        let account = db::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+
+            if let Err(e) = mavinote.delete_folder(remote_id).await {
+                log::debug!("failed to delete folder in remote, {e:?}");
+
+                delete = false;
+            }
+        }
+    }
+
+    if delete {
+        db::delete_folder(&mut conn, folder.local_id()).await?;
+    } else {
+        db::delete_folder_local(&mut conn, folder.local_id()).await?;
+    }
+
+    FOLDERS.get().unwrap().send_replace(db::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
+
+    Ok(())
 }
 
-pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id: RemoteId, folder_id: LocalId) -> Result<Option<Note>, Error> {
-    sqlx::query_as("select * from notes where remote_id = ? and folder_id = ?")
-        .bind(note_id.0)
-        .bind(folder_id.0)
-        .fetch_optional(conn)
-        .await
+pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
+    let notes_map = NOTES_MAP.get().unwrap();
+
+    if !notes_map.contains_key(folder_id) {
+        notes_map.insert(folder_id, State::Loading);
+
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+        notes_map.update(folder_id, db::fetch_notes(&mut conn, LocalId(folder_id)).await.map_err(|e| e.into()).into());
+    }
+
+    notes_map.subscribe(folder_id).unwrap()
 }
 
-pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit_id: i32) -> Result<Note, Error> {
-    conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into notes (folder_id, remote_id, title, text, commit_id, state) values(?, ?, ?, ?, ?, ?)")
-            .bind(folder_id.0)
-            .bind(remote_id.map(|id| id.0))
-            .bind(title.as_ref())
-            .bind(text.as_str())
-            .bind(commit_id)
-            .bind(State::Clean)
-            .execute(&mut *conn)
-            .await?;
-
-        sqlx::query_as("select * from notes order by id desc")
-            .fetch_optional(conn)
-            .await
-            .map(|opt| opt.unwrap())
-    }))
-     .await
+pub async fn note(note_id: i32) -> Result<Option<Note>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    db::fetch_note(&mut conn, LocalId(note_id)).await.map_err(|e| e.into())
 }
 
-pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, title: Option<&str>, text: &str, commit_id: i32, state: State) -> Result<(), Error> {
-    sqlx::query("update notes set title=?, text=?, commit_id=?, state=? where id=?")
-        .bind(title)
-        .bind(text)
-        .bind(commit_id)
-        .bind(state)
-        .bind(note_id.0)
-        .execute(conn)
-        .await
-        .map(|_| ())
+pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let folder = db::fetch_folder(&mut conn, LocalId(folder_id))
+        .await?
+        .ok_or_else(|| {
+            log::error!("trying to create a note in a folder with id {folder_id} which does not exist");
+
+            return Error::Message("unknown folder".to_string());
+        })?;
+
+    let account = db::fetch_account(&mut conn, folder.account_id)
+        .await?
+        .ok_or_else(|| {
+            log::error!("a folder with unknown account id {} cannot be exist", folder.account_id);
+
+            return Error::Message("unknown account".to_string());
+        })?;
+
+
+    let text = text.as_str().trim();
+    let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
+    let title = text[..ending_index].replace('\n', "");
+
+    let remote_note = if account.kind == AccountKind::Mavinote {
+        if let Some(remote_id) = folder.remote_id() {
+            let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+
+            match mavinote.create_note(remote_id, Some(title.as_str()), text).await {
+                Ok(note) => Some(note),
+                Err(e) => {
+                    log::debug!("failed to create note in remote, {e:?}");
+
+                    None
+                },
+            }
+        } else {
+            None
+        }
+    } else {
+        None
+    };
+
+    let local_note = db::create_note(
+        &mut conn,
+        folder.local_id(),
+        remote_note.as_ref().map(|n| n.id()),
+        Some(title),
+        text.to_string(),
+        remote_note.map(|n| n.commit_id).unwrap_or(0)
+    ).await?;
+
+    let note_id = local_note.id;
+
+    NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
+        if let State::Ok(notes) = state {
+            notes.push(local_note);
+        }
+    });
+
+    Ok(note_id)
 }
 
-pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, commit_id: i32) -> Result<(), Error> {
-    sqlx::query("update notes set commit_id=?, state=? where id=?")
-        .bind(commit_id)
-        .bind(State::Clean)
-        .bind(note_id.0)
-        .execute(conn)
-        .await
-        .map(|_| ())
+pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    let note = match db::fetch_note(&mut conn, LocalId(note_id)).await? {
+        Some(note) => note,
+        None => {
+            log::error!("trying to update a note with id {note_id} which does not exist");
+
+            return Ok(());
+        }
+    };
+
+    let text = text.as_str().trim();
+    let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
+    let title = text[..ending_index].replace('\n', "");
+
+    let (commit_id, state) = if let Some(remote_id) = note.remote_id() {
+        let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
+        let account = db::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+
+            match mavinote.update_note(remote_id, Some(title.as_str()), text).await {
+                Ok(commit) => (commit.commit_id, ModelState::Clean),
+                Err(e) => {
+                    log::debug!("failed to update note with id {note_id}, {e:?}");
+                    (note.commit_id, ModelState::Modified)
+                }
+            }
+        } else {
+            (note.commit_id, ModelState::Clean)
+        }
+    } else {
+        (note.commit_id, ModelState::Clean)
+    };
+
+    db::update_note(&mut conn, note.local_id(), Some(title.as_str()), text, commit_id, state).await?;
+
+    if let Some(updated_note) = db::fetch_note(&mut conn, note.local_id()).await? {
+        NOTES_MAP.get().unwrap().update_modify(note.folder_id, move |state| {
+            if let State::Ok(notes) = state {
+                if let Some(note) = notes.iter_mut().find(|n| n.id == note_id) {
+                    *note = updated_note;
+                }
+            }
+        });
+    }
+
+    Ok(())
 }
 
-pub async fn delete_note(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
-    sqlx::query("delete from notes where id = ?")
-        .bind(local_id.0)
-        .execute(conn)
-        .await
-        .map(|_| ())
-}
+pub async fn delete_note(note_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let config = runtime::get::<Arc<Config>>().unwrap();
 
-pub async fn delete_note_local(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
-    sqlx::query("update notes set state = ? where id = ?")
-        .bind(State::Deleted)
-        .bind(local_id.0)
-        .execute(&mut *conn)
-        .await
-        .map(|_| ())
+    let note = if let Some(note) = db::fetch_note(&mut conn, LocalId(note_id)).await? {
+        note
+    } else {
+        log::error!("trying to delete note with id {note_id} which does not exist in storage");
+
+        return Ok(());
+    };
+
+    let mut delete = true;
+
+    if let Some(remote_id) = note.remote_id() {
+        let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
+        let account = db::fetch_account(&mut conn, folder.account_id).await?.unwrap();
+        if let AccountKind::Mavinote = account.kind {
+            let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+
+            if let Err(e) = mavinote.delete_note(remote_id).await {
+                log::debug!("failed to delete note in remote, {e:?}");
+
+                delete = false;
+            }
+        }
+    }
+
+    if delete {
+        db::delete_note(&mut conn, note.local_id()).await?;
+    } else {
+        db::delete_note_local(&mut conn, note.local_id()).await?;
+    }
+
+    Ok(())
 }

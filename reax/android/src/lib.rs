@@ -161,7 +161,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         storage_dir,
     }));
 
-    ::note::init();
+    ::note::storage::init();
     ::notify::init(notify_url);
 
     ::log::info!("reax is built with {} profile", if cfg!(debug_assertions) { "debug" } else { "release" });

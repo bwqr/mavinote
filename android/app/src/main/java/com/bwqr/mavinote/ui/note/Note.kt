@@ -108,7 +108,6 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                     navController.navigateUp()
                 } catch (e: ReaxException) {
                     e.handle()
-                } finally {
                     deleting = false
                 }
             }
