@@ -1,6 +1,6 @@
 use std::panic;
 
-use account::Mavinote;
+use ::note::accounts::mavinote::MavinoteClient;
 use futures::stream::AbortHandle;
 use js_sys::Uint8Array;
 use serde::Serialize;
@@ -31,7 +31,7 @@ pub fn init_wasm(api_url: String) {
     log::init();
 
     runtime::init();
-    runtime::put::<Mavinote>(Mavinote::new(api_url, getItem("token").unwrap_or("".to_string())));
+    runtime::put::<MavinoteClient>(MavinoteClient::new(None, api_url, getItem("token").unwrap_or("".to_string())));
 
     note::init();
 

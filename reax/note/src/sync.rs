@@ -3,7 +3,7 @@ use std::sync::Arc;
 use base::{Error, Config};
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 
-use crate::{storage, models::{AccountKind, State as ModelState, Account, Mavinote}, mavinote::Client};
+use crate::{storage, models::{AccountKind, State as ModelState, Account, Mavinote}, accounts::mavinote::MavinoteClient};
 
 pub async fn sync() -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
@@ -29,7 +29,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
 
     let account_data = storage::fetch_account_data::<Mavinote>(conn, account.id).await?.unwrap();
 
-    let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+    let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
     let remote_folders = mavinote.fetch_folders().await?;
 
@@ -63,7 +63,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
                 if ModelState::Clean == note.state && note.commit_id < commit.commit_id {
                     // A note fetched by its remote id must have remote id. Hence we can safely unwrap it
                     match mavinote.fetch_note(note.remote_id().unwrap()).await {
-                        Ok(remote_note) => storage::update_note(
+                        Ok(Some(remote_note)) => storage::update_note(
                             conn,
                             note.local_id(),
                             remote_note.title.as_ref().map(|title| title.as_str()),
@@ -71,14 +71,16 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
                             remote_note.commit_id,
                             ModelState::Clean,
                         ).await?,
+                        Ok(None) => log::debug!("note with remote id {} does not exist on remote", note.remote_id().unwrap().0),
                         Err(e) => log::debug!("failed to fetch note with remote id {}, {e:?}", note.remote_id().unwrap().0),
                     }
                 }
             } else {
                 match mavinote.fetch_note(commit.note_id()).await {
-                    Ok(note) => {
+                    Ok(Some(note)) => {
                         storage::create_note(conn, folder.local_id(), Some(note.id()), note.title, note.text, note.commit_id).await?;
                     },
+                    Ok(None) => log::debug!("note with remote id {} does not exist on remote", commit.note_id().0),
                     Err(e) => log::debug!("failed to fetch note with remote id {}, {e:?}", commit.note_id),
                 };
             }

@@ -10,8 +10,8 @@ crate-type = ["rlib", "cdylib"]
 
 [dependencies]
 base = { path = "../base" }
-account = { path = "../account" }
 runtime = { path = "../runtime" }
+note = { path = "../note" }
 
 log = "0.4.16"
 

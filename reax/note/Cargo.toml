@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 auth = { path = "../auth" }
-base = { path = "../base", features = ["sqlx"] }
+base = { path = "../base" }
 runtime = { path = "../runtime" }
 
 log = "0.4.16"
@@ -16,5 +16,8 @@ serde_json = "1.0.79"
 
 reqwest = { version = "0.11.10", features = ["rustls-tls", "json"], default-features = false }
 serde = { version = "1.0.136", features = ["derive"] }
-sqlx = { version = "0.5.13", features = ["runtime-tokio-rustls", "sqlite", "json"] }
+sqlx = { version = "0.6.1", features = ["runtime-tokio-rustls", "sqlite", "json"], optional = true }
 tokio = { version = "1.18.2", features = ["sync"], default-features = false }
+
+[features]
+storage = ["dep:sqlx", "base/sqlx"]

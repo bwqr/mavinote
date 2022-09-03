@@ -1,6 +1,6 @@
 use std::sync::Arc;
 
-use mavinote::Client;
+use accounts::mavinote::MavinoteClient;
 use once_cell::sync::OnceCell;
 use sqlx::{Pool, Sqlite, types::Json};
 use tokio::sync::watch::{channel, Sender};
@@ -12,10 +12,8 @@ use models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, M
 pub mod models;
 pub mod sync;
 
-mod mavinote;
-mod requests;
-mod responses;
 mod storage;
+mod accounts;
 
 static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
 pub(crate) static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
@@ -157,7 +155,7 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
 
     let remote_id = if account.kind == AccountKind::Mavinote {
         let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-        let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+        let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
         match mavinote.create_folder(name.as_str()).await {
             Ok(folder) => Some(folder.id()),
@@ -199,7 +197,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
         let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
         if let AccountKind::Mavinote = account.kind {
             let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
             if let Err(e) = mavinote.delete_folder(remote_id).await {
                 log::debug!("failed to delete folder in remote, {e:?}");
@@ -266,7 +264,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
     let remote_note = if account.kind == AccountKind::Mavinote {
         if let Some(remote_id) = folder.remote_id() {
             let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
             match mavinote.create_note(remote_id, Some(title.as_str()), text).await {
                 Ok(note) => Some(note),
@@ -325,7 +323,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
         let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
         if let AccountKind::Mavinote = account.kind {
             let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
             match mavinote.update_note(remote_id, Some(title.as_str()), text).await {
                 Ok(commit) => (commit.commit_id, ModelState::Clean),
@@ -375,7 +373,7 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
         let account = storage::fetch_account(&mut conn, folder.account_id).await?.unwrap();
         if let AccountKind::Mavinote = account.kind {
             let account_data = storage::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-            let mavinote = Client::new(account.id, config.api_url.clone(), account_data.token);
+            let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
             if let Err(e) = mavinote.delete_note(remote_id).await {
                 log::debug!("failed to delete note in remote, {e:?}");
@@ -392,5 +390,4 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     }
 
     Ok(())
-
 }

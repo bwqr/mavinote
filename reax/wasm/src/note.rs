@@ -1,51 +1,28 @@
 use std::sync::Arc;
 
-use account::{Account, Mavinote, Folder, Note, State as ModelState};
-use base::{State, Error, observable_map::{ObservableMap, Receiver}};
 use futures::{stream::{AbortHandle, Abortable}, FutureExt};
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 use once_cell::sync::OnceCell;
-use tokio::sync::watch::{channel, Sender};
 use wasm_bindgen_futures::spawn_local;
+
+use ::note::{accounts::mavinote::MavinoteClient, models::{Folder, Note, State as ModelState}};
+use base::{State, Error, observable_map::{ObservableMap, Receiver}};
 
 use crate::{serialize_to_buffer, send_stream, Message};
 
-static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
 
 pub fn init() {
-    FOLDERS.set(channel(State::Initial).0).unwrap();
+    ::note::init();
     NOTES_MAP.set(Arc::new(ObservableMap::new())).unwrap();
-}
-
-pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>> {
-    let sender = FOLDERS.get().unwrap();
-    let load = match *sender.borrow() {
-        State::Initial | State::Err(_) => true,
-        _ => false,
-    };
-
-    if load {
-        sender.send_replace(State::Loading);
-
-        let mavinote = runtime::get::<Mavinote>().unwrap();
-        let folders = mavinote.fetch_folders()
-            .await
-            .map(|vec| vec.into_iter().filter(|f| if let ModelState::Clean = f.state { true } else { false }).collect())
-            .map_err(|e| e.into());
-
-        sender.send_replace(folders.into());
-    }
-
-    sender.subscribe()
 }
 
 #[wasm_bindgen]
 pub fn note_folders(stream_id: u32) -> *mut AbortHandle {
     let (abort_handle, abort_registration) = AbortHandle::new_pair();
     let future = Abortable::new(async move {
-        let mut rx = folders().await;
+        let mut rx = note::folders().await;
 
         match &*rx.borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
@@ -72,16 +49,14 @@ pub fn note_folders(stream_id: u32) -> *mut AbortHandle {
 
 #[wasm_bindgen]
 pub async fn note_create_folder(folder_name: String) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
-
-    mavinote.create_folder(folder_name).await
+    note::create_folder(folder_name).await
         .map(serialize_to_buffer)
         .map_err(serialize_to_buffer)
 }
 
 #[wasm_bindgen]
 pub async fn note_delete_folder(folder_id: i32) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     mavinote.delete_folder(folder_id).await
         .map(serialize_to_buffer)
@@ -94,7 +69,7 @@ pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
         if !notes_map.contains_key(folder_id) {
             notes_map.insert(folder_id, State::Loading);
 
-            let mavinote = runtime::get::<Mavinote>().unwrap();
+            let mavinote = runtime::get::<MavinoteClient>().unwrap();
             let notes = mavinote.fetch_notes(folder_id)
                 .await
                 .map(|vec| vec.into_iter().filter(|n| if let ModelState::Clean = n.state { true } else { false }).collect())
@@ -136,7 +111,7 @@ pub fn note_notes(stream_id: u32, folder_id: i32) -> *mut AbortHandle {
 
 #[wasm_bindgen]
 pub async fn note_note(note_id: i32) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     mavinote.fetch_note(note_id).await
         .map(serialize_to_buffer)
@@ -145,7 +120,7 @@ pub async fn note_note(note_id: i32) -> Result<Uint8Array, Uint8Array> {
 
 #[wasm_bindgen]
 pub async fn note_create_note(folder_id: i32, text: String) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
@@ -168,7 +143,7 @@ pub async fn note_create_note(folder_id: i32, text: String) -> Result<Uint8Array
 
 #[wasm_bindgen]
 pub async fn note_update_note(folder_id: i32, note_id: i32, text: String) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
@@ -191,7 +166,7 @@ pub async fn note_update_note(folder_id: i32, note_id: i32, text: String) -> Res
 
 #[wasm_bindgen]
 pub async fn note_delete_note(folder_id: i32, note_id: i32) -> Result<Uint8Array, Uint8Array> {
-    let mavinote = runtime::get::<Mavinote>().unwrap();
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     let res = mavinote.delete_note(note_id).await
         .map_err(serialize_to_buffer)?;
