@@ -3,6 +3,7 @@
 
     import * as noteStore from '$lib/stores/note';
     import { onDestroy } from 'svelte';
+    import ThreeDotsVertical from '../../../icons/three-dots-vertical.svelte';
 
     export let folderId: number | null = null;
     export let noteId: number | null = null;
@@ -11,6 +12,7 @@
     let text = '';
     let modified = false;
     let deleting = false;
+    let showActionMenu = false;
 
     if (noteId) {
         noteStore.note(noteId).then((n) => {
@@ -56,8 +58,27 @@
             .catch(() => (deleting = false));
     }
 </script>
+<div class="my-2 p-3 d-flex flex-column" style="height: calc(100% - 1rem);">
+    <div class="d-flex pb-2 mb-4">
+        <div class="flex-grow-1">
+            <h3 class="d-inline-block m-0">{title ?? 'New Note'}</h3>
+            <small>Note</small>
+        </div>
+        <div class="dropdown">
+            <button class="btn btn-light" on:click={() => showActionMenu = !showActionMenu}><ThreeDotsVertical/></button>
+            <ul class="dropdown-menu position-absolute end-0 mt-1" class:show={showActionMenu}>
+                <li>
+                    <button class="dropdown-item text-danger text-center" on:click={() => deleteNote()}>
+                        {#if deleting}
+                            <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+                        {/if}
+                        Delete
+                    </button>
+                </li>
+            </ul>
+        </div>
+    </div>
 
-<h1>{title ?? 'New Note'}</h1>
-<button on:click={() => deleteNote()}>Delete</button>
 
-<textarea on:input={() => (modified = true)} bind:value={text} />
+    <textarea class="flex-grow-1" on:input={() => (modified = true)} bind:value={text} />
+</div>

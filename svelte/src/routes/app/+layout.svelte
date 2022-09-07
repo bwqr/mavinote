@@ -10,11 +10,15 @@
 </script>
 
 {#if initialized}
-    <div>
-        <div><Folders /></div>
+    <div class="container-xxl">
+        <div class="row">
+            <div class="col-md-3">
+                <Folders/>
+            </div>
 
-        <div>
-            <slot />
+            <div class="col overflow-auto" style="height: 100vh;">
+                <slot/>
+            </div>
         </div>
     </div>
 {/if}

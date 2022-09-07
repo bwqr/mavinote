@@ -35,11 +35,28 @@
     }
 </script>
 
-<form on:submit|preventDefault={login}>
-    <input type="email" placeholder="Email" bind:value={email} required />
-    <input type="password" placeholder="Password" bind:value={password} required />
-    {#if error}
-        <span>{error}</span>
-    {/if}
-    <button type="submit">Login</button>
-</form>
+<div class="p-4 d-flex justify-content-center align-items-center" style="height: 100vh; background-color: var(--bs-gray-300);">
+    <form on:submit|preventDefault={login} class="shadow-sm bg-body px-4 py-5 rounded" style="max-width: 350px">
+        <div class="mb-3">
+            <h4>Mavinote</h4>
+            <small>You need to have a Mavinote account to start taking notes. If you do not have a Mavinote account, you can create a one.</small>
+        </div>
+        <div class="mb-3">
+            <input class="form-control" type="email" placeholder="Email" bind:value={email} required />
+        </div>
+        <div class="mb-3">
+            <input class="form-control" type="password" placeholder="Password" bind:value={password} required />
+        </div>
+
+        {#if error}
+            <p class="text-end mb-2 text-danger">{error}</p>
+        {/if}
+
+        <button class="btn btn-primary w-100" type="submit">
+            {#if inProgress}
+                <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
+            {/if}
+            Login
+        </button>
+    </form>
+</div>
