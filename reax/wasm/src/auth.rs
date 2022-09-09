@@ -2,7 +2,7 @@ use ::note::accounts::mavinote::MavinoteClient;
 use js_sys::Uint8Array;
 use wasm_bindgen::prelude::*;
 
-use crate::{serialize_to_buffer, setItem};
+use crate::{serialize_to_buffer, setItem, removeItem};
 
 #[wasm_bindgen]
 pub async fn auth_login(email: String, password: String) -> Result<(), Uint8Array> {
@@ -20,4 +20,9 @@ pub async fn auth_login(email: String, password: String) -> Result<(), Uint8Arra
     runtime::put::<MavinoteClient>(mavinote.with_token(token.token));
 
     Ok(())
+}
+
+#[wasm_bindgen]
+pub async fn auth_logout() -> () {
+    removeItem("token");
 }

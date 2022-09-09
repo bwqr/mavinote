@@ -1,6 +1,5 @@
 import { goto } from "$app/navigation";
 import { BincodeDeserializer } from "$lib/serde/bincode/bincodeDeserializer";
-import type { Deserializer } from "$lib/serde/serde/deserializer";
 import { ReaxError, Unauthorized } from "../models";
 
 export function decodeAndHandleError(buffer: Uint8Array): Promise<any> {

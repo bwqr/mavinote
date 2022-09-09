@@ -21,6 +21,9 @@ extern "C" {
     pub(crate) fn getItem(key: &str) -> Option<String>;
 
     #[wasm_bindgen(js_namespace = localStorage)]
+    pub(crate) fn removeItem(key: &str);
+
+    #[wasm_bindgen(js_namespace = localStorage)]
     pub(crate) fn setItem(key: &str, value: &str);
 }
 

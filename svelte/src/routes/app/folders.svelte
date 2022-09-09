@@ -5,6 +5,7 @@
     import { Subscription } from 'rxjs';
     import { onDestroy } from 'svelte';
     import FolderPlus from '/src/icons/folder-plus.svelte';
+    import BoxArrowRight from '/src/icons/box-arrow-right.svelte';
 
     let folders: Folder[] = [];
     let folderName = '';
@@ -38,17 +39,17 @@
 
         noteStore
             .createFolder(folderName)
-            .then((f) => {
-                folders = [...folders, f];
-                folderName = '';
-            })
+            .then(() => folderName = '')
             .finally(() => (inProgress = false));
     }
 </script>
 
 <div style="height: calc(100vh - 1rem);" class="d-flex flex-column my-2 border-end border-2">
     <div class="overflow-auto flex-grow-1 p-3">
-        <h3 class="mb-2">Folders</h3>
+        <div>
+            <h3 class="mb-2 d-inline-block">Folders</h3>
+            <a class="p-1 float-end text-black-50" href="/auth/logout" title="Logout"><BoxArrowRight/></a>
+        </div>
 
         {#if folders.length === 0}
             <small class="text-black-50 d-block mb-2">There is no folder to display.</small>

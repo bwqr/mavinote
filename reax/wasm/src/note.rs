@@ -34,7 +34,7 @@ pub async fn folders() -> tokio::sync::watch::Receiver<State<Vec<Folder>, Error>
         let mavinote = runtime::get::<MavinoteClient>().unwrap();
         let folders = mavinote.fetch_folders()
             .await
-            .map(|vec| vec.into_iter().filter(|f| if let ModelState::Clean = f.state { true } else { false }).collect())
+            .map(|vec| vec.into_iter().filter(|f| f.state == ModelState::Clean).collect())
             .map_err(|e| e.into());
 
         sender.send_replace(folders.into());
@@ -76,36 +76,56 @@ pub fn note_folders(stream_id: u32) -> *mut AbortHandle {
 pub async fn note_create_folder(folder_name: String) -> Result<Uint8Array, Uint8Array> {
     let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
-    mavinote.create_folder(folder_name.as_str()).await
-        .map(serialize_to_buffer)
-        .map_err(serialize_to_buffer)
+    let folder = mavinote.create_folder(folder_name.as_str()).await
+        .map_err(serialize_to_buffer)?;
+
+    let buffer = serialize_to_buffer(&folder);
+
+    FOLDERS.get().unwrap().send_modify(move |state| {
+        if let State::Ok(folders) = state {
+            folders.push(folder);
+        }
+    });
+
+    Ok(buffer)
 }
 
 #[wasm_bindgen]
 pub async fn note_delete_folder(folder_id: i32) -> Result<Uint8Array, Uint8Array> {
     let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
-    mavinote.delete_folder(RemoteId(folder_id)).await
-        .map(serialize_to_buffer)
-        .map_err(serialize_to_buffer)
+    let ret = mavinote.delete_folder(RemoteId(folder_id)).await
+        .map_err(serialize_to_buffer)?;
+
+    let buffer = serialize_to_buffer(ret);
+
+    FOLDERS.get().unwrap().send_modify(move |state| {
+        if let State::Ok(folders) = state {
+            if let Some(index) = folders.iter().position(|f| f.id == folder_id) {
+                folders.remove(index);
+            }
+        }
+    });
+
+    Ok(buffer)
 }
 
 pub async fn notes(folder_id: i32) -> Receiver<State<Vec<Note>, Error>> {
-        let notes_map = NOTES_MAP.get().unwrap();
+    let notes_map = NOTES_MAP.get().unwrap();
 
-        if !notes_map.contains_key(folder_id) {
-            notes_map.insert(folder_id, State::Loading);
+    if !notes_map.contains_key(folder_id) {
+        notes_map.insert(folder_id, State::Loading);
 
-            let mavinote = runtime::get::<MavinoteClient>().unwrap();
-            let notes = mavinote.fetch_notes(folder_id)
-                .await
-                .map(|vec| vec.into_iter().filter(|n| if let ModelState::Clean = n.state { true } else { false }).collect())
-                .map_err(|e| e.into());
+        let mavinote = runtime::get::<MavinoteClient>().unwrap();
+        let notes = mavinote.fetch_notes(folder_id)
+            .await
+            .map(|vec| vec.into_iter().filter(|n| if let ModelState::Clean = n.state { true } else { false }).collect())
+            .map_err(|e| e.into());
 
-            notes_map.update(folder_id, notes.into());
-        }
+        notes_map.update(folder_id, notes.into());
+    }
 
-        notes_map.subscribe(folder_id).unwrap()
+    notes_map.subscribe(folder_id).unwrap()
 }
 
 #[wasm_bindgen]
@@ -200,10 +220,9 @@ pub async fn note_delete_note(folder_id: i32, note_id: i32) -> Result<Uint8Array
         .map_err(serialize_to_buffer)?;
 
     NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
-        if let State::Ok(vec) = state {
-            let index = vec.iter().position(|n| n.id == note_id);
-            if let Some(index) = index {
-                vec.remove(index);
+        if let State::Ok(notes) = state {
+            if let Some(index) = notes.iter().position(|n| n.id == note_id) {
+                notes.remove(index);
             }
         }
     });

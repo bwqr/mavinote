@@ -16,7 +16,7 @@
                 <Folders/>
             </div>
 
-            <div class="col overflow-auto" style="height: 100vh;">
+            <div class="col overflow-auto h-100">
                 <slot/>
             </div>
         </div>

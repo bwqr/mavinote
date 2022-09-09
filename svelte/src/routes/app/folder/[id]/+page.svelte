@@ -68,7 +68,7 @@
     <h4 class="mb-2">Notes</h4>
 
     {#if notes.length === 0}
-        <div class="flex-grow-1 d-flex justify-content-center align-items-center flex-column" style="height: 100%;">
+        <div class="d-flex justify-content-center align-items-center flex-column" style="height: 100%;">
             <img id="note-draft" src="/images/note.png" alt="note taking" class="w-100 mb-5"/>
             <p class="text-black-50 text-center">There is no note in this folder to display. You can create a new one by clicking <strong>Create Note</strong> button.</p>
         </div>

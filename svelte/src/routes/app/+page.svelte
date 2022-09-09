@@ -2,7 +2,7 @@
     import Plus from '/src/icons/plus.svelte';
 </script>
 
-<div class="d-flex justify-content-center align-items-center flex-column" style="height: 100%;">
+<div class="d-flex justify-content-center align-items-center flex-column h-100">
     <div id="note-add" class="w-100">
         <Plus class="w-100 mb-5 h-auto text-black-50"/>
     </div>
