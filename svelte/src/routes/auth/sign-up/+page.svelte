@@ -3,8 +3,9 @@
     import { onMount } from 'svelte';
     import * as authStore from '$lib/stores/auth';
     import init from '$lib/wasm';
-    import { Unauthorized } from '$lib/models';
+    import { MessageError } from '$lib/models';
 
+    let name = '';
     let email = '';
     let password = '';
     let error: string | undefined = undefined;
@@ -12,7 +13,7 @@
 
     onMount(() => init());
 
-    function login() {
+    function signUp() {
         if (inProgress) {
             return;
         }
@@ -21,11 +22,11 @@
         inProgress = true;
 
         authStore
-            .login(email, password)
+            .signUp(name, email, password)
             .then(() => goto('/app'))
             .catch((e) => {
-                if (e instanceof Unauthorized) {
-                    error = 'Invalid credentials';
+                if (e instanceof MessageError) {
+                    error = e.message;
                     return;
                 }
 
@@ -35,11 +36,14 @@
     }
 </script>
 
+
 <div class="p-4 d-flex justify-content-center align-items-center" style="height: 100vh; background-color: var(--bs-gray-300);">
-    <form on:submit|preventDefault={login} class="shadow-sm bg-body px-4 py-5 rounded" style="max-width: 350px">
+    <form on:submit|preventDefault={signUp} class="shadow-sm bg-body px-4 py-5 rounded" style="max-width: 350px">
         <div class="mb-3">
-            <h4>Login into Mavinote</h4>
-            <small>You need to have a Mavinote account to start taking notes. If you do not have a Mavinote account, you can create a one.</small>
+            <h4>Sign Up</h4>
+        </div>
+        <div class="mb-3">
+            <input class="form-control" type="text" placeholder="Name" bind:value={name} required />
         </div>
         <div class="mb-3">
             <input class="form-control" type="email" placeholder="Email" bind:value={email} required />
@@ -56,9 +60,9 @@
             {#if inProgress}
                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
             {/if}
-            Login
+            Sign Up
         </button>
 
-        <small>Do not have an account? <a href="/auth/sign-up">Sign up</a></small>
+        <small>Already have an account? <a href="/auth/login">Login</a></small>
     </form>
 </div>

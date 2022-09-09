@@ -23,6 +23,25 @@ pub async fn auth_login(email: String, password: String) -> Result<(), Uint8Arra
 }
 
 #[wasm_bindgen]
+pub async fn auth_sign_up(name: String, email: String, password: String) -> Result<(), Uint8Array> {
+    let mavinote = runtime::get::<MavinoteClient>().unwrap();
+
+    let token = mavinote.sign_up(
+        name.as_str(),
+        email.as_str(),
+        password.as_str(),
+    )
+    .await
+    .map_err(serialize_to_buffer)?;
+
+    setItem("token", &token.token);
+
+    runtime::put::<MavinoteClient>(mavinote.with_token(token.token));
+
+    Ok(())
+}
+
+#[wasm_bindgen]
 pub async fn auth_logout() -> () {
     removeItem("token");
 }
