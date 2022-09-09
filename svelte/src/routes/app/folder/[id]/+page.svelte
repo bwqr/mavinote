@@ -40,12 +40,12 @@
     }
 </script>
 
-<div class="my-2 p-3">
+<div class="my-2 p-3 d-flex flex-column" style="height: calc(100% - 1rem);">
     {#if folder}
         <div class="d-flex border-bottom border-2 pb-2 mb-4">
             <div class="flex-grow-1">
                 <h3 class="d-inline-block m-0">{folder.name}</h3>
-                <small>Folder</small>
+                <small class="text-black-50">Folder</small>
             </div>
             <a class="btn btn-outline-primary me-2" href={`/app/folder/${folderId}/create-note`}><PencilSquare/> Create Note</a>
 
@@ -57,7 +57,7 @@
                             {#if deleting}
                                 <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                             {/if}
-                            Delete
+                            Delete Folder
                         </button>
                     </li>
                 </ul>
@@ -67,20 +67,37 @@
 
     <h4 class="mb-2">Notes</h4>
 
-    <ul class="list-unstyled">
-        {#each notes as note}
-            <li class="my-2">
-                <a href={`/app/note/${note.id}`} class="d-block p-2 list-element rounded text-decoration-none text-body">
-                    {note.title ?? 'New Note'}
-                </a>
-            </li>
-        {/each}
-    </ul>
+    {#if notes.length === 0}
+        <div class="flex-grow-1 d-flex justify-content-center align-items-center flex-column" style="height: 100%;">
+            <img id="note-draft" src="/images/note.png" alt="note taking" class="w-100 mb-5"/>
+            <p class="text-black-50 text-center">There is no note in this folder to display. You can create a new one by clicking <strong>Create Note</strong> button.</p>
+        </div>
+    {:else}
+        <ul class="list-unstyled">
+            {#each notes as note}
+                <li class="my-2">
+                    <a href={`/app/note/${note.id}`} class="d-block p-2 list-element rounded text-decoration-none text-body">
+                        {note.title ?? 'New Note'}
+                    </a>
+                </li>
+            {/each}
+        </ul>
+    {/if}
 </div>
 
 
 <style lang="scss">
     ul .list-element:hover, ul .selected {
         background-color: var(--bs-gray-200);
+    }
+
+    #note-draft {
+        max-width: 80%;
+    }
+
+    @media(min-width: 800px) {
+        #note-draft {
+            max-width: 50%;
+        }
     }
 </style>

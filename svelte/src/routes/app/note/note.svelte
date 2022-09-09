@@ -62,7 +62,7 @@
     <div class="d-flex pb-2 mb-4">
         <div class="flex-grow-1">
             <h3 class="d-inline-block m-0">{title ?? 'New Note'}</h3>
-            <small>Note</small>
+            <small class="text-black-50">Note</small>
         </div>
         <div class="dropdown">
             <button class="btn btn-light" on:click={() => showActionMenu = !showActionMenu}><ThreeDotsVertical/></button>
@@ -72,7 +72,7 @@
                         {#if deleting}
                             <span class="spinner-border spinner-border-sm me-2" role="status" aria-hidden="true"></span>
                         {/if}
-                        Delete
+                        Delete Note
                     </button>
                 </li>
             </ul>
@@ -80,5 +80,5 @@
     </div>
 
 
-    <textarea class="flex-grow-1" on:input={() => (modified = true)} bind:value={text} />
+    <textarea class="flex-grow-1 border rounded p-3" style="resize: none;" on:input={() => (modified = true)} bind:value={text}/>
 </div>

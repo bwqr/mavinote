@@ -4,7 +4,7 @@
     import * as noteStore from '$lib/stores/note';
     import { Subscription } from 'rxjs';
     import { onDestroy } from 'svelte';
-    import FolderPlus from '../../icons/folder-plus.svelte';
+    import FolderPlus from '/src/icons/folder-plus.svelte';
 
     let folders: Folder[] = [];
     let folderName = '';
@@ -50,15 +50,21 @@
     <div class="overflow-auto flex-grow-1 p-3">
         <h3 class="mb-2">Folders</h3>
 
-        <ul class="list-unstyled">
-            {#each folders as folder, i}
-                <li class="py-2 border-1" class:border-bottom={i !== folders.length - 1}>
-                    <a href={`/app/folder/${folder.id}`} class:selected={selectedFolderId === folder.id} class="d-block p-2 list-element rounded text-decoration-none text-body">
-                        {folder.name}
-                    </a>
-                </li>
-            {/each}
-        </ul>
+        {#if folders.length === 0}
+            <small class="text-black-50 d-block mb-2">There is no folder to display.</small>
+            <small class="text-black-50 d-block mb-2">In order to start taking notes, you need to create a folder.</small>
+            <small class="text-black-50 d-block mb-5">Folders can be created from the dialog displayed in the bottom part.</small>
+        {:else}
+            <ul class="list-unstyled">
+                {#each folders as folder, i}
+                    <li class="py-2 border-1" class:border-bottom={i !== folders.length - 1}>
+                        <a href={`/app/folder/${folder.id}`} class:selected={selectedFolderId === folder.id} class="d-block p-2 list-element rounded text-decoration-none text-body">
+                            {folder.name}
+                        </a>
+                    </li>
+                {/each}
+            </ul>
+        {/if}
     </div>
 
     <form on:submit|preventDefault={createFolder} class="mt-2 p-3">
