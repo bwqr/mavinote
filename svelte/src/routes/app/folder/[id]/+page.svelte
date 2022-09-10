@@ -87,7 +87,7 @@
 
 
 <style lang="scss">
-    ul .list-element:hover, ul .selected {
+    ul .list-element:hover {
         background-color: var(--bs-gray-200);
     }
 

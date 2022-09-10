@@ -5,8 +5,11 @@ const config: UserConfig = {
     plugins: [sveltekit()],
     server: {
         fs: {
-            allow: ['../reax/wasm/pkg'],
+            allow: ['./wasm'],
         }
+    },
+    ssr: {
+        noExternal: true,
     },
 };
 

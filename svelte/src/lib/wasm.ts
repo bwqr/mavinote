@@ -109,7 +109,7 @@ export default async function(): Promise<InitOutput> {
 
     initOutputs = await init();
 
-    init_wasm('http://127.0.0.1:8050/api');
+    init_wasm(globalThis.process && process.env['API_URL'] ? process.env['API_URL'] : import.meta.env.VITE_API_URL);
 
     return initOutputs;
 }
