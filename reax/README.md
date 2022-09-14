@@ -49,9 +49,9 @@ cargo build --package ios --target <target-you-want-to-build>
 You need to have **wasm-pack** installed on your system. Please refer to [wasm-pack](https://rustwasm.github.io/wasm-pack) site for installation.
 Then you can build the reax for wasm with
 ```sh
-wasm-pack build --target web
+wasm-pack build --target web wasm
 ```
-If you are building reax for **svelte** project. You need to change the `out-dir` of wasm-pack. You can build reax for svelte with
+If you are building reax for **svelte** project, you need to change the `out-dir` of wasm-pack. You can build reax for svelte with
 ```sh
 # Svelte project expects wasm build to be placed in its directory
 wasm-pack build --target web --out-dir ../../svelte/wasm wasm
