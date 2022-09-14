@@ -9,7 +9,7 @@ Before starting the development, you need to do:
 
 ## Configuration
 Project has two files that define the build time configurations, `.env.development` for development and `.env.production` for production.
-Right now, project has these variables defined in the configuration files.
+Right now, project has these variables defined in the configuration files:
 
 * **VITE_API_URL**: This variable contains the URL of backend service. An example is `http://127.0.0.1:8050/api`.
 

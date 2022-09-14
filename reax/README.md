@@ -25,7 +25,7 @@ Currently, only 64 bit builds are supported. 32 bit builds are not tested.
 
 ### iOS
 
-Build reax for ios requires to have macOS environment. You also need to have a set of different targets based on your device architecture.
+Building reax for ios requires to have macOS environment. You also need to have a set of different targets based on your device architecture.
 For devices with an arm64 CPU, you should have
 
 * **aarch64-apple-ios** both for running on iOS Simulator and arm64 build
@@ -43,4 +43,16 @@ rustup target add <target>
 Then you have to build the project by running
 ```bash
 cargo build --package ios --target <target-you-want-to-build>
+```
+
+### Wasm
+You need to have **wasm-pack** installed on your system. Please refer to [wasm-pack](https://rustwasm.github.io/wasm-pack) site for installation.
+Then you can build the reax for wasm with
+```sh
+wasm-pack build --target web
+```
+If you are building reax for **svelte** project. You need to change the `out-dir` of wasm-pack. You can build reax for svelte with
+```sh
+# Svelte project expects wasm build to be placed in its directory
+wasm-pack build --target web --out-dir ../../svelte/wasm wasm
 ```
