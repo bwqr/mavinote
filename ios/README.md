@@ -1,15 +1,15 @@
 # Mavinote iOS
 
-**### Current Xcode project is configured to be built for x86_64 iOS Simulator. Extra configurations are required to get an arm64 build like Library Search Paths.**
+**### Current Xcode project is configured to be built for x86_64 iOS Simulator. Extra configurations are required to get an arm64 build like configuring Library Search Paths.**
 
 iOS application of Mavinote. This project depends on the **reax** library. Prior to building the project, you need to complete the **ios prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
 
 After completing the reax prerequisites, you need to create some build time configurations. You can create configuration file by copying `BuildConfs.swift.example` file to `BuildConfs.swift`.
 ``` bash
-# Current PWD should be /PATH-TO-REPO/ios
+# Current working directory should be /PATH-TO-REPO/ios
 cp Mavinote/BuildConfs.swift.example Mavinote/BuildConfs.swift
 ```
-This configuration file defines build type dependent variables like **backend** project's **BIND_ADDRESS** configuration as **API_URL** variable.
+This configuration file defines build type dependent variables like **backend** project's **BIND_ADDRESS** configuration as **API_URL** variable for **release** and **debug** build types.
 
 Now you can open the project with Xcode and build the application.
 

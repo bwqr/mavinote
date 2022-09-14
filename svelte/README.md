@@ -1,38 +1,39 @@
-# create-svelte
+# Mavinote Web
+Web application of Mavinote. Web application does not have a **Local** account like Android and iOS have. It is designed to work on **Mavinote** accounts.
 
-Everything you need to build a Svelte project, powered by [`create-svelte`](https://github.com/sveltejs/kit/tree/master/packages/create-svelte).
+## Prerequisites
+Before starting the development, you need to do:
 
-## Creating a project
+* Complete **wasm prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
+* Install project dependencies with `npm install` (or `pnpm install` or `yarn`).
 
-If you're seeing this, you've probably already done this step. Congrats!
+## Configuration
+Project has two files that define the build time configurations, `.env.development` for development and `.env.production` for production.
+Right now, project has these variables defined in the configuration files.
 
-```bash
-# create a new project in the current directory
-npm create svelte@latest
+* **VITE_API_URL**: This variable contains the URL of backend service. An example is `http://127.0.0.1:8050/api`.
 
-# create a new project in my-app
-npm create svelte@latest my-app
-```
-
-## Developing
-
-Once you've created a project and installed dependencies with `npm install` (or `pnpm install` or `yarn`), start a development server:
-
-```bash
+## Development
+You can start the development server with
+```sh
 npm run dev
 
 # or start the server and open the app in a new browser tab
 npm run dev -- --open
 ```
 
-## Building
+## Deployment
+You can get production files manually or create a docker image which contains the project as ready to serve.
 
-To create a production version of your app:
-
-```bash
+* To get production files manually, you can run with
+```sh
 npm run build
 ```
+The build files are located in `build` directory.
 
-You can preview the production build with `npm run preview`.
-
-> To deploy your app, you may need to install an [adapter](https://kit.svelte.dev/docs/adapters) for your target environment.
+* To create a docker image, your current working directory must be the root of the repository since docker needs to access **reax** project.
+Then you can create docker image with
+```sh
+cd <root-of-repository>
+docker build -f svelte/Dockerfile -t <docker-image-tag> .
+```

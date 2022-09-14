@@ -42,7 +42,7 @@ Besides the main points, The project also aims to develop a fully functional not
     - [ ] Store notes as encrypted for both local notes and Mavinote account notes
 - [x] Finish iOS application
 - [ ] Finish desktop application
-- [ ] Finish web application
+- [x] Finish web application
 
 ### Project Structure
 
@@ -66,7 +66,7 @@ Mavinote contains multiple projects seperated by being a library, backend and fr
 
     * iOS
 
-        iOS implementation of Mavinote. Application itself is currently incomplete. It is implemented in [Swift](https://developer.apple.com/swift/) and uses [SwiftUI](https://developer.apple.com/xcode/swiftui/).
+        iOS implementation of Mavinote. It is implemented in [Swift](https://developer.apple.com/swift/) and uses [SwiftUI](https://developer.apple.com/xcode/swiftui/).
 
     * iced
 
@@ -75,7 +75,7 @@ Mavinote contains multiple projects seperated by being a library, backend and fr
 
     * Svelte
 
-        A web app implementation of Mavinote. Web app is currently incomplete. It is implemented in [TypeScript](https://www.typescriptlang.org/) and uses [Svelte](https://svelte.dev/).
+        A web app implementation of Mavinote. It is implemented in [TypeScript](https://www.typescriptlang.org/) and uses [Svelte](https://svelte.dev/).
 
 
 ### Running Mavinote application
