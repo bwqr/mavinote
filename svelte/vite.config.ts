@@ -8,9 +8,6 @@ const config: UserConfig = {
             allow: ['./wasm'],
         }
     },
-    ssr: {
-        noExternal: true,
-    },
 };
 
 export default config;

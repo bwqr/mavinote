@@ -1,0 +1,12 @@
+reax/target
+
+ios
+android
+
+svelte/node_modules
+svelte/build
+svelte/.svelte-kit
+svelte/wasm
+.env
+.env.*
+!.env.example

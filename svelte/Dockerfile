@@ -13,10 +13,10 @@ FROM alpine as svelte-builder
 
 WORKDIR /usr/local/src/mavinote/svelte
 
-COPY --from=wasm-builder /usr/local/src/mavinote/reax/wasm/pkg wasm
 COPY svelte .
+COPY --from=wasm-builder /usr/local/src/mavinote/reax/wasm/pkg wasm
 
-RUN apk update && apk add nodejs npm && npm i && npm run build && sh -c "echo '{\"type\":\"module\"}' > build/package.json"
+RUN apk update && apk add nodejs npm && npm i && npm run build && cp package.json build/package.json
 
 FROM alpine
 
@@ -24,7 +24,7 @@ WORKDIR /usr/local/app/mavinote/svelte
 
 COPY --from=svelte-builder /usr/local/src/mavinote/svelte/build .
 
-RUN apk update && apk add nodejs
+RUN apk update && apk add nodejs npm && npm i --omit=dev
 
 EXPOSE 3000
 
