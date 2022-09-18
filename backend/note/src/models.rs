@@ -19,21 +19,16 @@ pub struct Folder {
     pub created_at: NaiveDateTime,
 }
 
-#[derive(Queryable)]
+#[derive(Queryable, Serialize)]
 pub struct Note {
     pub id: i32,
     pub folder_id: i32,
+    pub commit: i32,
     pub title: Option<String>,
+    pub text: String,
     pub state: State,
     pub created_at: NaiveDateTime,
-}
-
-#[derive(Queryable)]
-pub struct Commit {
-    pub id: i32,
-    pub note_id: i32,
-    pub text: String,
-    pub created_at: NaiveDateTime,
+    pub updated_at: NaiveDateTime,
 }
 
 #[derive(Debug, FromSqlRow, Serialize)]

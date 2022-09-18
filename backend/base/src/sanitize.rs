@@ -23,6 +23,12 @@ impl Sanitize for String {
     }
 }
 
+impl Sanitize for i32 {
+    fn sanitize(self) -> Self {
+        self
+    }
+}
+
 impl<T> Sanitize for Option<T> where T: Sanitize {
     fn sanitize(self) -> Self {
         self.map(|s| s.sanitize())

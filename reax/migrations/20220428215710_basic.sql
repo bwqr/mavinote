@@ -22,10 +22,10 @@ create table folders(
 create table notes(
     id          integer primary key autoincrement,
     folder_id   integer         not null,
-    remote_id   integer default null,
+    remote_id   integer         default null,
+    'commit'    integer         not null,
     title       varchar(255)    default null,
     text        text            not null,
-    commit_id   integer         not null,
     state       varchar(8)      not null,
     foreign key(folder_id) references folders(id) on delete cascade on update no action,
     unique(folder_id, remote_id),

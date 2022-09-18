@@ -178,14 +178,14 @@ pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id:
         .await
 }
 
-pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit_id: i32) -> Result<Note, Error> {
+pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit: i32) -> Result<Note, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into notes (folder_id, remote_id, title, text, commit_id, state) values(?, ?, ?, ?, ?, ?)")
+        sqlx::query("insert into notes (folder_id, remote_id, title, text, 'commit', state) values(?, ?, ?, ?, ?, ?)")
             .bind(folder_id.0)
             .bind(remote_id.map(|id| id.0))
             .bind(title.as_ref())
             .bind(text.as_str())
-            .bind(commit_id)
+            .bind(commit)
             .bind(State::Clean)
             .execute(&mut *conn)
             .await?;
@@ -198,11 +198,11 @@ pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, 
      .await
 }
 
-pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, title: Option<&str>, text: &str, commit_id: i32, state: State) -> Result<(), Error> {
-    sqlx::query("update notes set title=?, text=?, commit_id=?, state=? where id=?")
+pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, title: Option<&str>, text: &str, commit: i32, state: State) -> Result<(), Error> {
+    sqlx::query("update notes set title=?, text=?, 'commit'=?, state=? where id=?")
         .bind(title)
         .bind(text)
-        .bind(commit_id)
+        .bind(commit)
         .bind(state)
         .bind(note_id.0)
         .execute(conn)
@@ -210,9 +210,9 @@ pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, ti
         .map(|_| ())
 }
 
-pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, commit_id: i32) -> Result<(), Error> {
-    sqlx::query("update notes set commit_id=?, state=? where id=?")
-        .bind(commit_id)
+pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, commit: i32) -> Result<(), Error> {
+    sqlx::query("update notes set commit=?, state=? where id=?")
+        .bind(commit)
         .bind(State::Clean)
         .bind(note_id.0)
         .execute(conn)

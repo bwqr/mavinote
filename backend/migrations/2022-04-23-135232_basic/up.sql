@@ -26,18 +26,19 @@ create table folders(
 );
 
 create table notes(
-    id      serial  primary key not null,
+    id          serial  primary key not null,
     folder_id   int             not null,
-    title       varchar(255)    default null,
+    commit      int             not null default 1,
+    title       text            default null,
+    text        text            not null,
     state       varchar(8)      not null default 'Clean' check (state in ('Clean', 'Deleted')),
     created_at  timestamp       not null default current_timestamp,
+    updated_at  timestamp       not null default current_timestamp,
     constraint  fk_notes_folder_id foreign key (folder_id) references folders (id) on delete cascade on update no action
 );
 
-create table commits(
-    id      serial  primary key not null,
-    note_id int         not null,
-    text    text        not null,
-    created_at  timestamp   not null    default current_timestamp,
-    constraint  fk_note_commits_note_id foreign key (note_id) references notes (id) on delete cascade on update no action
-);
+create trigger notes_updated_at
+    before update
+    on notes
+    for each row
+execute procedure update_timestamp();

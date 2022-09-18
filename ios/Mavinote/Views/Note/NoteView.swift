@@ -143,7 +143,7 @@ private class TextViewDelegate : NSObject, UITextViewDelegate {
 
 struct NoteView_Preview : PreviewProvider {
     static var previews: some View {
-        let note = Note(id: 1, folderId: 1, remoteId: 1, title: "My Note", text: "Little note in code", commitId: 0, state: .Clean)
+        let note = Note(id: 1, folderId: 1, remoteId: 1, commit: 1, title: "My Note", text: "Little note in code", state: .Clean)
 
         NavigationView {
             _NoteView(

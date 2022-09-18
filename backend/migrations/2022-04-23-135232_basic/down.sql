@@ -1,5 +1,3 @@
-drop table commits;
-
 drop table notes;
 
 drop table folders;

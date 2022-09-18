@@ -6,7 +6,7 @@ Simple and open source note-taking application. You can take notes that reside o
 
 Contents of this Readme
 
-1. [Avaialability](#availability)
+1. [Availability](#availability)
 2. [Project Goals](#project-goals)
 3. [Project Structure](#project-structure)
 4. [Running Mavinote Application](#running-mavinote-application)

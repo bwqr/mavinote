@@ -18,7 +18,7 @@ export function deserializeFolder(deserializer: Deserializer): Folder {
 export interface Note {
     id: number;
     folderId: number;
-    commitId: number;
+    commit: number;
     title: string | null;
     text: string;
     state: State;
@@ -28,7 +28,7 @@ export function deserializeNote(deserializer: Deserializer): Note {
     return {
         id: deserializer.deserializeI32(),
         folderId: deserializer.deserializeI32(),
-        commitId: deserializer.deserializeI32(),
+        commit: deserializer.deserializeI32(),
         title: deserializeOption(deserializer, (d) => d.deserializeStr()),
         text: deserializer.deserializeStr(),
         state: deserializeState(deserializer),

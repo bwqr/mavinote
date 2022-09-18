@@ -57,9 +57,9 @@ pub struct Note {
     pub id: i32,
     pub folder_id: i32,
     pub remote_id: Option<i32>,
+    pub commit: i32,
     pub title: Option<String>,
     pub text: String,
-    pub commit_id: i32,
     pub state: State,
 }
 

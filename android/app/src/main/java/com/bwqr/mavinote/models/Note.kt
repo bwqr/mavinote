@@ -7,9 +7,9 @@ data class Note constructor(
     val id: Int,
     val folderId: Int,
     val remoteId: Int?,
+    val commit: Int,
     val title: String?,
     val text: String,
-    val commitId: Int,
     val state: State
 ) {
     companion object {
@@ -20,9 +20,9 @@ data class Note constructor(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
                 TraitHelpers.deserializeOption(deserializer) { it.deserialize_i32() },
+                deserializer.deserialize_i32(),
                 TraitHelpers.deserializeOption(deserializer) { it.deserialize_str() },
                 deserializer.deserialize_str(),
-                deserializer.deserialize_i32(),
                 State.deserialize(deserializer)
             )
 

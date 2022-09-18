@@ -12,7 +12,6 @@ pub struct CreateFolderRequest {
 #[derive(Deserialize, Sanitize)]
 #[serde(rename_all = "camelCase")]
 pub struct CreateNoteRequest {
-    #[sanitize(skip_sanitizing)]
     pub folder_id: i32,
     pub title: Option<String>,
     pub text: String,
@@ -21,6 +20,7 @@ pub struct CreateNoteRequest {
 #[derive(Deserialize, Sanitize)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdateNoteRequest {
+    pub commit: i32,
     pub title: Option<String>,
     pub text: String,
 }

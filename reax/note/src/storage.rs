@@ -288,7 +288,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
         remote_note.as_ref().map(|n| n.id()),
         Some(title),
         text.to_string(),
-        remote_note.map(|n| n.commit_id).unwrap_or(0)
+        remote_note.map(|n| n.commit).unwrap_or(0)
     ).await?;
 
     let note_id = local_note.id;
@@ -319,7 +319,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
     let title = text[..ending_index].replace('\n', "");
 
-    let (commit_id, state) = if let Some(remote_id) = note.remote_id() {
+    let (commit, state) = if let Some(remote_id) = note.remote_id() {
         let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
         let account = db::fetch_account(&mut conn, folder.account_id).await?.unwrap();
         if let AccountKind::Mavinote = account.kind {
@@ -327,20 +327,20 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
             let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
             match mavinote.update_note(remote_id, Some(title.as_str()), text).await {
-                Ok(commit) => (commit.commit_id, ModelState::Clean),
+                Ok(commit) => (commit.commit, ModelState::Clean),
                 Err(e) => {
                     log::debug!("failed to update note with id {note_id}, {e:?}");
-                    (note.commit_id, ModelState::Modified)
+                    (note.commit, ModelState::Modified)
                 }
             }
         } else {
-            (note.commit_id, ModelState::Clean)
+            (note.commit, ModelState::Clean)
         }
     } else {
-        (note.commit_id, ModelState::Clean)
+        (note.commit, ModelState::Clean)
     };
 
-    db::update_note(&mut conn, note.local_id(), Some(title.as_str()), text, commit_id, state).await?;
+    db::update_note(&mut conn, note.local_id(), Some(title.as_str()), text, commit, state).await?;
 
     if let Some(updated_note) = db::fetch_note(&mut conn, note.local_id()).await? {
         NOTES_MAP.get().unwrap().update_modify(note.folder_id, move |state| {

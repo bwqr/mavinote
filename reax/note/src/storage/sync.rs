@@ -61,7 +61,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
             let note = db::fetch_note_by_remote_id(conn, commit.note_id(), folder.local_id()).await?;
 
             if let Some(note) = note {
-                if ModelState::Clean == note.state && note.commit_id < commit.commit_id {
+                if ModelState::Clean == note.state && note.commit < commit.commit {
                     // A note fetched by its remote id must have remote id. Hence we can safely unwrap it
                     match mavinote.fetch_note(note.remote_id().unwrap()).await {
                         Ok(Some(remote_note)) => db::update_note(
@@ -69,7 +69,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
                             note.local_id(),
                             remote_note.title.as_ref().map(|title| title.as_str()),
                             remote_note.text.as_str(),
-                            remote_note.commit_id,
+                            remote_note.commit,
                             ModelState::Clean,
                         ).await?,
                         Ok(None) => log::debug!("note with remote id {} does not exist on remote", note.remote_id().unwrap().0),
@@ -79,7 +79,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
             } else {
                 match mavinote.fetch_note(commit.note_id()).await {
                     Ok(Some(note)) => {
-                        db::create_note(conn, folder.local_id(), Some(note.id()), note.title, note.text, note.commit_id).await?;
+                        db::create_note(conn, folder.local_id(), Some(note.id()), note.title, note.text, note.commit).await?;
                     },
                     Ok(None) => log::debug!("note with remote id {} does not exist on remote", commit.note_id().0),
                     Err(e) => log::debug!("failed to fetch note with remote id {}, {e:?}", commit.note_id),
@@ -135,16 +135,16 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
                 } else if let Some(remote_id) = local_note.remote_id() {
                     if ModelState::Modified == local_note.state {
                         match mavinote.update_note(remote_id, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
-                            Ok(commit) => db::update_commit(conn, local_note.local_id(), commit.commit_id).await?,
+                            Ok(commit) => db::update_commit(conn, local_note.local_id(), commit.commit).await?,
                             Err(e) => log::debug!("failed to update note with id {}, {e:?}", local_note.id),
                         }
                     }
                 } else if local_note.remote_id().is_none() {
                     match mavinote.create_note(remote_folder_id, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
                         Ok(remote_note) => {
-                            sqlx::query("update notes set remote_id = ?, commit_id = ? where id = ?")
+                            sqlx::query("update notes set remote_id = ?, 'commit' = ? where id = ?")
                                 .bind(remote_note.id)
-                                .bind(remote_note.commit_id)
+                                .bind(remote_note.commit)
                                 .bind(local_note.id)
                                 .execute(&mut *conn)
                                 .await?;

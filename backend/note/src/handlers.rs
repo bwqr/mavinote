@@ -1,16 +1,16 @@
 use actix_web::{
     get, post, put,
-    web::{block, Data, Json, Path}, http::StatusCode, delete,
+    web::{block, Data, Json, Path}, delete, http::StatusCode,
 };
 use diesel::prelude::*;
 
-use base::{sanitize::Sanitized, schemas::{folders, notes, commits}, types::Pool, HttpError};
+use base::{sanitize::Sanitized, schemas::{folders, notes}, types::Pool, HttpError};
 use user::models::User;
 
 use crate::{
-    models::{Folder, Note, Commit, State},
+    models::{Folder, Note, State},
     requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest},
-    responses::{Commit as CommitResponse, Note as NoteResponse}
+    responses::Commit
 };
 
 #[get("folders")]
@@ -58,25 +58,17 @@ pub async fn delete_folder(
             .select(folders::id)
             .first::<i32>(&conn)?;
 
-        let note_ids = notes::table
-            .filter(notes::folder_id.eq(folder_id))
-            .select(notes::id)
-            .load::<i32>(&conn)?;
-
         diesel::update(folders::table)
             .filter(folders::id.eq(folder_id))
             .set((
                 folders::state.eq(State::Deleted),
-                //folders::name.eq(""),
             ))
             .execute(&conn)?;
 
+        // This query can be removed at some point since at database level, deleting a folder will
+        // be cascaded to notes
         diesel::delete(notes::table)
             .filter(notes::folder_id.eq(folder_id))
-            .execute(&conn)?;
-
-        diesel::delete(commits::table)
-            .filter(commits::note_id.eq_any(note_ids))
             .execute(&conn)
     })
         .await??;
@@ -89,7 +81,7 @@ pub async fn fetch_notes(
     pool: Data<Pool>,
     folder_id: Path<i32>,
     user: User,
-) -> Result<Json<Vec<NoteResponse>>, HttpError> {
+) -> Result<Json<Vec<Note>>, HttpError> {
     let notes = block(move || {
         let conn = pool.get().unwrap();
 
@@ -102,16 +94,12 @@ pub async fn fetch_notes(
 
         notes::table
             .filter(notes::folder_id.eq(folder_id))
-            .left_join(commits::table)
-            .order((notes::id.desc(), commits::id.desc()))
-            .select((notes::all_columns, commits::all_columns.nullable()))
-            .distinct_on(notes::id)
+            .order(notes::id.desc())
+            .select(notes::all_columns)
             .load(&conn)
     })
     .await??
     .into_iter()
-    .filter(|note: &(Note, Option<Commit>)| note.1.is_some())
-    .map(|note| NoteResponse::from((note.0, note.1.unwrap())))
     .collect();
 
     Ok(Json(notes))
@@ -122,7 +110,7 @@ pub async fn fetch_commits(
     pool: Data<Pool>,
     folder_id: Path<i32>,
     user: User,
-) -> Result<Json<Vec<CommitResponse>>, HttpError> {
+) -> Result<Json<Vec<Commit>>, HttpError> {
     let commits = block(move || {
         let conn = pool.get().unwrap();
 
@@ -135,19 +123,16 @@ pub async fn fetch_commits(
 
         notes::table
             .filter(notes::folder_id.eq(folder_id))
-            .left_join(commits::table)
-            .order((notes::id.desc(), commits::id.desc()))
-            .select((notes::id, notes::state, commits::id.nullable()))
-            .distinct_on(notes::id)
-            .load(&conn)
+            .order(notes::id.desc())
+            .select((notes::id, notes::commit, notes::state))
+            .load::<(i32, i32, State)>(&conn)
     })
     .await??
     .into_iter()
-    .filter(|commit: &(i32, State, Option<i32>)| commit.2.is_some())
-    .map(|commit| CommitResponse {
+    .map(|commit| Commit {
         note_id: commit.0,
-        state: commit.1,
-        commit_id: commit.2.unwrap(),
+        commit: commit.1,
+        state: commit.2,
     })
     .collect();
 
@@ -155,32 +140,19 @@ pub async fn fetch_commits(
 }
 
 #[get("note/{note_id}")]
-pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>, user: User) -> Result<Json<NoteResponse>, HttpError> {
-    let note_and_commit = block(move || {
+pub async fn fetch_note(pool: Data<Pool>, note_id: Path<i32>, user: User) -> Result<Json<Note>, HttpError> {
+    let note = block(move || {
         notes::table
             .filter(notes::id.eq(note_id.into_inner()))
             .filter(notes::state.eq(State::Clean.as_str()))
             .filter(folders::user_id.eq(user.id))
             .inner_join(folders::table)
-            .left_join(commits::table)
-            .order(commits::id.desc())
-            .select((notes::all_columns, commits::all_columns.nullable()))
-            .first::<(Note, Option<Commit>)>(&pool.get().unwrap())
+            .select(notes::all_columns)
+            .first(&pool.get().unwrap())
     })
     .await??;
 
-    if let (note, Some(commit)) = note_and_commit {
-        Ok(Json((note, commit).into()))
-    } else {
-        log::error!("note {} does not have a commit", note_and_commit.0.id);
-
-        Err(HttpError {
-            code: StatusCode::INTERNAL_SERVER_ERROR,
-            error: "invalidState",
-            message: Some("note does not have a commit".to_string()),
-        })
-    }
-
+    Ok(Json(note))
 }
 
 #[post("/note")]
@@ -188,8 +160,8 @@ pub async fn create_note(
     pool: Data<Pool>,
     request: Sanitized<Json<CreateNoteRequest>>,
     user: User,
-) -> Result<Json<NoteResponse>, HttpError> {
-    let note = block(move || -> Result<NoteResponse, HttpError> {
+) -> Result<Json<Note>, HttpError> {
+    let note = block(move || {
         let conn = pool.get().unwrap();
 
         let folder_id = folders::table
@@ -199,21 +171,13 @@ pub async fn create_note(
             .select(folders::id)
             .first::<i32>(&conn)?;
 
-        let note = diesel::insert_into(notes::table)
+        diesel::insert_into(notes::table)
             .values((
                 notes::folder_id.eq(folder_id),
                 notes::title.eq(&request.title),
+                notes::text.eq(&request.text)
             ))
-            .get_result::<Note>(&conn)?;
-
-        let note_commit = diesel::insert_into(commits::table)
-            .values((
-                commits::note_id.eq(note.id),
-                commits::text.eq(&request.text),
-            ))
-            .get_result(&conn)?;
-
-        Ok(NoteResponse::from((note, note_commit)))
+            .get_result::<Note>(&conn)
     })
     .await??;
 
@@ -226,35 +190,37 @@ pub async fn update_note(
     note_id: Path<i32>,
     request: Sanitized<Json<UpdateNoteRequest>>,
     user: User,
-) -> Result<Json<CommitResponse>, HttpError> {
-    let commit = block(move || -> Result<CommitResponse, HttpError> {
+) -> Result<Json<Commit>, HttpError> {
+    let commit = block(move || -> Result<Commit, HttpError> {
         let conn = pool.get().unwrap();
 
-        let note_id = notes::table
+        // TODO make incrementing commit atomic
+        let (note_id, commit) = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
             .filter(notes::state.eq(State::Clean.as_str()))
             .filter(folders::user_id.eq(user.id))
             .inner_join(folders::table)
-            .select(notes::id)
-            .first::<i32>(&conn)?;
+            .select((notes::id, notes::commit))
+            .first::<(i32, i32)>(&conn)?;
+
+        if commit != request.commit {
+            return Err(HttpError {
+                code: StatusCode::CONFLICT,
+                error: "commit_not_matches",
+                message: None,
+            });
+        }
 
         diesel::update(notes::table)
             .filter(notes::id.eq(note_id))
-            .set(notes::title.eq(&request.title))
+            .set((notes::title.eq(&request.title), notes::commit.eq(commit + 1)))
             .execute(&conn)?;
 
-        diesel::insert_into(commits::table)
-            .values((
-                commits::note_id.eq(note_id),
-                commits::text.eq(&request.text),
-            ))
-            .get_result::<Commit>(&conn)
-            .map(|commit| CommitResponse {
-                commit_id: commit.id,
-                state: State::Clean,
-                note_id,
-            })
-            .map_err(|e| e.into())
+        Ok(Commit {
+            note_id,
+            commit: commit + 1,
+            state: State::Clean,
+        })
     })
     .await??;
 
@@ -283,10 +249,6 @@ pub async fn delete_note(
                 notes::state.eq(State::Deleted),
                 //notes::title.eq(None as Option<State>),
             ))
-            .execute(&conn)?;
-
-        diesel::delete(commits::table)
-            .filter(commits::note_id.eq(note_id))
             .execute(&conn)
     })
     .await??;

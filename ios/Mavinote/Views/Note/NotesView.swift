@@ -117,9 +117,9 @@ struct NotesView_Preview : PreviewProvider {
     static var previews : some View {
         let folder = Folder(id: 1, accountId: 1, remoteId: nil, name: "My Folder", state: .Clean)
         let notes = [
-            Note(id: 1, folderId: 1, remoteId: nil, title: "Little Note", text: "Empty text", commitId: 1, state: .Clean),
-            Note(id: 2, folderId: 1, remoteId: nil, title: "Hacky Solutions", text: "Empty text", commitId: 1, state: .Clean),
-            Note(id: 3, folderId: 1, remoteId: nil, title: "No Surprise", text: "Empty text", commitId: 1, state: .Clean)
+            Note(id: 1, folderId: 1, remoteId: nil, commit: 1, title: "Little Note", text: "Empty text", state: .Clean),
+            Note(id: 2, folderId: 1, remoteId: nil, commit: 1, title: "Hacky Solutions", text: "Empty text", state: .Clean),
+            Note(id: 3, folderId: 1, remoteId: nil, commit: 1, title: "No Surprise", text: "Empty text", state: .Clean)
         ]
 
         NavigationView {

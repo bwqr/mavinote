@@ -154,10 +154,10 @@ fun NotesPreview() {
     val folder = Folder(1, 1, null, "Can Long Typed Title Fit Here Or Cannot Fit Here", State.Clean)
 
     val notes = listOf(
-        Note(1, folder.id, null, "Downtown", "Going to downtown", 1, State.Clean),
-        Note(2, folder.id, null, "Hometown", "Sky hometown", 1, State.Clean),
-        Note(3, folder.id, null, "Middle Town", "Right in the middle", 1, State.Clean),
-        Note(4, folder.id, null, "Middle ", "Right in the middle", 1, State.Clean),
+        Note(1, folder.id, null, 1, "Downtown", "Going to downtown", State.Clean),
+        Note(2, folder.id, null, 1, "Hometown", "Sky hometown", State.Clean),
+        Note(3, folder.id, null, 1, "Middle Town", "Right in the middle", State.Clean),
+        Note(4, folder.id, null, 1, "Middle", "Right in the middle", State.Clean),
     )
 
     MavinoteTheme {
