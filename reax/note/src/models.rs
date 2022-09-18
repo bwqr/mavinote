@@ -8,7 +8,6 @@ pub struct LocalId(pub i32);
 pub struct RemoteId(pub i32);
 
 #[derive(Debug, Serialize)]
-#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Account {
     pub id: i32,
@@ -30,7 +29,6 @@ pub struct Mavinote {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Folder {
     pub id: i32,
@@ -51,7 +49,6 @@ impl Folder {
 }
 
 #[derive(Debug, Deserialize, Serialize)]
-#[serde(rename_all = "camelCase")]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Note {
     pub id: i32,

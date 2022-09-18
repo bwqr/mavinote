@@ -10,6 +10,7 @@
 
     let title: string | null = null;
     let text = '';
+    let commit: number | null = null;
     let modified = false;
     let deleting = false;
     let showActionMenu = false;
@@ -20,6 +21,7 @@
                 title = n.title;
                 text = n.text;
                 folderId = n.folderId;
+                commit = n.commit;
             }
         });
     }
@@ -30,7 +32,7 @@
         }
 
         if (noteId !== null && modified) {
-            noteStore.updateNote(folderId!, noteId, text);
+            noteStore.updateNote(folderId!, noteId, commit!, text);
         } else if (noteId === null && text.trim().length !== 0) {
             if (!folderId) {
                 throw new Error('Either folderId or noteId must be provided');

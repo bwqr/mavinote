@@ -1,4 +1,4 @@
-import { deserializeFolder, deserializeNote, State } from "../models";
+import { deserializeFolder, deserializeNote } from "../models";
 import type { Folder, Note } from '../models';
 import * as noteWasm from "mavinote-wasm";
 import { deserializeOption, deserializeVec } from '$lib/serde';
@@ -67,8 +67,8 @@ export async function createNote(folderId: number, text: string): Promise<Note> 
         .catch(decodeAndHandleError);
 }
 
-export async function updateNote(folderId: number, noteId: number, text: string): Promise<void> {
-    return noteWasm.note_update_note(folderId, noteId, text)
+export async function updateNote(folderId: number, noteId: number, commit: number, text: string): Promise<void> {
+    return noteWasm.note_update_note(folderId, noteId, commit, text)
         .then(() => { })
         .catch(decodeAndHandleError);
 }

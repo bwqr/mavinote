@@ -134,7 +134,7 @@ async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, a
                     }
                 } else if let Some(remote_id) = local_note.remote_id() {
                     if ModelState::Modified == local_note.state {
-                        match mavinote.update_note(remote_id, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
+                        match mavinote.update_note(remote_id, local_note.commit, local_note.title.as_ref().map(|title| title.as_str()), local_note.text.as_str()).await {
                             Ok(commit) => db::update_commit(conn, local_note.local_id(), commit.commit).await?,
                             Err(e) => log::debug!("failed to update note with id {}, {e:?}", local_note.id),
                         }

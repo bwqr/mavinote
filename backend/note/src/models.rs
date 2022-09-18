@@ -10,7 +10,6 @@ use diesel::{
 use serde::Serialize;
 
 #[derive(Queryable, Serialize)]
-#[serde(rename_all = "camelCase")]
 pub struct Folder {
     pub id: i32,
     pub user_id: i32,

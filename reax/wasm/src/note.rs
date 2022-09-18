@@ -189,14 +189,14 @@ pub async fn note_create_note(folder_id: i32, text: String) -> Result<Uint8Array
 }
 
 #[wasm_bindgen]
-pub async fn note_update_note(folder_id: i32, note_id: i32, text: String) -> Result<Uint8Array, Uint8Array> {
+pub async fn note_update_note(folder_id: i32, note_id: i32, commit: i32, text: String) -> Result<Uint8Array, Uint8Array> {
     let mavinote = runtime::get::<MavinoteClient>().unwrap();
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
     let title = text[..ending_index].replace('\n', "");
 
-    let res = mavinote.update_note(RemoteId(note_id), Some(title.as_str()), &text).await
+    let res = mavinote.update_note(RemoteId(note_id), commit, Some(title.as_str()), &text).await
         .map(|_| ())
         .map_err(serialize_to_buffer)?;
 

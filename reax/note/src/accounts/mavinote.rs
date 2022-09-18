@@ -175,8 +175,8 @@ impl MavinoteClient {
             .map_err(|e| self.error(e))
     }
 
-    pub async fn update_note(&self, note_id: RemoteId, title: Option<&str>, text: &str) -> Result<responses::Commit, Error> {
-        let request = requests::UpdateNoteRequest { title, text };
+    pub async fn update_note(&self, note_id: RemoteId, commit: i32, title: Option<&str>, text: &str) -> Result<responses::Commit, Error> {
+        let request = requests::UpdateNoteRequest { commit, title, text };
 
         self.client
             .put(format!("{}/note/note/{}", self.api_url, note_id.0))
@@ -221,20 +221,17 @@ mod requests {
     use serde::Serialize;
 
     #[derive(Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct LoginRequest<'a> {
         pub email: &'a str,
         pub password: &'a str,
     }
 
     #[derive(Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct CreateFolderRequest<'a> {
         pub name: &'a str,
     }
 
     #[derive(Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct CreateNoteRequest<'a> {
         pub folder_id: i32,
         pub title: Option<&'a str>,
@@ -242,8 +239,8 @@ mod requests {
     }
 
     #[derive(Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct UpdateNoteRequest<'a> {
+        pub commit: i32,
         pub title: Option<&'a str>,
         pub text: &'a str,
     }
@@ -262,7 +259,6 @@ pub mod responses {
     use crate::models::{RemoteId, State};
 
     #[derive(Debug, Deserialize, Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct Folder {
         pub id: i32,
         pub name: String,
@@ -276,7 +272,6 @@ pub mod responses {
     }
 
     #[derive(Debug, Deserialize, Serialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct Note {
         pub id: i32,
         pub folder_id: i32,
@@ -293,7 +288,6 @@ pub mod responses {
     }
 
     #[derive(Deserialize)]
-    #[serde(rename_all = "camelCase")]
     pub struct Commit {
         pub note_id: i32,
         pub commit: i32,

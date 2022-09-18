@@ -213,7 +213,7 @@ pub async fn update_note(
 
         diesel::update(notes::table)
             .filter(notes::id.eq(note_id))
-            .set((notes::title.eq(&request.title), notes::commit.eq(commit + 1)))
+            .set((notes::commit.eq(commit + 1), notes::title.eq(&request.title), notes::text.eq(&request.text)))
             .execute(&conn)?;
 
         Ok(Commit {

@@ -326,7 +326,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
             let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
             let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
 
-            match mavinote.update_note(remote_id, Some(title.as_str()), text).await {
+            match mavinote.update_note(remote_id, note.commit, Some(title.as_str()), text).await {
                 Ok(commit) => (commit.commit, ModelState::Clean),
                 Err(e) => {
                     log::debug!("failed to update note with id {note_id}, {e:?}");
