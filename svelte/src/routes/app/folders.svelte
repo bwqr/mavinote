@@ -4,8 +4,8 @@
     import * as noteStore from '$lib/stores/note';
     import { Subscription } from 'rxjs';
     import { onDestroy } from 'svelte';
-    import FolderPlus from '/src/icons/folder-plus.svelte';
-    import BoxArrowRight from '/src/icons/box-arrow-right.svelte';
+    import FolderPlus from '$components/icons/folder-plus.svelte';
+    import BoxArrowRight from '$components/icons/box-arrow-right.svelte';
 
     let folders: Folder[] = [];
     let folderName = '';

@@ -1,5 +1,5 @@
 <script lang="ts">
-    import Plus from '/src/icons/plus.svelte';
+    import Plus from '$components/icons/plus.svelte';
 </script>
 
 <div class="d-flex justify-content-center align-items-center flex-column h-100">

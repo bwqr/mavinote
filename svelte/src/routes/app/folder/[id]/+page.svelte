@@ -6,8 +6,8 @@
     import * as noteStore from '$lib/stores/note';
     import { Subscription } from 'rxjs';
     import { onDestroy } from 'svelte';
-    import PencilSquare from '../../../../icons/pencil-square.svelte';
-    import ThreeDotsVertical from '../../../../icons/three-dots-vertical.svelte';
+    import PencilSquare from '$components/icons/pencil-square.svelte';
+    import ThreeDotsVertical from '$components/icons/three-dots-vertical.svelte';
 
     let folder: Folder | undefined = undefined;
     let folderId: number | undefined = undefined;

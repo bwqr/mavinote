@@ -1,5 +1,5 @@
 <script lang="ts">
-    import BoxArrowUpRight from "../icons/box-arrow-up-right.svelte";
+    import BoxArrowUpRight from "$components/icons/box-arrow-up-right.svelte";
 </script>
 
 <nav class="bg-primary">

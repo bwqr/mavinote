@@ -3,7 +3,7 @@
 
     import * as noteStore from '$lib/stores/note';
     import { onDestroy } from 'svelte';
-    import ThreeDotsVertical from '../../../icons/three-dots-vertical.svelte';
+    import ThreeDotsVertical from '$components/icons/three-dots-vertical.svelte';
 
     export let folderId: number | null = null;
     export let noteId: number | null = null;
