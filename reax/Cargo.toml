@@ -3,7 +3,6 @@ members = [
     "android",
     "ios",
     "wasm",
-    "auth",
     "base",
     "note",
     "notify",

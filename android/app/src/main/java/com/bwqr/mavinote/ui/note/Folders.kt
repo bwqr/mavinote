@@ -45,9 +45,9 @@ fun Folders(navController: NavController) {
     }
 
     LaunchedEffect(key1 = 1) {
-        NoteViewModel()
+        NoteViewModel
             .accounts()
-            .combine(NoteViewModel().folders()) { accounts, folders ->
+            .combine(NoteViewModel.folders()) { accounts, folders ->
                 accounts.map {
                     AccountWithFolders(
                         it,
@@ -57,7 +57,7 @@ fun Folders(navController: NavController) {
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is ReaxException -> cause.handle()
+                    is Error -> cause.handle()
                 }
             }
             .launchIn(this)

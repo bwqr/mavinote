@@ -1,16 +1,26 @@
 use base::{State, Error};
 use jni::{
-    objects::{JObject, JString},
+    objects::{JString, JClass},
     sys::{jint, jlong, jboolean},
-    JNIEnv,
+    JNIEnv
 };
 
-use crate::{send_stream, send_once, spawn, Message};
+use crate::{send_stream, send_once, spawn, Message, block_on};
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1init(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
+) {
+    block_on(::note::storage::init()).unwrap();
+
+    log::info!("reax note is initialized");
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1sync(
+    _: JNIEnv,
+    _: JClass,
     once_id: jint
 ) -> jlong {
     let handle = spawn(async move {
@@ -23,9 +33,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1sync(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1accounts(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1accounts(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     stream_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
@@ -52,9 +62,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1accounts(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1account(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1account(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     account_id: jint,
 ) -> jlong {
@@ -68,9 +78,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1account(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1mavinoteAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1mavinoteAccount(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     account_id: jint,
 ) -> jlong {
@@ -84,9 +94,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1mavinoteAcco
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addAccount(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     name: JString,
     email: JString,
@@ -107,9 +117,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1addAccount(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteAccount(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     account_id: jint,
 ) -> jlong {
@@ -123,9 +133,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteAccoun
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1authorizeMavinoteAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1authorizeMavinoteAccount(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     account_id: jint,
     password: JString,
@@ -142,9 +152,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1authorizeMav
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1folders(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     stream_id: jint,
 ) -> jlong {
     let handle = spawn(async move {
@@ -171,9 +181,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folders(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folder(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1folder(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     folder_id: jint,
 ) -> jlong {
@@ -187,9 +197,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1folder(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createFolder(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1createFolder(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     account_id: i32,
     name: JString,
@@ -206,9 +216,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createFolder
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteFolder(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteFolder(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     folder_id: jint,
 ) -> jlong {
@@ -222,9 +232,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteFolder
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummaries(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1noteSummaries(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     stream_id: jint,
     folder_id: jint,
 ) -> jlong {
@@ -250,9 +260,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1noteSummarie
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1note(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     note_id: jint,
 ) -> jlong {
@@ -266,9 +276,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1note(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1createNote(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     folder_id: jint,
     text: JString,
@@ -285,9 +295,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1createNote(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1updateNote(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     note_id: jint,
     text: JString,
@@ -304,9 +314,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1updateNote(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModel__1deleteNote(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteNote(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     once_id: jint,
     note_id: jint,
 ) -> jlong {

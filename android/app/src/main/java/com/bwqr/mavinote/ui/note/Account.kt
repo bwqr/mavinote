@@ -19,8 +19,8 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.Mavinote
-import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
@@ -34,13 +34,13 @@ fun Account(navController: NavController, accountId: Int) {
 
     LaunchedEffect(key1 = 0) {
         try {
-            account = NoteViewModel().account(accountId)
+            account = NoteViewModel.account(accountId)
 
             account?.let {
                 if (AccountKind.Mavinote == it.kind) {
                     try {
-                        mavinote = NoteViewModel().mavinoteAccount(it.id)
-                    } catch (e: ReaxException) {
+                        mavinote = NoteViewModel.mavinoteAccount(it.id)
+                    } catch (e: Error) {
                         e.handle()
                     }
                 }
@@ -49,7 +49,7 @@ fun Account(navController: NavController, accountId: Int) {
             if (account == null) {
                 Log.e("Account", "accountId $accountId does not exist")
             }
-        } catch (e: ReaxException) {
+        } catch (e: Error) {
             e.handle()
         }
     }
@@ -64,10 +64,10 @@ fun Account(navController: NavController, accountId: Int) {
 
             scope.launch {
                 try {
-                    NoteViewModel().deleteAccount(accountId)
+                    NoteViewModel.deleteAccount(accountId)
 
                     navController.navigateUp()
-                } catch (e: ReaxException) {
+                } catch (e: Error) {
                     e.handle()
                 } finally {
                     inProgress = false

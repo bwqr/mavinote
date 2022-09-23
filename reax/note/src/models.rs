@@ -26,6 +26,7 @@ pub enum AccountKind {
 pub struct Mavinote {
     pub email: String,
     pub token: String,
+    pub enc_key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

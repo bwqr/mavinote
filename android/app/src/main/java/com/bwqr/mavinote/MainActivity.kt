@@ -1,5 +1,6 @@
 package com.bwqr.mavinote
 
+import android.content.Context
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,22 +10,22 @@ import androidx.compose.material.Surface
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.navigation.compose.NavHost
-import androidx.navigation.compose.composable
-import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.reax.Runtime
 import com.bwqr.mavinote.ui.BackgroundFeatures
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
-import com.bwqr.mavinote.viewmodels.Runtime
+import com.bwqr.mavinote.viewmodels.NoteViewModel
 
-sealed class MainScreens(val route: String) {
-    object BackgroundFeatures : MainScreens("background-features")
+fun initReax(ctx: Context) {
+    System.loadLibrary("reax")
+    Runtime.init(ctx.filesDir.absolutePath)
+    NoteViewModel.init()
 }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
-        Runtime.initialize(applicationContext.filesDir.absolutePath)
+        initReax(applicationContext)
 
         setContent {
             MavinoteTheme {
@@ -42,16 +43,7 @@ class MainActivity : ComponentActivity() {
 
 @Composable
 fun MainScreen() {
-    val navController = rememberNavController()
-
-    NavHost(
-        navController = navController,
-        startDestination = MainScreens.BackgroundFeatures.route
-    ) {
-        composable(MainScreens.BackgroundFeatures.route) {
-            BackgroundFeatures(navController)
-        }
-    }
+    BackgroundFeatures()
 }
 
 @Preview(showBackground = true)

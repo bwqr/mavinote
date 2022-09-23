@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -39,7 +39,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
     LaunchedEffect(key1 = 1) {
         noteId?.let {
             try {
-                val note = NoteViewModel().note(noteId)
+                val note = NoteViewModel.note(noteId)
 
                 if (note != null) {
                     title = note.title
@@ -47,7 +47,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                 } else {
                     Log.e("Note", "noteId $noteId does not exist")
                 }
-            } catch (e: ReaxException) {
+            } catch (e: Error) {
                 e.handle()
             }
         }
@@ -63,12 +63,12 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                         }
 
                         if (noteId != null && modified) {
-                            NoteViewModel().updateNote(noteId, text)
+                            NoteViewModel.updateNote(noteId, text)
                         } else if (noteId == null && text.isNotBlank()) {
                             // if noteId is null, folderId must be provided
-                            NoteViewModel().createNote(folderId!!, text)
+                            NoteViewModel.createNote(folderId!!, text)
                         }
-                    } catch (e: ReaxException) {
+                    } catch (e: Error) {
                         e.handle()
                     }
                 }
@@ -103,10 +103,10 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
 
             coroutineScope.launch {
                 try {
-                    NoteViewModel().deleteNote(deletingNoteId)
+                    NoteViewModel.deleteNote(deletingNoteId)
 
                     navController.navigateUp()
-                } catch (e: ReaxException) {
+                } catch (e: Error) {
                     e.handle()
                     deleting = false
                 }

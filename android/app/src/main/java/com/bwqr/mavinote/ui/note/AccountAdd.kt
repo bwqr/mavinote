@@ -18,9 +18,9 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bwqr.mavinote.R
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.HttpError
 import com.bwqr.mavinote.models.Message
-import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
@@ -47,12 +47,12 @@ fun AccountAdd(navController: NavController) {
 
         scope.launch {
             try {
-                NoteViewModel().addAccount(accountName, email, password, createAccount)
+                NoteViewModel.addAccount(accountName, email, password, createAccount)
 
                 navController.navigateUp()
-            } catch (e: ReaxException) {
-                when (e.error) {
-                    is Message -> error = e.error.message
+            } catch (e: Error) {
+                when (e) {
+                    is Message -> error = e.message
                     is HttpError.Unauthorized -> error =
                             "Invalid credentials. If you do not have a Mavinote account, you can create a new one by checking the box above"
                     else -> e.handle()

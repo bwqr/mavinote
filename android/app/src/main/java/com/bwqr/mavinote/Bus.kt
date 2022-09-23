@@ -1,4 +1,4 @@
-package com.bwqr.mavinote.viewmodels
+package com.bwqr.mavinote
 
 import kotlin.coroutines.Continuation
 import kotlin.coroutines.resume

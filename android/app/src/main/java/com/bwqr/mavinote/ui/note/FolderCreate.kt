@@ -14,7 +14,7 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
-import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
@@ -31,12 +31,12 @@ fun FolderCreate(navController: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = 0) {
-        NoteViewModel()
+        NoteViewModel
             .accounts()
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is ReaxException -> cause.handle()
+                    is Error -> cause.handle()
                 }
             }
             .launchIn(this)
@@ -58,10 +58,10 @@ fun FolderCreate(navController: NavController) {
 
             coroutineScope.launch {
                 try {
-                    NoteViewModel().createFolder(accountId, folderName)
+                    NoteViewModel.createFolder(accountId, folderName)
 
                     navController.navigateUp()
-                } catch (e: ReaxException) {
+                } catch (e: Error) {
                     e.handle()
                 } finally {
                     inProgress = false

@@ -1,19 +1,18 @@
 use std::sync::Arc;
 
-use base::{Error, Config};
+use base::Error;
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 
 use super::db;
-use crate::{models::{AccountKind, State as ModelState, Account, Mavinote}, accounts::mavinote::MavinoteClient};
+use crate::models::{AccountKind, State as ModelState, Account};
 
 pub async fn sync() -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
-    let config = runtime::get::<Arc<Config>>().unwrap();
 
     let accounts = db::fetch_accounts(&mut conn).await?;
 
     for account in accounts {
-        sync_account(&mut conn, &config, account).await?;
+        sync_account(&mut conn, account).await?;
     }
 
     super::FOLDERS.get().unwrap().send_replace(db::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
@@ -21,16 +20,14 @@ pub async fn sync() -> Result<(), Error> {
     Ok(())
 }
 
-async fn sync_account(conn: &mut PoolConnection<Sqlite>, config: &Arc<Config>, account: Account) -> Result<(), Error> {
+async fn sync_account(conn: &mut PoolConnection<Sqlite>, account: Account) -> Result<(), Error> {
     if AccountKind::Mavinote != account.kind {
         log::debug!("only mavinote accounts are synced");
 
         return Ok(());
     }
 
-    let account_data = db::fetch_account_data::<Mavinote>(conn, account.id).await?.unwrap();
-
-    let mavinote = MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token);
+    let mavinote = super::MAVINOTE_CLIENTS.get().unwrap().get(&account.id).unwrap();
 
     let remote_folders = mavinote.fetch_folders().await?;
 

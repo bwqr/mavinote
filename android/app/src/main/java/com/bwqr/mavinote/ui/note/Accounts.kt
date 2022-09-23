@@ -22,7 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
-import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.ui.NoteScreens
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -35,12 +35,12 @@ fun Accounts(navController: NavController) {
     var accounts by remember { mutableStateOf(listOf<Account>()) }
 
     LaunchedEffect(key1 = 0) {
-        NoteViewModel()
+        NoteViewModel
             .accounts()
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is ReaxException -> cause.handle()
+                    is Error -> cause.handle()
                 }
             }
             .launchIn(this)

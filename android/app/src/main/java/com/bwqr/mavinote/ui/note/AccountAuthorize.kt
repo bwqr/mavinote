@@ -24,9 +24,9 @@ fun AccountAuthorize(accountId: Int, onClose: () -> Unit) {
 
     LaunchedEffect(key1 = accountId) {
         try {
-            account = NoteViewModel().account(accountId)
-            mavinote = NoteViewModel().mavinoteAccount(accountId)
-        } catch (e: ReaxException) {
+            account = NoteViewModel.account(accountId)
+            mavinote = NoteViewModel.mavinoteAccount(accountId)
+        } catch (e: Error) {
             e.handle()
         }
     }
@@ -49,13 +49,13 @@ fun AccountAuthorize(accountId: Int, onClose: () -> Unit) {
 
                 scope.launch {
                     try {
-                        NoteViewModel().authorizeMavinoteAccount(accountId, password)
+                        NoteViewModel.authorizeMavinoteAccount(accountId, password)
 
                         onClose()
-                    } catch (e: ReaxException) {
-                        when (e.error) {
+                    } catch (e: Error) {
+                        when (e) {
                             is HttpError.Unauthorized -> error = "Wrong password, please try again"
-                            is Message -> error = e.error.message
+                            is Message -> error = e.message
                             else -> e.handle()
                         }
                     } finally {

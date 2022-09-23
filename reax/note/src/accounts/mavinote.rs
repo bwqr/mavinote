@@ -1,3 +1,4 @@
+use aes_gcm_siv::{Aes256GcmSiv, Key};
 use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}, StatusCode};
 
 use base::{Error, HttpError, models::Token};
@@ -5,16 +6,17 @@ use base::{Error, HttpError, models::Token};
 use crate::models::RemoteId;
 
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub struct MavinoteClient {
     account_id: Option<i32>,
     api_url: String,
     token: String,
+    enc_key: Key<Aes256GcmSiv>,
     client: Client,
 }
 
 impl MavinoteClient {
-    pub fn new(account_id: Option<i32>, api_url: String, token: String) -> Self {
+    pub fn new(account_id: Option<i32>, api_url: String, token: String, enc_key: Key<Aes256GcmSiv>) -> Self {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
 
@@ -27,22 +29,31 @@ impl MavinoteClient {
             account_id,
             api_url,
             token,
+            enc_key,
             client,
         }
     }
 
     pub fn with_token(&self, token: String) -> Self {
-        Self::new(self.account_id, self.api_url.clone(), token)
+        Self::new(self.account_id, self.api_url.clone(), token, self.enc_key.clone())
     }
 
-    pub async fn login(&self, email: &str, password: &str) -> Result<Token, Error> {
+    pub async fn login(api_url: &str, email: &str, password: &str) -> Result<Token, Error> {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+
+        let client = ClientBuilder::new()
+            .default_headers(headers)
+            .build()
+            .unwrap();
+
         let email = email.trim();
         let password = password.trim();
 
         let request_body = serde_json::to_string(&requests::LoginRequest { email, password }).unwrap();
 
-        self.client
-            .post(format!("{}/auth/login", self.api_url))
+        client
+            .post(format!("{}/auth/login", api_url))
             .body(request_body)
             .send()
             .await?
@@ -53,15 +64,23 @@ impl MavinoteClient {
 
     }
 
-    pub async fn sign_up(&self, name: &str, email: &str, password: &str) -> Result<Token, Error> {
+    pub async fn sign_up(api_url: &str, name: &str, email: &str, password: &str) -> Result<Token, Error> {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+
+        let client = ClientBuilder::new()
+            .default_headers(headers)
+            .build()
+            .unwrap();
+
         let name = name.trim();
         let email = email.trim();
         let password = password.trim();
 
         let request_body = serde_json::to_string(&requests::SignUp { name, email, password }).unwrap();
 
-        let response = self.client
-            .post(format!("{}/auth/sign-up", self.api_url))
+        let response = client
+            .post(format!("{}/auth/sign-up", api_url))
             .body(request_body)
             .send()
             .await?;

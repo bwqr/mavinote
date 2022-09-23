@@ -8,17 +8,16 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.navigation.NavController
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
-import com.bwqr.mavinote.models.ReaxException
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.ui.note.*
-import com.bwqr.mavinote.viewmodels.Bus
-import com.bwqr.mavinote.viewmodels.BusEvent
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
@@ -33,7 +32,7 @@ sealed class NoteScreens(val route: String) {
 }
 
 @Composable
-fun BackgroundFeatures(mainNavController: NavController) {
+fun BackgroundFeatures() {
     val scaffoldState = rememberScaffoldState()
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
@@ -54,8 +53,8 @@ fun BackgroundFeatures(mainNavController: NavController) {
         }
 
         try {
-            NoteViewModel().sync()
-        } catch (e: ReaxException) {
+            NoteViewModel.sync()
+        } catch (e: Error) {
             e.handle()
         }
     }

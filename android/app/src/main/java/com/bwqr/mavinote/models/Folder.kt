@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.models
 
+import com.bwqr.mavinote.reax.deserializeOption
 import com.novi.serde.Deserializer
 
 data class Folder constructor(
@@ -16,7 +17,7 @@ data class Folder constructor(
             val folder = Folder(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
-                TraitHelpers.deserializeOption(deserializer) { it.deserialize_i32() },
+                deserializeOption(deserializer) { it.deserialize_i32() },
                 deserializer.deserialize_str(),
                 State.deserialize(deserializer)
             )

@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.models
 
+import com.bwqr.mavinote.reax.deserializeOption
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
@@ -19,9 +20,9 @@ data class Note constructor(
             val note = Note(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
-                TraitHelpers.deserializeOption(deserializer) { it.deserialize_i32() },
+                deserializeOption(deserializer) { it.deserialize_i32() },
                 deserializer.deserialize_i32(),
-                TraitHelpers.deserializeOption(deserializer) { it.deserialize_str() },
+                deserializeOption(deserializer) { it.deserialize_str() },
                 deserializer.deserialize_str(),
                 State.deserialize(deserializer)
             )

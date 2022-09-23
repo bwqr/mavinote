@@ -1,32 +1,30 @@
 package com.bwqr.mavinote.models
 
 import android.util.Log
-import com.bwqr.mavinote.viewmodels.Bus
-import com.bwqr.mavinote.viewmodels.BusEvent
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
+import com.bwqr.mavinote.reax.deserializeOption
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
-class ReaxException constructor(val error: Error) : Throwable() {
-    fun handle() {
-        when (error) {
-            is HttpError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
-            is HttpError.Unauthorized -> error.accountId?.let { Bus.emit(BusEvent.RequireAuthorization(it)) }
-            else -> Log.e("ReaxException", "Unhandled error, $error")
-        }
-    }
-}
 
-open class Error {
+open class Error : Throwable() {
     companion object {
         fun deserialize(deserializer: Deserializer): Error {
-            val index = deserializer.deserialize_variant_index()
-
-            return when (index) {
+            return when (val index = deserializer.deserialize_variant_index()) {
                 0 -> HttpError.deserialize(deserializer)
                 1 -> Message.deserialize(deserializer)
                 2 -> Database.deserialize(deserializer)
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
+        }
+    }
+
+    fun handle() {
+        when (this) {
+            is HttpError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
+            is HttpError.Unauthorized -> this.accountId?.let { Bus.emit(BusEvent.RequireAuthorization(it)) }
+            else -> Log.e("ReaxError", "Unhandled error, $this")
         }
     }
 }
@@ -39,12 +37,10 @@ sealed class HttpError : Error() {
 
     companion object {
         fun deserialize(deserializer: Deserializer): HttpError {
-            val index = deserializer.deserialize_variant_index()
-
-            return when (index) {
+            return when (val index = deserializer.deserialize_variant_index()) {
                 0 -> NoConnection
                 1 -> UnexpectedResponse
-                2 -> Unauthorized(TraitHelpers.deserializeOption(deserializer) {
+                2 -> Unauthorized(deserializeOption(deserializer) {
                     it.deserialize_i32()
                 })
                 3 -> Unknown
@@ -54,7 +50,7 @@ sealed class HttpError : Error() {
     }
 }
 
-data class Message(val message: String) : Error() {
+data class Message(override val message: String) : Error() {
     companion object {
         fun deserialize(deserializer: Deserializer): Message {
             return Message(deserializer.deserialize_str())
@@ -62,7 +58,7 @@ data class Message(val message: String) : Error() {
     }
 }
 
-data class Database(val message: String) : Error() {
+data class Database(override val message: String) : Error() {
     companion object {
         fun deserialize(deserializer: Deserializer): Database {
             return Database(deserializer.deserialize_str())

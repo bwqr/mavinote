@@ -8,13 +8,12 @@ use std::{
 
 use base::Config;
 use jni::{
-    objects::{JObject, JString, JValue},
+    objects::{JObject, JString, JValue, JClass},
     signature::{JavaType, Primitive},
     JNIEnv, sys::jlong,
 };
 use libc::c_char;
 use once_cell::sync::OnceCell;
-use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
 use tokio::task::JoinHandle;
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
@@ -65,6 +64,10 @@ where
     ASYNC_RUNTIME.get().unwrap().spawn(future)
 }
 
+pub fn block_on<F: Future>(future: F) -> F::Output {
+    ASYNC_RUNTIME.get().unwrap().block_on(future)
+}
+
 fn capture_stderr() {
     std::thread::spawn(|| unsafe {
         let mut pipes: [i32; 2] = [0; 2];
@@ -85,24 +88,16 @@ fn capture_stderr() {
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
+pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     api_url: JString,
-    notify_url: JString,
     storage_dir: JString,
 ) {
     capture_stderr();
 
     let api_url = env
         .get_string(api_url)
-        .unwrap()
-        .to_str()
-        .unwrap()
-        .to_owned();
-
-    let notify_url = env
-        .get_string(notify_url)
         .unwrap()
         .to_str()
         .unwrap()
@@ -128,17 +123,8 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
 
     runtime::init();
 
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-    let client = ClientBuilder::new()
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
-    runtime::put::<Arc<Client>>(Arc::new(client));
-
     let db_path = format!("sqlite:{}/app.db", storage_dir);
-    let pool = ASYNC_RUNTIME.get().unwrap().block_on(async move {
+    let pool = block_on(async move {
         let options = SqliteConnectOptions::from_str(db_path.as_str())
             .unwrap()
             .create_if_missing(true);
@@ -161,17 +147,14 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1init(
         storage_dir,
     }));
 
-    ::note::storage::init();
-    ::notify::init(notify_url);
-
     ::log::info!("reax is built with {} profile", if cfg!(debug_assertions) { "debug" } else { "release" });
     ::log::info!("reax runtime is initialized");
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(
+pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
     env: JNIEnv,
-    _: JObject,
+    _: JClass,
     callback: JObject,
 ) {
     let (send, recv) = std::sync::mpsc::channel();
@@ -220,9 +203,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1initHandler(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_Runtime__1abort(
+pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1abort(
     _: JNIEnv,
-    _: JObject,
+    _: JClass,
     pointer: jlong,
 ) {
     let handle = unsafe { Box::from_raw(pointer as * mut tokio::task::JoinHandle<()>) };

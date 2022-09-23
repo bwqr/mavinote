@@ -21,9 +21,9 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.R
+import com.bwqr.mavinote.models.Error
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
-import com.bwqr.mavinote.models.ReaxException
 import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
@@ -45,21 +45,21 @@ fun Notes(navController: NavController, folderId: Int) {
     LaunchedEffect(key1 = folderId) {
         launch {
             try {
-                folder = NoteViewModel().folder(folderId)
+                folder = NoteViewModel.folder(folderId)
                 if (folder == null) {
                     Log.e("Notes", "folderId $folderId does not exist")
                 }
-            } catch (e: ReaxException) {
+            } catch (e: Error) {
                 e.handle()
             }
         }
 
-        NoteViewModel()
+        NoteViewModel
             .notes(folderId)
             .onEach { notes = it }
             .catch {
                 when (val cause = it.cause) {
-                    is ReaxException -> cause.handle()
+                    is Error -> cause.handle()
                 }
             }
             .launchIn(this)
@@ -75,10 +75,10 @@ fun Notes(navController: NavController, folderId: Int) {
 
             coroutineScope.launch {
                 try {
-                    NoteViewModel().deleteFolder(folderId)
+                    NoteViewModel.deleteFolder(folderId)
 
                     navController.navigateUp()
-                } catch (e: ReaxException) {
+                } catch (e: Error) {
                     e.handle()
                 } finally {
                     deleting = false
