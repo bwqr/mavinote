@@ -3,26 +3,15 @@ import type { Folder, Note } from '../models';
 import * as noteWasm from "mavinote-wasm";
 import { deserializeOption, deserializeVec } from '$lib/serde';
 import { BincodeDeserializer } from "$lib/serde/bincode/bincodeDeserializer";
-import { decodeAndHandleError, handleError } from ".";
-import { Observable } from "rxjs";
-import { Runtime, Stream } from "$lib/wasm";
+import { decodeAndHandleError } from ".";
+import type { Observable } from "rxjs";
+import { Runtime } from "$lib/wasm";
 
 export function folders(): Observable<Folder[]> {
-    return new Observable((sub) => {
-        const streamId = Runtime.instance.startStream(new Stream(
-            (deserializer) => sub.next(deserializeVec(deserializer, (d) => deserializeFolder(d))),
-            (error) => {
-                handleError(error);
-                sub.error(error);
-            },
-            () => sub.complete(),
-            (streamId) => noteWasm.note_folders(streamId),
-        ));
-
-        return {
-            unsubscribe: () => Runtime.instance.abortStream(streamId),
-        };
-    });
+    return Runtime.runStream(
+        (deserializer) => deserializeVec(deserializer, (d) => deserializeFolder(d)),
+        (streamId) => noteWasm.note_folders(streamId),
+    );
 }
 
 export async function createFolder(folderName: string): Promise<Folder> {
@@ -38,21 +27,10 @@ export async function deleteFolder(folderId: number): Promise<void> {
 }
 
 export function notes(folderId: number): Observable<Note[]> {
-    return new Observable((sub) => {
-        const streamId = Runtime.instance.startStream(new Stream(
-            (deserializer) => sub.next(deserializeVec(deserializer, (d) => deserializeNote(d))),
-            (error) => {
-                handleError(error);
-                sub.error(error);
-            },
-            () => sub.complete(),
-            (streamId) => noteWasm.note_notes(streamId, folderId),
-        ));
-
-        return {
-            unsubscribe: () => Runtime.instance.abortStream(streamId),
-        };
-    });
+    return Runtime.runStream(
+        (deserializer) => deserializeVec(deserializer, (d) => deserializeNote(d)),
+        (streamId) => noteWasm.note_notes(streamId, folderId),
+    );
 }
 
 export async function note(noteId: number): Promise<Note | null> {

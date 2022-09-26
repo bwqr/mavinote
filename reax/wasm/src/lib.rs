@@ -1,6 +1,6 @@
-use std::panic;
+use std::{panic, sync::Arc};
 
-use ::note::accounts::mavinote::MavinoteClient;
+use base::Config;
 use futures::stream::AbortHandle;
 use js_sys::Uint8Array;
 use serde::Serialize;
@@ -28,15 +28,16 @@ extern "C" {
 }
 
 #[wasm_bindgen]
-pub fn init_wasm(api_url: String) {
+pub fn wasm_init(api_url: String) {
     panic::set_hook(Box::new(console_error_panic_hook::hook));
 
     log::init();
 
     runtime::init();
-    runtime::put::<MavinoteClient>(MavinoteClient::new(None, api_url, getItem("token").unwrap_or("".to_string())));
-
-    note::init();
+    runtime::put::<Arc<Config>>(Arc::new(Config {
+        api_url: api_url.clone(),
+        storage_dir: "".to_string(),
+    }));
 
     ::log::info!("reax runtime is initialized");
 }

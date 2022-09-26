@@ -1,7 +1,9 @@
-import init, { init_wasm, abort_stream, type InitOutput } from 'mavinote-wasm';
+import init, { wasm_init, abort_stream, type InitOutput, note_init } from 'mavinote-wasm';
+import { Observable } from 'rxjs';
 import { ReaxError } from './models';
 import { BincodeDeserializer } from './serde/bincode/bincodeDeserializer';
 import type { Deserializer } from './serde/serde/deserializer';
+import { handleError } from './stores';
 
 let initOutputs: InitOutput | undefined = undefined;
 
@@ -33,7 +35,7 @@ export class Stream {
         }
     }
 
-    start(streamId: number) {
+    run(streamId: number) {
         if (this._joinHandle) {
             throw new Error('Stream started more than once');
         }
@@ -49,7 +51,29 @@ export class Stream {
 export class Runtime {
     private static readonly MAX_UINT_32 = 2 ** 32 - 1;
 
-    static instance: Runtime = new Runtime();
+    private static instance: Runtime = new Runtime();
+
+    static runStream<T>(onNext: (deserializer: Deserializer) => T, onStart: (streamId: number) => number): Observable<T> {
+        return new Observable((sub) => {
+            const stream = new Stream(
+                (deserializer) => sub.next(onNext(deserializer)),
+                (error) => {
+                    handleError(error);
+                    sub.error(error);
+                },
+                () => sub.complete(),
+                (streamId) => onStart(streamId),
+            );
+
+            const streamId = Runtime.instance.insertStream(stream);
+
+            stream.run(streamId);
+
+            return {
+                unsubscribe: () => Runtime.instance.abortStream(streamId),
+            };
+        });
+    }
 
     static handleStream(streamId: number, bytes: Uint8Array) {
         console.log(`handling the stream with streamId ${streamId} and ${bytes.length} lenght of bytes`);
@@ -67,7 +91,7 @@ export class Runtime {
 
     private constructor() { }
 
-    startStream(stream: Stream): number {
+    private insertStream(stream: Stream): number {
         let streamId = Math.trunc(Math.random() * Runtime.MAX_UINT_32);
 
         while (this.streams.has(streamId)) {
@@ -76,12 +100,10 @@ export class Runtime {
 
         this.streams.set(streamId, stream);
 
-        stream.start(streamId);
-
         return streamId;
     }
 
-    abortStream(streamId: number) {
+    private abortStream(streamId: number) {
         const stream = this.streams.get(streamId);
 
         if (!stream) {
@@ -109,7 +131,8 @@ export default async function(): Promise<InitOutput> {
 
     initOutputs = await init();
 
-    init_wasm(globalThis.process && process.env['API_URL'] ? process.env['API_URL'] : import.meta.env.VITE_API_URL);
+    wasm_init(globalThis.process && process.env['API_URL'] ? process.env['API_URL'] : import.meta.env.VITE_API_URL);
+    note_init();
 
     return initOutputs;
 }
