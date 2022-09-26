@@ -1,190 +1,117 @@
 class NoteViewModel {
-    func accounts() -> AsyncStream<Result<[Account], ReaxError>> {
-        return AsyncStream { continuation in
-             let streamId = Runtime.instance().startStream(Stream(
-                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Account.deserialize($0) })) },
-                onError: { continuation.yield(Result.failure($0))},
-                onComplete: { continuation.finish() },
-                onStart: { reax_note_accounts($0)}
-            ))
+    static func initialize() {
+        reax_note_init()
+    }
 
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
+    static func accounts() -> AsyncStream<Result<[Account], ReaxError>> {
+        return Runtime.runStream {
+            try deserializeList($0) { try Account.deserialize($0) }
+        } _: {
+            reax_note_accounts($0)
         }
     }
 
-    func account(_ accountId: Int32) async throws -> Account? {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in
-                    continuation.resume(returning: try deserializeOption(deserializer) {
-                        try Account.deserialize($0)
-                    })
-                },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_account($0, accountId) }
-            ))
+    static func account(_ accountId: Int32) async throws -> Account? {
+        return try await Runtime.runOnce {
+            try deserializeOption($0) { try Account.deserialize($0) }
+        } _: {
+            reax_note_account($0, accountId)
         }
     }
 
-    func mavinoteAccount(_ accountId: Int32) async throws -> Mavinote? {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in
-                    continuation.resume(returning: try deserializeOption(deserializer) {
-                        try Mavinote.deserialize($0)
-                    })
-                },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_mavinote_account($0, accountId) }
-            ))
+    static func mavinoteAccount(_ accountId: Int32) async throws -> Mavinote? {
+        return try await Runtime.runOnce {
+            try deserializeOption($0) { try Mavinote.deserialize($0) }
+        } _: {
+            reax_note_mavinote_account($0, accountId)
         }
     }
 
-    func addAccount(_ name: String, _ email: String, _ password: String, _ createAccount: Bool) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_add_account($0, name, email, password, createAccount) }
-            ))
+    static func addAccount(_ name: String, _ email: String, _ password: String, _ createAccount: Bool) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_add_account($0, name, email, password, createAccount)
         }
     }
 
-    func deleteAccount(_ accountId: Int32) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_delete_account($0, accountId) }
-            ))
+    static func deleteAccount(_ accountId: Int32) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_delete_account($0, accountId)
         }
     }
 
-    func sync() async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_sync($0) }
-            ))
+    static func sync() async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_sync($0)
         }
     }
 
-    func folders() -> AsyncStream<Result<[Folder], ReaxError>> {
-        return AsyncStream { continuation in
-             let streamId = Runtime.instance().startStream(Stream(
-                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Folder.deserialize($0) })) },
-                onError: { continuation.yield(Result.failure($0))},
-                onComplete: { continuation.finish() },
-                onStart: { reax_note_folders($0)}
-            ))
-
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
+    static func folders() -> AsyncStream<Result<[Folder], ReaxError>> {
+        return Runtime.runStream {
+            try deserializeList($0) { try Folder.deserialize($0) }
+        } _: {
+            reax_note_folders($0)
         }
     }
 
-    func folder(_ folderId: Int32) async throws -> Folder? {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in
-                    continuation.resume(returning: try deserializeOption(deserializer) {
-                        try Folder.deserialize($0)
-                    })
-                },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_folder($0, folderId) }
-            ))
+    static func folder(_ folderId: Int32) async throws -> Folder? {
+        return try await Runtime.runOnce {
+            try deserializeOption($0) { try Folder.deserialize($0) }
+        } _: {
+            reax_note_folder($0, folderId)
         }
     }
 
-    func createFolder(_ accountId: Int32, _ name: String) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_create_folder($0, accountId, name) }
-            ))
+    static func createFolder(_ accountId: Int32, _ name: String) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_create_folder($0, accountId, name)
         }
     }
 
-    func deleteFolder(_ folderId: Int32) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_delete_folder($0, folderId) }
-            ))
+    static func deleteFolder(_ folderId: Int32) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_delete_folder($0, folderId)
         }
     }
 
-    func authorizeAccount(_ accountId: Int32, password: String) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_authorize_account($0, accountId, password) }
-            ))
+    static func authorizeAccount(_ accountId: Int32, password: String) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_authorize_account($0, accountId, password)
         }
     }
 
-    func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], ReaxError>> {
-        return AsyncStream { continuation in
-            let streamId = Runtime.instance().startStream(Stream(
-                onNext: { continuation.yield(Result.success(try deserializeList($0) { try Note.deserialize($0) })) },
-                onError: { continuation.yield(Result.failure($0)) },
-                onComplete: { continuation.finish() },
-                onStart: { reax_note_note_summaries($0, folderId) }
-            ))
-
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
+    static func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], ReaxError>> {
+        return Runtime.runStream {
+            try deserializeList($0) { try Note.deserialize($0) }
+        } _: {
+            reax_note_note_summaries($0, folderId)
         }
     }
 
-    func note(_ noteId: Int32) async throws -> Note? {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { continuation.resume(returning: try deserializeOption($0) {
-                    try Note.deserialize($0)
-                }) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: {reax_note_note($0, noteId)}
-            ))
+    static func note(_ noteId: Int32) async throws -> Note? {
+        return try await Runtime.runOnce {
+            try deserializeOption($0) { try Note.deserialize($0) }
+        } _: {
+            reax_note_note($0, noteId)
         }
     }
 
-    func createNote(_ folderId: Int32, _ text: String) async throws -> Int32 {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { continuation.resume(returning: try $0.deserialize_i32()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_create_note($0, folderId, text) }
-            ))
+    static func createNote(_ folderId: Int32, _ text: String) async throws -> Int32 {
+        return try await Runtime.runOnce {
+            try $0.deserialize_i32()
+        } _: {
+            reax_note_create_note($0, folderId, text)
         }
     }
 
-    func updateNote(_ noteId: Int32, _ text: String) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_update_note($0, noteId, text) }
-            ))
+    static func updateNote(_ noteId: Int32, _ text: String) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_update_note($0, noteId, text)
         }
     }
 
-    func deleteNote(_ noteId: Int32) async throws -> () {
-        return try await withCheckedThrowingContinuation { continuation in
-            Runtime.instance().startOnce(Once(
-                onNext: { deserializer in continuation.resume(returning: ()) },
-                onError: { continuation.resume(throwing: $0)},
-                onStart: { reax_note_delete_note($0, noteId) }
-            ))
+    static func deleteNote(_ noteId: Int32) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_delete_note($0, noteId)
         }
     }
 }

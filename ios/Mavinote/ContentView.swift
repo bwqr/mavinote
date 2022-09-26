@@ -60,7 +60,7 @@ struct ContentView: View {
 
                 tasks.append(Task {
                     do {
-                        try await NoteViewModel().sync()
+                        try await NoteViewModel.sync()
                     } catch let error as ReaxError {
                         error.handle(appState)
                     } catch {

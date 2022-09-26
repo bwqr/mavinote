@@ -114,13 +114,21 @@
 /* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
+		843575B828DE10F1007909A0 /* Reax */ = {
+			isa = PBXGroup;
+			children = (
+				AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */,
+				AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */,
+			);
+			path = Reax;
+			sourceTree = "<group>";
+		};
 		AC6CAA5028AD1C17005F2A15 /* Models */ = {
 			isa = PBXGroup;
 			children = (
 				AC6CAA5128AD1C17005F2A15 /* Error.swift */,
 				AC6CAA5228AD1C17005F2A15 /* Folder.swift */,
 				AC6CAA5328AD1C17005F2A15 /* Note.swift */,
-				AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */,
 				84858B0628AF9FDD001D7F4B /* Account.swift */,
 			);
 			path = Models;
@@ -129,7 +137,6 @@
 		AC6CAA5928AD1C1F005F2A15 /* ViewModels */ = {
 			isa = PBXGroup;
 			children = (
-				AC6CAA5A28AD1C1F005F2A15 /* Runtime.swift */,
 				AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */,
 			);
 			path = ViewModels;
@@ -201,6 +208,7 @@
 		ACC07B9C28AD197700305FC6 /* Mavinote */ = {
 			isa = PBXGroup;
 			children = (
+				843575B828DE10F1007909A0 /* Reax */,
 				ACA8F73528AEAB4C0015F71E /* Views */,
 				AC6CAA5928AD1C1F005F2A15 /* ViewModels */,
 				AC6CAA5028AD1C17005F2A15 /* Models */,

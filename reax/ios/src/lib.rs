@@ -2,7 +2,6 @@ use std::{os::raw::{c_char, c_int, c_uchar}, ffi::{CStr, c_void}, sync::{Mutex, 
 
 use base::Config;
 use once_cell::sync::OnceCell;
-use reqwest::{header::{HeaderMap, HeaderValue}, ClientBuilder, Client};
 use serde::Serialize;
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 use tokio::task::JoinHandle;
@@ -52,10 +51,16 @@ where
     ASYNC_RUNTIME.get().unwrap().spawn(future)
 }
 
+pub fn block_on<F: Future>(future: F) -> F::Output {
+    ASYNC_RUNTIME.get().unwrap().block_on(future)
+}
+
 #[no_mangle]
-pub extern fn reax_init(api_url: *const c_char, notify_url: *const c_char, storage_dir: *const c_char) {
+pub extern fn reax_init(
+    api_url: *const c_char,
+    storage_dir: *const c_char,
+) {
     let api_url = unsafe { CStr::from_ptr(api_url).to_str().unwrap().to_string() };
-    let notify_url = unsafe { CStr::from_ptr(notify_url).to_str().unwrap().to_string() };
     let storage_dir = unsafe { CStr::from_ptr(storage_dir).to_str().unwrap().to_string() };
 
     std::env::set_var("RUST_LOG", "debug");
@@ -71,15 +76,6 @@ pub extern fn reax_init(api_url: *const c_char, notify_url: *const c_char, stora
         .expect("failed to set tokio runtime");
 
     runtime::init();
-
-    let mut headers = HeaderMap::new();
-    headers.insert("Content-Type", HeaderValue::from_static("application/json"));
-    let client = ClientBuilder::new()
-        .default_headers(headers)
-        .build()
-        .unwrap();
-
-    runtime::put::<Arc<Client>>(Arc::new(client));
 
     let db_path = format!("sqlite:{}/app.db", storage_dir);
     let pool = ASYNC_RUNTIME.get().unwrap().block_on(async move {
@@ -105,8 +101,6 @@ pub extern fn reax_init(api_url: *const c_char, notify_url: *const c_char, stora
         storage_dir,
     }));
 
-    ::note::storage::init();
-    ::notify::init(notify_url);
     ::log::info!("reax runtime is initialized");
 }
 

@@ -6,7 +6,14 @@ use std::{
 use base::{State, Error};
 use tokio::task::JoinHandle;
 
-use crate::{spawn, send_stream, Message, send_once};
+use crate::{spawn, send_stream, Message, send_once, block_on};
+
+#[no_mangle]
+pub extern "C" fn reax_note_init() {
+    block_on(::note::storage::init()).unwrap();
+
+    log::info!("reax note is initialized");
+}
 
 #[no_mangle]
 pub extern "C" fn reax_note_accounts(stream_id: c_int) -> * mut JoinHandle<()> {

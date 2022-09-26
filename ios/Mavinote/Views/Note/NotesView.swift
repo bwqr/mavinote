@@ -26,7 +26,7 @@ struct NotesView: View {
 
                     tasks.append(Task {
                         do {
-                            try await NoteViewModel().deleteFolder(folderId)
+                            try await NoteViewModel.deleteFolder(folderId)
                             dismiss()
                         } catch {
                             print("failed to delete folder \(folderId)")
@@ -40,7 +40,7 @@ struct NotesView: View {
         .navigationTitle(folderName)
         .onAppear {
             tasks.append(Task {
-                let stream = NoteViewModel().noteSummaries(self.folderId)
+                let stream = NoteViewModel.noteSummaries(self.folderId)
 
                 for await result in stream {
                     switch result {
@@ -52,7 +52,7 @@ struct NotesView: View {
 
             tasks.append(Task {
                 do {
-                    folder = try await NoteViewModel().folder(folderId)
+                    folder = try await NoteViewModel.folder(folderId)
                 } catch let e as ReaxError {
                     e.handle(appState)
                 } catch {

@@ -45,7 +45,7 @@ class Stream {
 
     }
 
-    func start(_ streamId: Int32) {
+    func run(_ streamId: Int32) {
         self._joinHandle = self.onStart(streamId)
     }
 }
@@ -84,7 +84,7 @@ class Once {
         }
     }
 
-    func start(_ onceId: Int32) {
+    func run(_ onceId: Int32) {
         self._joinHandle = self.onStart(onceId)
     }
 }
@@ -106,15 +106,87 @@ class Runtime {
     static func instance() -> Runtime {
         _instance!
     }
-    
+
+    static func runStream<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) -> AsyncStream<Result<T, ReaxError>> {
+        return AsyncStream { continuation in
+            let stream = Stream(
+                onNext: { continuation.yield(Result.success(try onNext($0))) },
+                onError: { continuation.yield(Result.failure($0))},
+                onComplete: { continuation.finish() },
+                onStart: onStart
+            )
+
+            let streamId = Runtime.instance().insertStream(stream)
+
+            stream.run(streamId)
+
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
+        }
+    }
+
+    static func runUnitOnce(_ onStart: @escaping OnStart) async throws -> () {
+        return try await runOnce({ deserializer in }, onStart)
+    }
+
+    static func runOnce<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) async throws -> T {
+        return try await withCheckedThrowingContinuation { continuation in
+            let once = Once(
+                onNext: { continuation.resume(returning: try onNext($0))},
+                onError: { continuation.resume(throwing: $0)},
+                onStart: onStart
+            )
+            let onceId = Runtime.instance().insertOnce(once)
+
+            once.run(onceId)
+        }
+    }
+
     private init(_ storageDir: String) {
        Thread
             .init(target: self, selector: #selector(initHandler), object: nil)
             .start()
  
-        reax_init(API_URL, NOTIFY_URL, storageDir)
+        reax_init(API_URL, storageDir)
     }
-   
+
+    private func insertStream(_ stream: Stream) -> Int32 {
+        var streamId = Int32.random(in: 0...Int32.max)
+
+        while streams[streamId] != nil {
+            streamId = Int32.random(in: 0...Int32.max)
+        }
+
+        streams[streamId] = stream
+
+        return streamId
+    }
+
+    private func insertOnce(_ once: Once) -> Int32 {
+        var onceId = Int32.random(in: 0...Int32.max)
+
+        while onces[onceId] != nil {
+            onceId = Int32.random(in: 0...Int32.max)
+        }
+
+        onces[onceId] = once
+
+        return onceId
+    }
+
+    private func abortStream(_ streamId: Int32) {
+        if let stream = self.streams[streamId], let joinHandle = stream.joinHandle {
+            reax_abort(joinHandle)
+        }
+    }
+
+    private func abortOnce(_ onceId: Int32) {
+         if let once = self.onces[onceId], let joinHandle = once.joinHandle {
+            reax_abort(joinHandle)
+        }
+    }
+
     @objc private func initHandler() {
         let this = UnsafeMutableRawPointer(Unmanaged.passRetained(self).toOpaque())
 
@@ -133,47 +205,7 @@ class Runtime {
                 once.handle(bytesArray)
             }
         }
-        
+
         let _ = Unmanaged<AnyObject>.fromOpaque(this).takeRetainedValue()
-    }
-
-    func startOnce(_ once: Once) -> Int32 {
-        var onceId = Int32.random(in: 0...Int32.max)
-
-        while onces[onceId] != nil {
-            onceId = Int32.random(in: 0...Int32.max)
-        }
-
-        onces[onceId] = once
-
-        once.start(onceId)
-
-        return onceId
-    }
-
-    func startStream(_ stream: Stream) -> Int32 {
-        var streamId = Int32.random(in: 0...Int32.max)
-
-        while streams[streamId] != nil {
-            streamId = Int32.random(in: 0...Int32.max)
-        }
-
-        streams[streamId] = stream
-
-        stream.start(streamId)
-
-        return streamId
-    }
-
-    func abortStream(_ streamId: Int32) {
-        if let stream = self.streams[streamId], let joinHandle = stream.joinHandle {
-            reax_abort(joinHandle)
-        }
-    }
-
-    func abortOnce(_ onceId: Int32) {
-         if let once = self.onces[onceId], let joinHandle = once.joinHandle {
-            reax_abort(joinHandle)
-        }
     }
 }

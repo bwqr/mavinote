@@ -20,7 +20,7 @@ struct FoldersView: View {
         _FoldersView(accounts: $accounts)
             .onAppear {
                 tasks.append(Task {
-                    for await result in combineLatest(NoteViewModel().accounts(), NoteViewModel().folders()) {
+                    for await result in combineLatest(NoteViewModel.accounts(), NoteViewModel.folders()) {
                         switch result {
                         case (.success(let a), .success(let f)):
                             accounts = a.map { account in

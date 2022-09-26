@@ -7,7 +7,6 @@ edition = "2021"
 
 [dependencies]
 base = { path = "../base" }
-auth = { path = "../auth" }
 note = { path = "../note", features = ["storage"]}
 notify = { path = "../notify" }
 runtime = { path = "../runtime" }

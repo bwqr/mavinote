@@ -10,7 +10,7 @@ struct AccountsView : View {
         _AccountsView(accounts: $accounts)
             .onAppear {
                 tasks.append(Task {
-                    let stream = NoteViewModel().accounts()
+                    let stream = NoteViewModel.accounts()
 
                     for await result in stream {
                         switch result {

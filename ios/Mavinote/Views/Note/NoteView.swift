@@ -30,7 +30,7 @@ struct NoteView : View {
                 tasks.append(Task {
                     do {
                         if let noteId = noteId {
-                            try await NoteViewModel().deleteNote(noteId)
+                            try await NoteViewModel.deleteNote(noteId)
                         }
 
                         dismiss()
@@ -51,7 +51,7 @@ struct NoteView : View {
 
             tasks.append(Task {
                 do {
-                    if let note = try await NoteViewModel().note(noteId) {
+                    if let note = try await NoteViewModel.note(noteId) {
                         text = note.text
                         modified = false
                     }
@@ -71,9 +71,9 @@ struct NoteView : View {
             Task {
                 do {
                     if let noteId = noteId, modified {
-                        try await NoteViewModel().updateNote(noteId, text)
+                        try await NoteViewModel.updateNote(noteId, text)
                     } else if noteId == nil && !text.isEmpty {
-                        let _ = try await NoteViewModel().createNote(folderId, text)
+                        let _ = try await NoteViewModel.createNote(folderId, text)
                     }
                 } catch {
                     print("failed to update or create note", error)

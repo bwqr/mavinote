@@ -27,7 +27,7 @@ struct AccountView : View {
 
                     tasks.append(Task {
                         do {
-                            try await NoteViewModel().deleteAccount(accountId)
+                            try await NoteViewModel.deleteAccount(accountId)
                             dismiss()
                         } catch let e as ReaxError {
                             e.handle(appState)
@@ -44,10 +44,10 @@ struct AccountView : View {
         .onAppear {
             tasks.append(Task {
                 do {
-                    account = try await NoteViewModel().account(accountId)
+                    account = try await NoteViewModel.account(accountId)
 
                     if let acc = account, acc.kind == AccountKind.Mavinote {
-                        mavinote = try await NoteViewModel().mavinoteAccount(acc.id)
+                        mavinote = try await NoteViewModel.mavinoteAccount(acc.id)
                     }
                 } catch let e as ReaxError {
                     e.handle(appState)

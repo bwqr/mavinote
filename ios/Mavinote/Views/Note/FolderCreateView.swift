@@ -33,7 +33,7 @@ struct FolderCreateView : View {
 
                     tasks.append(Task {
                         do {
-                            try await NoteViewModel().createFolder(accountId, name)
+                            try await NoteViewModel.createFolder(accountId, name)
                             dismiss()
                         } catch let e as ReaxError {
                             e.handle(appState)
@@ -52,7 +52,7 @@ struct FolderCreateView : View {
         .navigationTitle("Create Folder")
         .onAppear {
             tasks.append(Task {
-                let stream = NoteViewModel().accounts()
+                let stream = NoteViewModel.accounts()
 
                 for await result in stream {
                     switch result {

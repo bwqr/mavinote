@@ -25,7 +25,7 @@ struct AccountAddView : View {
 
                 tasks.append(Task {
                     do {
-                        try await NoteViewModel().addAccount(name, email, password, createAccount)
+                        try await NoteViewModel.addAccount(name, email, password, createAccount)
                         dismiss()
                     } catch let e as ReaxError {
                         switch e {

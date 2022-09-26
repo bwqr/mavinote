@@ -31,7 +31,7 @@ struct AccountAuthorizeView : View {
 
                     tasks.append(Task {
                         do {
-                            try await NoteViewModel().authorizeAccount(accountId, password: password)
+                            try await NoteViewModel.authorizeAccount(accountId, password: password)
                             dismiss()
                         } catch let e as ReaxError {
                             switch e {
@@ -51,7 +51,7 @@ struct AccountAuthorizeView : View {
         .onAppear {
             tasks.append(Task {
                 do {
-                    if let a = try await NoteViewModel().account(accountId), let m = try await NoteViewModel().mavinoteAccount(accountId) {
+                    if let a = try await NoteViewModel.account(accountId), let m = try await NoteViewModel.mavinoteAccount(accountId) {
                         account = (a, m)
                     }
                 } catch let e as ReaxError {
