@@ -1,0 +1,23 @@
+* Things that need to be encrypted while sending to server
+    * Folder name
+    * Note title
+    * Note text
+
+* Where to store encryption key?
+    * In the devices
+        then what happens if all the devices delete the account from their storage? All the keys are deleted, how to decrypt encrypted texts.
+    * In the server encrypted by a passcode specified by user. When user logins, s/he enters the passcode and obtains the encryption key
+        then what happens if user forgets the passcode, there is no way to reset the passcode.
+
+* User shall be able to list devices that have access to notes
+* User shall be able to remove a device
+* User shall be able to add a new device
+* Added device shall be able to obtain all the notes user has
+
+User Story
+* Mobile
+    * When user wants to create an account
+        * Enters an email
+        * If this email is not used before
+        * Types the code that is sent to email
+        * It sets up 
