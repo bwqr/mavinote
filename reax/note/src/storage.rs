@@ -2,6 +2,7 @@ use std::{sync::Arc, collections::HashMap};
 
 use aes_gcm_siv::{aead::{KeyInit, OsRng}, Aes256GcmSiv, Key};
 
+use base64ct::{Base64, Encoding};
 use once_cell::sync::OnceCell;
 use sqlx::{Pool, Sqlite, types::Json};
 use tokio::sync::watch::{channel, Sender};
@@ -36,7 +37,7 @@ pub async fn init() -> Result<(), Error> {
 
     for account in mavinote_accounts {
         let account_data = db::fetch_account_data::<Mavinote>(&mut conn, account.id).await?.unwrap();
-        let enc_key = Key::<Aes256GcmSiv>::from_iter(hex::decode(account_data.enc_key).unwrap().into_iter());
+        let enc_key = Key::<Aes256GcmSiv>::from_iter(Base64::decode_vec(account_data.enc_key.as_str()).unwrap().into_iter());
         clients.insert(account.id, MavinoteClient::new(Some(account.id), config.api_url.clone(), account_data.token, enc_key));
     }
 
@@ -89,7 +90,7 @@ pub async fn add_account(name: String, email: String, password: String, create_a
         MavinoteClient::login(config.api_url.as_str(), email.as_str(), password.as_str()).await?
     };
 
-    let enc_key = hex::encode(Aes256GcmSiv::generate_key(&mut OsRng));
+    let enc_key = Base64::encode_string(Aes256GcmSiv::generate_key(&mut OsRng).as_ref());
 
     db::create_account(&mut conn, name, AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token, enc_key }))).await?;
 

@@ -1,3 +1,5 @@
+# TODO resturcture this doc wrt svelte/README.md
+
 # Mavinote Android
 
 Android application of Mavinote. This project depends on the **reax** library. **Reax** will be automatically build when you build the android project. However you need to complete the **android prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.

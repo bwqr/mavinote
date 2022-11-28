@@ -1,5 +1,6 @@
-use aes_gcm_siv::{Aes256GcmSiv, Key};
+use aes_gcm_siv::{Aes256GcmSiv, Key, KeyInit, Nonce, aead::Aead};
 use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}, StatusCode};
+use base64ct::{Base64, Encoding};
 
 use base::{Error, HttpError, models::Token};
 
@@ -175,11 +176,44 @@ impl MavinoteClient {
             .map_err(|e| self.error(e))?
             .json::<Option<responses::Note>>()
             .await
+            .map(|mut note| {
+                if let Some(note) = &mut note {
+                    let cipher = Aes256GcmSiv::new(&self.enc_key);
+                    let nonce = Nonce::from_slice(b"unique nonce");
+
+                    if let Some(title) = &note.title {
+                         match Base64::decode_vec(title.as_str()) {
+                            Ok(bytes) => {
+                                if let Ok(decrypted) = cipher.decrypt(nonce, bytes.as_ref()) {
+                                    note.title = Some(std::str::from_utf8(decrypted.as_ref()).unwrap().to_string());
+                                }
+                            },
+                            Err(e) => log::error!("failed to decode note title as base64 {:?}", e)
+                        };
+                    }
+
+                    match Base64::decode_vec(note.text.as_str()) {
+                        Ok(bytes) => {
+                            if let Ok(decrypted) = cipher.decrypt(nonce, bytes.as_ref()) {
+                                note.text = std::str::from_utf8(decrypted.as_ref()).unwrap().to_string();
+                            }
+                        },
+                        Err(e) => log::error!("failed to decode note text as base64 {:?}", e)
+                    };
+                }
+
+                note
+            })
             .map_err(|e| self.error(e))
     }
 
     pub async fn create_note(&self, folder_id: RemoteId, title: Option<&str>, text: &str) -> Result<responses::Note, Error> {
-        let request_body = serde_json::to_string(&requests::CreateNoteRequest { folder_id: folder_id.0, title, text }).unwrap();
+        let cipher = Aes256GcmSiv::new(&self.enc_key);
+        let nonce = Nonce::from_slice(b"unique nonce");
+        let title = title.map(|t| Base64::encode_string(cipher.encrypt(nonce, t.as_bytes()).unwrap().as_slice()));
+        let text = Base64::encode_string(cipher.encrypt(nonce, text.as_bytes()).unwrap().as_slice());
+
+        let request_body = serde_json::to_string(&requests::CreateNoteRequest { folder_id: folder_id.0, title: title.as_ref().map(|t| t.as_str()), text: text.as_str() }).unwrap();
 
         self.client
             .post(format!("{}/note/note", self.api_url))

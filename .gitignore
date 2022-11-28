@@ -1,1 +1,5 @@
 /storage
+
+.DS_Store
+
+.ccls-cache
