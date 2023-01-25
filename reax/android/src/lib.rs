@@ -20,19 +20,18 @@ use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
 mod log;
 mod note;
-mod notify;
 
 static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
 static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
 
 #[derive(Serialize)]
-enum Message<T: Serialize> {
+enum Message<T: Serialize, E: Serialize> {
     Ok(T),
-    Err(base::Error),
+    Err(E),
     Complete,
 }
 
-pub(crate) fn send_stream<T: Serialize>(stream_id: i32, message: Message<T>) {
+pub(crate) fn send_stream<T: Serialize, E: Serialize>(stream_id: i32, message: Message<T, E>) {
     let bytes = bincode::serialize(&message).expect("failed to searialize message");
 
     HANDLER
@@ -44,7 +43,7 @@ pub(crate) fn send_stream<T: Serialize>(stream_id: i32, message: Message<T>) {
         .unwrap();
 }
 
-pub(crate) fn send_once<T: Serialize>(once_id: i32, message: Result<T, base::Error>) {
+pub(crate) fn send_once<T: Serialize, E: Serialize>(once_id: i32, message: Result<T, E>) {
     let bytes = bincode::serialize(&message).expect("failed to searialize message");
 
     HANDLER

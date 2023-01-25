@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 anymap = "0.12.1"
-once_cell = "1.10.0"
+once_cell.workspace = true

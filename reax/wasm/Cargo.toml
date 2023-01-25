@@ -18,17 +18,17 @@ aes-gcm-siv = "0.11.1"
 # for more information https://docs.rs/getrandom/latest/getrandom/#webassembly-support
 getrandom = { version = "0.2", features = ["js"] }
 
-log = "0.4.16"
 
 bincode = "1.3.3"
-serde = "1.0.144"
-once_cell = "1.11.0"
+
+log.workspace = true
+reqwest.workspace = true
+once_cell.workspace = true
+serde.workspace = true
+tokio.workspace = true
 
 futures = "0.3.24"
 js-sys = "0.3.59"
 wasm-bindgen = "0.2.80"
 wasm-bindgen-futures = "0.4.30"
 console_error_panic_hook = "0.1.7"
-
-tokio = { version = "1.18.2", features = ["sync"], default-features = false }
-reqwest = { version = "0.11.10", features = ["rustls-tls"], default-features = false }

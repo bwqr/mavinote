@@ -3,7 +3,7 @@ use sqlx::Connection;
 use sqlx::types::Json;
 use sqlx::{Sqlite, pool::PoolConnection, Error};
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote};
+use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote, Device};
 
 pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
     sqlx::query_as("select id, name, kind from accounts order by id")
@@ -24,6 +24,32 @@ pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(co
         .fetch_optional(conn)
         .await
         .map(|opt| opt.map(|json| json.0.0))
+}
+
+pub async fn devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
+    sqlx::query_as("select id, account_id from devices where account_id = ?")
+        .bind(account_id)
+        .fetch_all(conn)
+        .await
+}
+
+pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, device_ids: &[i32]) -> Result<(), Error> {
+    let device_ids: String = itertools::Itertools::intersperse(device_ids.into_iter().map(|id| format!("({}, {})", id, account_id)), ",".to_string()).collect();
+    let query = format!("insert into devices (id, account_id) values {}", device_ids);
+
+    let query = sqlx::query(&query);
+
+    query.execute(&mut *conn)
+        .await
+        .map(|_| ())
+}
+
+pub async fn delete_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
+    sqlx::query("delete from devices where account_id = ?")
+        .bind(account_id)
+        .execute(&mut *conn)
+        .await
+        .map(|_| ())
 }
 
 pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
@@ -115,6 +141,15 @@ pub async fn create_folder(conn: &mut PoolConnection<Sqlite>, remote_id: Option<
             .map(|opt| opt.unwrap())
     }))
      .await
+}
+
+pub async fn update_folder_remote_id(conn: &mut PoolConnection<Sqlite>, local_id: LocalId, remote_id: RemoteId) -> Result<(), Error> {
+    sqlx::query("update folders set remote_id = ? where id = ?")
+        .bind(remote_id.0)
+        .bind(local_id.0)
+        .execute(&mut *conn)
+        .await
+        .map(|_| ())
 }
 
 pub async fn delete_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {

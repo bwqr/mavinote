@@ -22,11 +22,16 @@ pub enum AccountKind {
     Local
 }
 
+#[cfg_attr(feature = "storage", derive(FromRow))]
+pub struct Device {
+    pub id: i32,
+    pub account_id: i32,
+}
+
 #[derive(Debug, Deserialize, Serialize)]
 pub struct Mavinote {
     pub email: String,
     pub token: String,
-    pub enc_key: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

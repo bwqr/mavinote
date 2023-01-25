@@ -6,13 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-log = "0.4.16"
+log.workspace = true
 
-reqwest = { version = "0.11.10", features = ["rustls-tls"], default-features = false }
-serde = { version = "1.0.136", features = ["derive"] }
-tokio = { version = "1.18.2", features = ["sync"], default-features = false }
-
-sqlx = { version = "0.6.1", features = ["runtime-tokio-rustls", "sqlite"], optional = true }
-
-[features]
-sqlx = ["dep:sqlx"]
+tokio.workspace = true

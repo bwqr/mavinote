@@ -8,6 +8,13 @@ create table accounts(
 
 insert into accounts (name, kind) values ('Local', 'Local');
 
+create table devices(
+    id  integer,
+    account_id  integer,
+    foreign key(account_id) references accounts(id) on delete cascade on update no action,
+    unique(id, account_id)
+);
+
 create table folders(
     id          integer primary key autoincrement,
     account_id  integer         not null,

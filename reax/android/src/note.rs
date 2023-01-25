@@ -1,11 +1,22 @@
-use base::{State, Error};
+use base::State;
+use note::Error;
+
 use jni::{
     objects::{JString, JClass},
-    sys::{jint, jlong, jboolean},
+    sys::{jint, jlong},
     JNIEnv
 };
+use serde::Serialize;
 
-use crate::{send_stream, send_once, spawn, Message, block_on};
+use crate::{spawn, Message, block_on};
+
+fn send_once<T: Serialize>(once_id: i32, message: Result<T, Error>) {
+    crate::send_once(once_id, message)
+}
+
+fn send_stream<T: Serialize>(stream_id: i32, message: Message<T, Error>) {
+    crate::send_stream(stream_id, message)
+}
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1init(
@@ -43,19 +54,19 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1accounts(
 
         match &*rx.borrow() {
             State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+            State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
             _ => {},
         };
 
         while rx.changed().await.is_ok() {
             match &*rx.borrow() {
                 State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
+                State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
                 _ => {},
             };
         }
 
-        send_stream::<Vec<note::models::Account>>(stream_id, Message::Complete);
+        send_stream::<()>(stream_id, Message::Complete);
     });
 
     Box::into_raw(Box::new(handle)) as jlong
@@ -94,21 +105,38 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1mavinoteAc
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addAccount(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1signUp(
     env: JNIEnv,
     _: JClass,
     once_id: jint,
     name: JString,
     email: JString,
-    password: JString,
-    create_account: jboolean,
+    code: JString,
 ) -> jlong {
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
-    let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
+    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::storage::add_account(name, email, password, create_account > 0).await;
+        let res = note::storage::add_account(name, email, code).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1sendCode(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    email: JString,
+) -> jlong {
+    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::storage::send_code(email).await;
 
         send_once(once_id, res);
     });
@@ -125,25 +153,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteAcco
 ) -> jlong {
     let handle = spawn(async move {
         let res = note::storage::delete_account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1authorizeMavinoteAccount(
-    env: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    account_id: jint,
-    password: JString,
-) -> jlong {
-    let password = env.get_string(password).unwrap().to_str().unwrap().to_owned();
-
-    let handle = spawn(async move {
-        let res = note::storage::authorize_mavinote_account(account_id, password).await;
 
         send_once(once_id, res);
     });
