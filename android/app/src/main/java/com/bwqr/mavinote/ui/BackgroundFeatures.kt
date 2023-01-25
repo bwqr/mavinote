@@ -16,7 +16,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.BusEvent
-import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
@@ -37,9 +37,6 @@ fun BackgroundFeatures() {
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
 
-    val accountsToAuthorize = remember { mutableStateMapOf<Int, Unit>() }
-
-
     LaunchedEffect(key1 = 1) {
         launch {
             while (true) {
@@ -47,14 +44,16 @@ fun BackgroundFeatures() {
                     is BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
                         "No internet connection"
                     )
-                    is BusEvent.RequireAuthorization -> accountsToAuthorize[event.accountId] = Unit
+                    is BusEvent.DisplayNotAuthorized -> scaffoldState.snackbarHostState.showSnackbar(
+                        "Account is not authorized ${event.accountId}"
+                    )
                 }
             }
         }
 
         try {
             NoteViewModel.sync()
-        } catch (e: Error) {
+        } catch (e: NoteError) {
             e.handle()
         }
     }
@@ -72,9 +71,6 @@ fun BackgroundFeatures() {
             }
         },
     ) {
-        accountsToAuthorize.firstNotNullOfOrNull { accountId -> accountId.key }?.let { accountId ->
-            AccountAuthorize(accountId) { accountsToAuthorize.remove(accountId) }
-        }
 
         NavHost(
             navController,

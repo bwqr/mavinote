@@ -16,6 +16,12 @@ class NoteViewModel {
             _init()
         }
 
+        suspend fun sendCode(email: String): Unit = Runtime.runUnitOnce { _sendCode(it, email) }
+
+        suspend fun signUp(
+            name: String, email: String, code: String
+        ): Unit = Runtime.runUnitOnce { _signUp(it, name, email, code) }
+
         suspend fun sync(): Unit = Runtime.runUnitOnce { _sync(it) }
 
         fun accounts(): Flow<List<Account>> = Runtime.runStream({
@@ -35,10 +41,6 @@ class NoteViewModel {
                 Mavinote.deserialize(deserializer)
             }
         }, { _mavinoteAccount(it, accountId) })
-
-        suspend fun addAccount(
-            name: String, email: String, password: String, createAccount: Boolean
-        ): Unit = Runtime.runUnitOnce { _addAccount(it, name, email, password, createAccount) }
 
         suspend fun deleteAccount(accountId: Int): Unit =
             Runtime.runUnitOnce { _deleteAccount(it, accountId) }
@@ -88,14 +90,12 @@ class NoteViewModel {
 
 private external fun _init()
 
+private external fun _sendCode(onceId: Int, email: String): Long
 private external fun _sync(onceId: Int): Long
 private external fun _accounts(streamId: Int): Long
 private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
-private external fun _addAccount(
-    onceId: Int, name: String, email: String, password: String, createAccount: Boolean
-): Long
-
+private external fun _signUp(onceId: Int, name: String, email: String, code: String): Long
 private external fun _deleteAccount(onceId: Int, accountId: Int): Long
 private external fun _authorizeMavinoteAccount(onceId: Int, accountId: Int, password: String): Long
 private external fun _folders(streamId: Int): Long

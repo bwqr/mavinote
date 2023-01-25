@@ -8,13 +8,13 @@ import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
 
-open class Error : Throwable() {
+open class NoteError : Error() {
     companion object {
-        fun deserialize(deserializer: Deserializer): Error {
+        fun deserialize(deserializer: Deserializer): NoteError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> HttpError.deserialize(deserializer)
-                1 -> Message.deserialize(deserializer)
-                2 -> Database.deserialize(deserializer)
+                0 -> MavinoteError.deserialize(deserializer)
+                1 -> StorageError.deserialize(deserializer)
+                2 -> DatabaseError.deserialize(deserializer)
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
         }
@@ -22,46 +22,61 @@ open class Error : Throwable() {
 
     fun handle() {
         when (this) {
-            is HttpError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
-            is HttpError.Unauthorized -> this.accountId?.let { Bus.emit(BusEvent.RequireAuthorization(it)) }
+            is MavinoteError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
+            is MavinoteError.Unauthorized -> this.accountId?.let { Bus.emit(BusEvent.DisplayNotAuthorized(it)) }
             else -> Log.e("ReaxError", "Unhandled error, $this")
         }
     }
 }
 
-sealed class HttpError : Error() {
-    object NoConnection : HttpError()
-    object UnexpectedResponse : HttpError()
-    class Unauthorized(val accountId: Int?) : HttpError()
-    object Unknown : HttpError()
+sealed class MavinoteError : NoteError() {
+    class Unauthorized(val accountId: Int?) : MavinoteError()
+    class Message(override val message: String) : MavinoteError()
+    object NoConnection : MavinoteError()
+    object UnexpectedResponse : MavinoteError()
+    object Unknown : MavinoteError()
 
     companion object {
-        fun deserialize(deserializer: Deserializer): HttpError {
+        fun deserialize(deserializer: Deserializer): MavinoteError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> NoConnection
-                1 -> UnexpectedResponse
-                2 -> Unauthorized(deserializeOption(deserializer) {
+                0 -> Unauthorized(deserializeOption(deserializer) {
                     it.deserialize_i32()
                 })
-                3 -> Unknown
-                else -> throw DeserializationError("Unknown variant index for HttpError: $index")
+                1 -> Message(deserializer.deserialize_str())
+                2 -> NoConnection
+                3 -> UnexpectedResponse
+                4 -> Unknown
+                else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }
         }
     }
 }
 
-data class Message(override val message: String) : Error() {
+sealed class StorageError : NoteError() {
+    class InvalidState(override val message: String) : StorageError()
+    object NotMavinoteAccount : StorageError()
+    object AccountNotFound : StorageError()
+    object AccountNameUsed : StorageError()
+    object FolderNotFound : StorageError()
+
     companion object {
-        fun deserialize(deserializer: Deserializer): Message {
-            return Message(deserializer.deserialize_str())
+        fun deserialize(deserializer: Deserializer): StorageError {
+            return when (val index = deserializer.deserialize_variant_index()) {
+                0 -> StorageError.InvalidState(deserializer.deserialize_str())
+                1 -> StorageError.NotMavinoteAccount
+                2 -> StorageError.AccountNotFound
+                3 -> StorageError.AccountNameUsed
+                4 -> StorageError.FolderNotFound
+                else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
+            }
         }
     }
 }
 
-data class Database(override val message: String) : Error() {
+data class DatabaseError(override val message: String) : NoteError() {
     companion object {
-        fun deserialize(deserializer: Deserializer): Database {
-            return Database(deserializer.deserialize_str())
+        fun deserialize(deserializer: Deserializer): DatabaseError {
+            return DatabaseError(deserializer.deserialize_str())
         }
     }
 }

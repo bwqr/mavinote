@@ -14,7 +14,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
-import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -47,7 +47,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                 } else {
                     Log.e("Note", "noteId $noteId does not exist")
                 }
-            } catch (e: Error) {
+            } catch (e: NoteError) {
                 e.handle()
             }
         }
@@ -68,7 +68,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                             // if noteId is null, folderId must be provided
                             NoteViewModel.createNote(folderId!!, text)
                         }
-                    } catch (e: Error) {
+                    } catch (e: NoteError) {
                         e.handle()
                     }
                 }
@@ -106,7 +106,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                     NoteViewModel.deleteNote(deletingNoteId)
 
                     navController.navigateUp()
-                } catch (e: Error) {
+                } catch (e: NoteError) {
                     e.handle()
                     deleting = false
                 }

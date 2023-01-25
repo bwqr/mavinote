@@ -57,7 +57,7 @@ fun Folders(navController: NavController) {
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is Error -> cause.handle()
+                    is NoteError -> cause.handle()
                 }
             }
             .launchIn(this)

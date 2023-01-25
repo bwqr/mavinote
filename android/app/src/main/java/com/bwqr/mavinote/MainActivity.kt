@@ -15,7 +15,15 @@ import com.bwqr.mavinote.ui.BackgroundFeatures
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 
+var ReaxInitialized = false
+
 fun initReax(ctx: Context) {
+    if (ReaxInitialized) {
+        return
+    }
+
+    ReaxInitialized = true
+
     System.loadLibrary("reax")
     Runtime.init(ctx.filesDir.absolutePath)
     NoteViewModel.init()

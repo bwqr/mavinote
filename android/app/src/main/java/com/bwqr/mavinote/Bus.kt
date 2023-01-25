@@ -6,7 +6,7 @@ import kotlin.coroutines.suspendCoroutine
 
 sealed class BusEvent {
     object DisplayNoInternetWarning : BusEvent()
-    class RequireAuthorization(val accountId: Int) : BusEvent()
+    class DisplayNotAuthorized(val accountId: Int) : BusEvent()
 }
 
 class Bus {

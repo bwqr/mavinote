@@ -14,7 +14,7 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
-import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
@@ -36,7 +36,7 @@ fun FolderCreate(navController: NavController) {
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is Error -> cause.handle()
+                    is NoteError -> cause.handle()
                 }
             }
             .launchIn(this)
@@ -61,7 +61,7 @@ fun FolderCreate(navController: NavController) {
                     NoteViewModel.createFolder(accountId, folderName)
 
                     navController.navigateUp()
-                } catch (e: Error) {
+                } catch (e: NoteError) {
                     e.handle()
                 } finally {
                     inProgress = false

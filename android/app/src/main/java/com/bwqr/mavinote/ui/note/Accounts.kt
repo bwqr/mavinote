@@ -22,7 +22,7 @@ import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
-import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.NoteScreens
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -40,7 +40,7 @@ fun Accounts(navController: NavController) {
             .onEach { accounts = it }
             .catch {
                 when (val cause = it.cause) {
-                    is Error -> cause.handle()
+                    is NoteError -> cause.handle()
                 }
             }
             .launchIn(this)

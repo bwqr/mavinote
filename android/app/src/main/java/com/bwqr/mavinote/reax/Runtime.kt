@@ -2,7 +2,7 @@ package com.bwqr.mavinote.reax
 
 import android.util.Log
 import com.bwqr.mavinote.BuildConfig
-import com.bwqr.mavinote.models.Error
+import com.bwqr.mavinote.models.NoteError
 import com.novi.bincode.BincodeDeserializer
 import com.novi.serde.Deserializer
 import kotlinx.coroutines.cancel
@@ -29,7 +29,7 @@ class Stream constructor(
 
         when (deserializer.deserialize_variant_index()) {
             0 -> onNext(deserializer)
-            1 -> onError(Error.deserialize(deserializer))
+            1 -> onError(NoteError.deserialize(deserializer))
             2 -> onComplete()
         }
     }
@@ -60,7 +60,7 @@ class Once constructor(
 
         when (deserializer.deserialize_variant_index()) {
             0 -> onNext(deserializer)
-            1 -> onError(Error.deserialize(deserializer))
+            1 -> onError(NoteError.deserialize(deserializer))
         }
     }
 
