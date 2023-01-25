@@ -9,7 +9,9 @@ edition = "2021"
 base = { path = "../base" }
 derive = { path = "../derive" }
 
-actix-web = "4.0.1"
+rand = "0.8.5"
 
-diesel = { version = "1.4.8", features = ["sqlite", "r2d2", "chrono"] }
-serde = { version = "1.0.136", features = ["derive"] }
+actix-web.workspace = true
+chrono.workspace = true
+diesel.workspace = true
+serde.workspace = true

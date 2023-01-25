@@ -1,15 +1,20 @@
 use actix::Actor;
 use actix_cors::Cors;
-use actix_web::{HttpServer, App, middleware::Logger, web::Data, http::header};
-use diesel::{r2d2::{Pool as DieselPool, ConnectionManager}, PgConnection};
+use actix_web::{http::header, middleware::Logger, web::Data, App, HttpServer};
+use diesel::{
+    r2d2::{ConnectionManager, Pool as DieselPool},
+    PgConnection,
+};
 
-use base::{types::Pool, crypto::Crypto};
-use notify::{SessionManager, Server};
+use base::{crypto::Crypto, types::Pool};
+use notify::{Server, SessionManager};
 
 fn setup_database() -> Pool {
     let conn_info = std::env::var("DATABASE_URL").expect("DATABASE_URL is not provided in env");
     let manager = ConnectionManager::<PgConnection>::new(conn_info);
-    let pool = DieselPool::builder().build(manager).expect("Failed to create pool.");
+    let pool = DieselPool::builder()
+        .build(manager)
+        .expect("Failed to create pool.");
 
     pool
 }
@@ -20,16 +25,28 @@ async fn main() -> std::io::Result<()> {
     env_logger::init();
 
     let pool = setup_database();
-    let crypto = Crypto::new(std::env::var("SECRET_KEY").expect("SECRET_KEY is not provided in env").as_str());
+    let crypto = Crypto::new(
+        std::env::var("SECRET_KEY")
+            .expect("SECRET_KEY is not provided in env")
+            .as_str(),
+    );
 
     let notify_server = Server::new().start();
     let session_manager = SessionManager::new(notify_server.clone()).start();
 
     HttpServer::new(move || {
         let cors = Cors::default()
-            .allowed_origin(std::env::var("CORS_ORIGIN").expect("CORS_ORIGIN is not provided in env").as_str())
+            .allowed_origin(
+                std::env::var("CORS_ORIGIN")
+                    .expect("CORS_ORIGIN is not provided in env")
+                    .as_str(),
+            )
             .allow_any_method()
-            .allowed_headers(vec![header::AUTHORIZATION, header::ACCEPT, header::CONTENT_TYPE])
+            .allowed_headers(vec![
+                header::AUTHORIZATION,
+                header::ACCEPT,
+                header::CONTENT_TYPE,
+            ])
             .allowed_header("enctype")
             .max_age(60);
 
@@ -45,7 +62,11 @@ async fn main() -> std::io::Result<()> {
             .configure(notify::register)
             .configure(user::register)
     })
-    .bind(std::env::var("BIND_ADDRESS").expect("APP_BIND_ADDRESS is not provided in env").as_str())?
+    .bind(
+        std::env::var("BIND_ADDRESS")
+            .expect("APP_BIND_ADDRESS is not provided in env")
+            .as_str(),
+    )?
     .run()
     .await
 }

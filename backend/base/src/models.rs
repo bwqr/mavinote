@@ -1,25 +1,20 @@
 use chrono::Utc;
-use serde::{Serialize, Deserialize};
+use serde::{Deserialize, Serialize};
 
 #[derive(Deserialize, Serialize)]
 pub struct Token {
     // issued at
     pub iat: i64,
-    // expire time
-    pub exp: i64,
-    pub user_id: i32,
+    pub device_id: i32,
 }
 
 impl Token {
-    pub fn new(user_id: i32) -> Self {
-        const TIMEOUT: i64 = 60 * 60 * 24;
-
+    pub fn new(device_id: i32) -> Self {
         let now = Utc::now().timestamp();
 
         Self {
             iat: now,
-            exp: now + TIMEOUT,
-            user_id,
+            device_id,
         }
     }
 }

@@ -1,28 +1,38 @@
 use actix::Addr;
-use actix_web::{web::{ServiceConfig, scope, self}, HttpRequest, HttpResponse, get, post, http::StatusCode};
+use actix_web::{
+    get,
+    http::StatusCode,
+    post,
+    web::{self, scope, ServiceConfig},
+    HttpRequest, HttpResponse,
+};
 
 use actix_web_actors::ws;
-use base::{HttpError, middlewares::auth_user::AuthUser};
-use user::models::User;
+use base::{middlewares::auth_user::AuthUser, HttpError};
 
-pub use session::Manager as SessionManager;
 pub use server::Server;
+pub use session::Manager as SessionManager;
 
-use session::{Session, messages::CreateSession};
+use session::{messages::CreateSession, Session};
 
 mod server;
 mod session;
 
 #[get("/connect")]
-async fn connect(manager: web::Data<Addr<SessionManager>>, req: HttpRequest, stream: web::Payload, user: User) -> actix_web::error::Result<HttpResponse> {
-    let session: Session = manager.send(CreateSession { user_id: user.id })
+async fn connect(
+    manager: web::Data<Addr<SessionManager>>,
+    req: HttpRequest,
+    stream: web::Payload,
+) -> actix_web::error::Result<HttpResponse> {
+    let session: Session = manager
+        .send(CreateSession { user_id: 1 })
         .await
         .map_err(|e| {
             log::error!("failed to create session from manager {e:?}");
 
             HttpError {
                 code: StatusCode::INTERNAL_SERVER_ERROR,
-                error: "failedToCreateSession",
+                error: "failed_to_create_session",
                 message: None,
             }
         })?;
@@ -31,8 +41,16 @@ async fn connect(manager: web::Data<Addr<SessionManager>>, req: HttpRequest, str
 }
 
 #[post("send/{user_id}")]
-async fn send_message(server: web::Data<Addr<Server>>, user_id: web::Path<i32>, msg: web::Json<String>) -> Result<String, HttpError> {
-    server.send(server::messages::SendMessage { user_id: user_id.into_inner(), message: msg.into_inner()})
+async fn send_message(
+    server: web::Data<Addr<Server>>,
+    user_id: web::Path<i32>,
+    msg: web::Json<String>,
+) -> Result<String, HttpError> {
+    server
+        .send(server::messages::SendMessage {
+            user_id: user_id.into_inner(),
+            message: msg.into_inner(),
+        })
         .await
         .unwrap();
 
@@ -44,6 +62,6 @@ pub fn register(config: &mut ServiceConfig) {
         scope("api/notify")
             .wrap(AuthUser)
             .service(connect)
-            .service(send_message)
+            .service(send_message),
     );
 }

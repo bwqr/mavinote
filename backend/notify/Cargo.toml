@@ -10,7 +10,7 @@ base = { path = "../base" }
 user = { path = "../user" }
 
 actix = "0.13"
-actix-web = "4.0.1"
+actix-web.workspace = true
 actix-web-actors = "4.0.1"
 
-log = "0.4.16"
+log.workspace = true

@@ -10,10 +10,10 @@ base = { path = "../base" }
 derive = { path = "../derive" }
 user = { path = "../user" }
 
-actix-web = "4.0.1"
+actix-web.workspace = true
 
-log = "0.4.16"
+log.workspace = true
 
-chrono = { version = "0.4.19", features = ["serde"] }
-diesel = { version = "1.4.8", features = ["sqlite", "r2d2", "chrono"] }
-serde = { version = "1.0.136", features = ["derive"] }
+chrono.workspace = true
+diesel.workspace = true
+serde.workspace = true

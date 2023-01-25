@@ -11,7 +11,11 @@ pub struct Login {
 
 #[derive(Deserialize, Sanitize)]
 pub struct SignUp {
-    pub name: String,
     pub email: String,
-    pub password: String,
+    pub code: String,
+}
+
+#[derive(Deserialize, Sanitize)]
+pub struct SendCode {
+    pub email: String,
 }

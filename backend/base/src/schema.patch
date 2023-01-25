@@ -1,0 +1,25 @@
+diff --git a/backend/base/src/schema.rs b/backend/base/src/schema.rs
+index 48de707..0a5dce6 100644
+--- a/backend/base/src/schema.rs
++++ b/backend/base/src/schema.rs
+@@ -1,12 +1,20 @@
+ // @generated automatically by Diesel CLI.
+ 
+ pub mod sql_types {
++    use diesel::query_builder::QueryId;
++
+     #[derive(diesel::sql_types::SqlType)]
+     #[diesel(postgres_type(name = "state"))]
+     pub struct State;
++
++    impl QueryId for State {
++        type QueryId = diesel::sql_types::Text;
++
++        const HAS_STATIC_QUERY_ID: bool = true;
++    }
+ }
+ 
+ diesel::table! {
+     device_folders (folder_id, receiver_device_id) {
+         folder_id -> Int4,
+         sender_device_id -> Int4,

@@ -6,11 +6,12 @@ use derive::Sanitize;
 #[derive(Deserialize, Sanitize)]
 pub struct CreateFolderRequest {
     pub name: String,
+    pub device_id: i32,
 }
 
 #[derive(Deserialize, Sanitize)]
 pub struct CreateNoteRequest {
-    pub folder_id: i32,
+    pub device_id: i32,
     pub title: Option<String>,
     pub text: String,
 }
@@ -18,6 +19,5 @@ pub struct CreateNoteRequest {
 #[derive(Deserialize, Sanitize)]
 pub struct UpdateNoteRequest {
     pub commit: i32,
-    pub title: Option<String>,
-    pub text: String,
+    pub device_notes: Vec<CreateNoteRequest>,
 }

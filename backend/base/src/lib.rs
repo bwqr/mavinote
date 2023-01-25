@@ -1,6 +1,3 @@
-#[macro_use]
-extern crate diesel;
-
 use std::fmt::Display;
 
 use actix_web::{error::BlockingError, http::StatusCode, HttpResponse, ResponseError};
@@ -10,34 +7,17 @@ pub mod crypto;
 pub mod middlewares;
 pub mod models;
 pub mod sanitize;
-pub mod schemas;
+pub mod schema;
 pub mod types;
 
-pub enum Error {
-    InvalidToken,
-    TokenNotFound,
-    ExpiredToken,
+#[derive(Serialize)]
+pub struct HttpMessage {
+    message: &'static str,
 }
 
-impl Into<HttpError> for Error {
-    fn into(self) -> HttpError {
-        match self {
-            Error::InvalidToken => HttpError {
-                code: StatusCode::UNAUTHORIZED,
-                error: "invalidToken",
-                message: None,
-            },
-            Error::TokenNotFound => HttpError {
-                code: StatusCode::UNAUTHORIZED,
-                error: "tokenNotFound",
-                message: None,
-            },
-            Error::ExpiredToken=> HttpError {
-                code: StatusCode::UNAUTHORIZED,
-                error: "expiredToken",
-                message: None,
-            },
-        }
+impl HttpMessage {
+    pub const fn success() -> HttpMessage {
+        HttpMessage { message: "success" }
     }
 }
 
@@ -46,6 +26,32 @@ pub struct HttpError {
     pub code: StatusCode,
     pub error: &'static str,
     pub message: Option<String>,
+}
+
+impl HttpError {
+    pub const fn not_found(error: &'static str) -> Self {
+        HttpError {
+            code: StatusCode::NOT_FOUND,
+            error,
+            message: None,
+        }
+    }
+
+    pub const fn conflict(error: &'static str) -> Self {
+        HttpError {
+            code: StatusCode::CONFLICT,
+            error,
+            message: None,
+        }
+    }
+
+    pub const fn unprocessable_entity(error: &'static str) -> Self {
+        HttpError {
+            code: StatusCode::UNPROCESSABLE_ENTITY,
+            error,
+            message: None,
+        }
+    }
 }
 
 impl Serialize for HttpError {
@@ -88,7 +94,7 @@ impl From<BlockingError> for HttpError {
     fn from(_: BlockingError) -> Self {
         HttpError {
             code: StatusCode::INTERNAL_SERVER_ERROR,
-            error: "blockingError",
+            error: "blocking_error",
             message: None,
         }
     }
@@ -101,14 +107,14 @@ impl From<diesel::result::Error> for HttpError {
         if let diesel::result::Error::NotFound = e {
             return HttpError {
                 code: StatusCode::NOT_FOUND,
-                error: "itemNotFound",
+                error: "item_not_found",
                 message: None,
-            }
+            };
         };
 
         HttpError {
             code: StatusCode::INTERNAL_SERVER_ERROR,
-            error: "dbError",
+            error: "db_error",
             message: None,
         }
     }
@@ -118,7 +124,7 @@ impl From<jsonwebtoken::errors::Error> for HttpError {
     fn from(_: jsonwebtoken::errors::Error) -> Self {
         HttpError {
             code: StatusCode::INTERNAL_SERVER_ERROR,
-            error: "cryptoError",
+            error: "crypto_error",
             message: None,
         }
     }

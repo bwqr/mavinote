@@ -1,6 +1,6 @@
-use jsonwebtoken::{EncodingKey, DecodingKey, errors::Error as JWTError, Header, Validation};
+use jsonwebtoken::{errors::Error as JWTError, DecodingKey, EncodingKey, Header, Validation};
 use ring::hmac;
-use serde::{Serialize, de::DeserializeOwned};
+use serde::{de::DeserializeOwned, Serialize};
 
 #[derive(Clone)]
 pub struct Crypto {
@@ -13,11 +13,15 @@ pub struct Crypto {
 
 impl Crypto {
     pub fn new(secret: &str) -> Self {
+        let mut validation = Validation::default();
+        validation.set_required_spec_claims::<&'_ str>(&[]);
+        validation.validate_exp = false;
+
         Self {
             encoding_key: EncodingKey::from_secret(secret.as_bytes()),
             decoding_key: DecodingKey::from_secret(secret.as_bytes()),
             header: Header::default(),
-            validation: Validation::default(),
+            validation,
             hmac512_key: hmac::Key::new(hmac::HMAC_SHA512, secret.as_bytes()),
         }
     }
@@ -27,8 +31,7 @@ impl Crypto {
     }
 
     pub fn decode<T: DeserializeOwned>(&self, token: &str) -> Result<T, JWTError> {
-        jsonwebtoken::decode::<T>(token, &self.decoding_key, &self.validation)
-            .map(|t| t.claims)
+        jsonwebtoken::decode::<T>(token, &self.decoding_key, &self.validation).map(|t| t.claims)
     }
 
     pub fn sign512(&self, message: &str) -> String {

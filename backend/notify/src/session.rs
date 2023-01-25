@@ -1,7 +1,10 @@
-use std::{collections::HashSet, time::{Duration, Instant}};
+use std::{
+    collections::HashSet,
+    time::{Duration, Instant},
+};
 
 use actix::prelude::*;
-use actix_web_actors::ws::{WebsocketContext, Message as WebsocketMessage, ProtocolError};
+use actix_web_actors::ws::{Message as WebsocketMessage, ProtocolError, WebsocketContext};
 
 use crate::server::Server;
 
@@ -9,12 +12,15 @@ type UserSession = (i32, u64);
 
 pub struct Manager {
     sessions: HashSet<UserSession>,
-    server: Addr<Server>
+    server: Addr<Server>,
 }
 
 impl Manager {
     pub fn new(server: Addr<Server>) -> Self {
-        Manager { sessions: HashSet::new(), server }
+        Manager {
+            sessions: HashSet::new(),
+            server,
+        }
     }
 }
 
@@ -60,7 +66,13 @@ impl Session {
     const CONNECTION_TIMEOUT: Duration = Duration::from_secs(120);
 
     pub fn new(id: u64, user_id: i32, server: Addr<Server>, manager: Addr<Manager>) -> Self {
-        Session { id, user_id, server, manager, hb: Instant::now() }
+        Session {
+            id,
+            user_id,
+            server,
+            manager,
+            hb: Instant::now(),
+        }
     }
 
     fn check_hb(&mut self) -> bool {
@@ -74,11 +86,12 @@ impl Actor for Session {
     fn started(&mut self, ctx: &mut Self::Context) {
         log::debug!("starting session with ({},{})", self.user_id, self.id);
 
-        self.server.send(crate::server::messages::Connect {
-            session_id: self.id,
-            user_id: self.user_id,
-            addr: ctx.address(),
-        })
+        self.server
+            .send(crate::server::messages::Connect {
+                session_id: self.id,
+                user_id: self.user_id,
+                addr: ctx.address(),
+            })
             .into_actor(self)
             .then(|_, _, _| fut::ready(()))
             .wait(ctx);
@@ -119,16 +132,13 @@ impl StreamHandler<Result<WebsocketMessage, ProtocolError>> for Session {
                 self.hb = Instant::now();
                 ctx.pong(&msg);
             }
-            WebsocketMessage::Pong(_) => {
-                self.hb = Instant::now()
-            }
+            WebsocketMessage::Pong(_) => self.hb = Instant::now(),
             WebsocketMessage::Text(text) => {
                 ctx.text(text);
-            },
+            }
             WebsocketMessage::Close(_) => ctx.stop(),
             _ => {}
         }
-
     }
 }
 

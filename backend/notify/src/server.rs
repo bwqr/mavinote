@@ -10,7 +10,9 @@ pub struct Server {
 
 impl Server {
     pub fn new() -> Self {
-        Server { users: HashMap::new() }
+        Server {
+            users: HashMap::new(),
+        }
     }
 }
 
@@ -48,7 +50,9 @@ impl Handler<messages::SendMessage> for Server {
     fn handle(&mut self, msg: messages::SendMessage, _: &mut Self::Context) -> Self::Result {
         if let Some(sessions) = self.users.get_mut(&msg.user_id) {
             for session in sessions.iter() {
-                session.1.do_send(crate::session::messages::SendMessage { message: msg.message.clone() });
+                session.1.do_send(crate::session::messages::SendMessage {
+                    message: msg.message.clone(),
+                });
             }
         }
     }
