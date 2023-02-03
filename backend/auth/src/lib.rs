@@ -9,6 +9,7 @@ pub fn register(config: &mut web::ServiceConfig) {
     config.service(
         web::scope("api/auth")
             .service(handlers::sign_up)
-            .service(handlers::send_code),
+            .service(handlers::send_code)
+            .service(handlers::create_pending_device),
     );
 }

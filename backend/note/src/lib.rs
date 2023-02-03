@@ -1,4 +1,4 @@
-use actix_web::web::{scope, ServiceConfig};
+use actix_web::web::{post, scope, ServiceConfig};
 use base::middlewares::auth_user::AuthUser;
 
 mod handlers;
@@ -17,6 +17,9 @@ pub fn register(config: &mut ServiceConfig) {
             .service(handlers::fetch_note)
             .service(handlers::create_note)
             .service(handlers::update_note)
-            .service(handlers::delete_note),
+            .service(handlers::delete_note)
+            .service(handlers::fetch_requests)
+            .route("requests", post().to(handlers::create_requests))
+            .service(handlers::respond_requests),
     );
 }

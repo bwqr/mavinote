@@ -11,7 +11,7 @@ use diesel::Queryable;
 use futures::future::LocalBoxFuture;
 use serde::Serialize;
 
-#[derive(Queryable, Serialize)]
+#[derive(Clone, Queryable, Serialize)]
 pub struct Device {
     pub id: i32,
     pub user_id: i32,

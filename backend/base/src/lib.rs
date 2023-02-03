@@ -10,7 +10,7 @@ pub mod sanitize;
 pub mod schema;
 pub mod types;
 
-#[derive(Serialize)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct HttpMessage {
     message: &'static str,
 }
@@ -21,7 +21,7 @@ impl HttpMessage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct HttpError {
     pub code: StatusCode,
     pub error: &'static str,

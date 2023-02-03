@@ -26,6 +26,14 @@ create table devices(
     constraint  fk_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action
 );
 
+create table pending_devices(
+    email       varchar(255)    not null,
+    fingerprint varchar(64)     not null,
+    created_at  timestamp       not null default current_timestamp,
+    primary key (email, fingerprint),
+    constraint  fk_pending_devices_email foreign key (email) references users (email) on delete cascade on update no action
+);
+
 create table folders(
     id          serial  primary key not null,
     user_id     int         not null,
@@ -60,12 +68,28 @@ create table device_notes(
     note_id             int     not null,
     sender_device_id    int     not null,
     receiver_device_id  int     not null,
-    title               text    default null,
+    name                text    not null,
     text                text    not null,
     primary key (note_id, receiver_device_id),
     constraint  fk_device_notes_note_id foreign key (note_id) references notes (id) on delete cascade on update no action,
     constraint  fk_device_notes_sender_device_id foreign key (sender_device_id) references devices (id) on delete cascade on update no action,
     constraint  fk_device_notes_receiver_device_id foreign key (receiver_device_id) references devices (id) on delete cascade on update no action
+);
+
+create table note_requests(
+    note_id     int not null,
+    device_id   int not null,
+    primary key (note_id, device_id),
+    constraint  fk_note_requests_note_id foreign key (note_id) references notes (id) on delete cascade on update no action,
+    constraint  fk_note_requests_device_id foreign key (device_id) references devices (id) on delete cascade on update no action
+);
+
+create table folder_requests(
+    folder_id   int not null,
+    device_id   int not null,
+    primary key (folder_id, device_id),
+    constraint  fk_folder_requests_folder_id foreign key (folder_id) references folders (id) on delete cascade on update no action,
+    constraint  fk_folder_requests_device_id foreign key (device_id) references devices (id) on delete cascade on update no action
 );
 
 create trigger pending_users_updated_at

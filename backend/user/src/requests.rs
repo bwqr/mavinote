@@ -4,6 +4,6 @@ use base::sanitize::Sanitize;
 use derive::Sanitize;
 
 #[derive(Sanitize, Deserialize)]
-pub struct CreateDeviceRequest {
-    pub id: String,
+pub struct AddDevice {
+    pub fingerprint: String,
 }

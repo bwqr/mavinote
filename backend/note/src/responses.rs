@@ -45,6 +45,24 @@ pub struct Note {
 #[derive(Queryable, Serialize)]
 pub struct DeviceNote {
     pub sender_device_id: i32,
-    pub title: Option<String>,
+    pub name: String,
     pub text: String,
+}
+
+#[derive(Serialize)]
+pub struct Requests {
+    pub folder_requests: Vec<FolderRequest>,
+    pub note_requests: Vec<NoteRequest>,
+}
+
+#[derive(Queryable, Serialize)]
+pub struct FolderRequest {
+    pub folder_id: i32,
+    pub device_id: i32,
+}
+
+#[derive(Queryable, Serialize)]
+pub struct NoteRequest {
+    pub note_id: i32,
+    pub device_id: i32,
 }

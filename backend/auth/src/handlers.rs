@@ -2,7 +2,7 @@ use base::{
     crypto::Crypto,
     models::Token,
     sanitize::Sanitized,
-    schema::{devices, pending_users, users},
+    schema::{devices, pending_devices, pending_users, users},
     types::Pool,
     HttpError, HttpMessage,
 };
@@ -17,7 +17,7 @@ use rand::seq::SliceRandom;
 
 use crate::{
     models::PendingUser,
-    requests::{SendCode, SignUp},
+    requests::{CreatePendingDevice, SendCode, SignUp},
     responses::TokenResponse,
 };
 
@@ -110,6 +110,50 @@ pub async fn send_code(
             .execute(&mut conn)?;
 
         Ok(())
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
+}
+
+#[post("fingerprint")]
+pub async fn create_pending_device(
+    pool: Data<Pool>,
+    request: Sanitized<Json<CreatePendingDevice>>,
+) -> Result<Json<HttpMessage>, HttpError> {
+    if request.fingerprint.len() != 16 {
+        return Err(HttpError::unprocessable_entity("invalid_fingerprint"));
+    }
+
+    block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let user_exists = diesel::select(diesel::dsl::exists(
+            users::table.filter(users::email.eq(&request.email)),
+        ))
+        .get_result::<bool>(&mut conn)?;
+
+        if !user_exists {
+            return Err(HttpError::unprocessable_entity("email_not_found"));
+        }
+
+        diesel::insert_into(pending_devices::table)
+            .values((
+                pending_devices::email.eq(&request.email),
+                pending_devices::fingerprint.eq(&request.fingerprint)
+            ))
+            .execute(&mut conn)
+            .map_err(|e| {
+                match e {
+                    diesel::result::Error::DatabaseError(
+                        diesel::result::DatabaseErrorKind::UniqueViolation,
+                        _,
+                    ) => HttpError::conflict("fingerprint_already_exists"),
+                    _ => e.into()
+                }
+            })?;
+
+        Result::<(), HttpError>::Ok(())
     })
     .await??;
 

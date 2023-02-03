@@ -19,3 +19,9 @@ pub struct SignUp {
 pub struct SendCode {
     pub email: String,
 }
+
+#[derive(Deserialize, Sanitize)]
+pub struct CreatePendingDevice {
+    pub email: String,
+    pub fingerprint: String,
+}
