@@ -118,7 +118,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1signUp(
     let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
 
     let handle = spawn(async move {
-        let res = note::storage::add_account(name, email, code).await;
+        let res = note::storage::sign_up(name, email, code).await;
 
         send_once(once_id, res);
     });
@@ -153,6 +153,25 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteAcco
 ) -> jlong {
     let handle = spawn(async move {
         let res = note::storage::delete_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addDevice(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+    fingerprint: JString,
+) -> jlong {
+    let fingerprint = env.get_string(fingerprint).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::storage::add_device(account_id, fingerprint).await;
 
         send_once(once_id, res);
     });

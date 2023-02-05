@@ -31,7 +31,7 @@ create table notes(
     folder_id   integer         not null,
     remote_id   integer         default null,
     'commit'    integer         not null,
-    title       varchar(255)    default null,
+    name        varchar(255)    not null,
     text        text            not null,
     state       varchar(8)      not null,
     foreign key(folder_id) references folders(id) on delete cascade on update no action,

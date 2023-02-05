@@ -26,7 +26,7 @@ pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(co
         .map(|opt| opt.map(|json| json.0.0))
 }
 
-pub async fn devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
+pub async fn fetch_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
     sqlx::query_as("select id, account_id from devices where account_id = ?")
         .bind(account_id)
         .fetch_all(conn)
@@ -213,12 +213,12 @@ pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id:
         .await
 }
 
-pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit: i32) -> Result<Note, Error> {
+pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, name: String, text: String, commit: i32) -> Result<Note, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into notes (folder_id, remote_id, title, text, 'commit', state) values(?, ?, ?, ?, ?, ?)")
+        sqlx::query("insert into notes (folder_id, remote_id, name, text, 'commit', state) values(?, ?, ?, ?, ?, ?)")
             .bind(folder_id.0)
             .bind(remote_id.map(|id| id.0))
-            .bind(title.as_ref())
+            .bind(name.as_str())
             .bind(text.as_str())
             .bind(commit)
             .bind(State::Clean)
@@ -233,9 +233,9 @@ pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, 
      .await
 }
 
-pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, title: Option<&str>, text: &str, commit: i32, state: State) -> Result<(), Error> {
-    sqlx::query("update notes set title=?, text=?, 'commit'=?, state=? where id=?")
-        .bind(title)
+pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, name: &str, text: &str, commit: i32, state: State) -> Result<(), Error> {
+    sqlx::query("update notes set name=?, text=?, 'commit'=?, state=? where id=?")
+        .bind(name)
         .bind(text)
         .bind(commit)
         .bind(state)

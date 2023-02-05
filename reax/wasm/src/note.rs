@@ -178,9 +178,9 @@ pub async fn note_create_note(folder_id: i32, text: String) -> Result<Uint8Array
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
-    let title = text[..ending_index].replace('\n', "");
+    let name = text[..ending_index].replace('\n', "");
 
-    let note = mavinote.create_note(RemoteId(folder_id), Some(title.as_str()), &text)
+    let note = mavinote.create_note(RemoteId(folder_id), &name, &text)
         .await
         .map_err(serialize_to_buffer)?;
 
@@ -201,16 +201,16 @@ pub async fn note_update_note(folder_id: i32, note_id: i32, commit: i32, text: S
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
-    let title = text[..ending_index].replace('\n', "");
+    let name = text[..ending_index].replace('\n', "");
 
-    let res = mavinote.update_note(RemoteId(note_id), commit, Some(title.as_str()), &text).await
+    let res = mavinote.update_note(RemoteId(note_id), commit, &name, &text).await
         .map(|_| ())
         .map_err(serialize_to_buffer)?;
 
     NOTES_MAP.get().unwrap().update_modify(folder_id, move |state| {
         if let State::Ok(vec) = state {
             if let Some(n) = vec.into_iter().find(|n| n.id == note_id) {
-                n.title = Some(title);
+                n.name = name;
                 n.text = text.to_string();
             }
         }

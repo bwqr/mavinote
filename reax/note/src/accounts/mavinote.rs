@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::models::RemoteId;
 
-pub use requests::{CreateFolderRequest, CreateNoteRequest};
+pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest};
 
 #[derive(Deserialize)]
 pub struct Token {
@@ -88,7 +88,7 @@ impl MavinoteClient {
 
 impl MavinoteClient {
     pub async fn send_code(&self, email: &str) -> Result<(), Error> {
-        let request = requests::SendCode { email: email.trim() };
+        let request = requests::SendCode { email };
 
         self.client
             .post(format!("{}/auth/send-code", self.api_url))
@@ -101,7 +101,7 @@ impl MavinoteClient {
     }
 
     pub async fn sign_up(&self, email: &str, code: &str) -> Result<Token, Error> {
-        let request = requests::SignUp { email: email.trim(), code: code.trim() };
+        let request = requests::SignUp { email, code };
 
         self.client
             .post(format!("{}/auth/sign-up", self.api_url))
@@ -124,6 +124,22 @@ impl MavinoteClient {
             .await?
             .json()
             .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn add_device(&self, fingerprint: String) -> Result<i32, Error> {
+        let request = requests::AddDevice { fingerprint };
+
+        self.client
+            .post(format!("{}/user/device", self.api_url))
+            .body(serde_json::to_string(&request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await?
+            .json::<responses::CreatedDevice>()
+            .await
+            .map(|device| device.id)
             .map_err(|e| e.into())
     }
 
@@ -181,7 +197,7 @@ impl MavinoteClient {
 
     pub async fn create_note<'a>(&self, folder_id: RemoteId, device_notes: Vec<requests::CreateNoteRequest<'a>>) -> Result<responses::CreatedNote, Error> {
         self.client
-            .post(format!("{}/note/folder/{}/note", self.api_url, folder_id.0))
+            .post(format!("{}/note/note?folder_id={}", self.api_url, folder_id.0))
             .body(serde_json::to_string(&device_notes).unwrap())
             .send()
             .await
@@ -228,6 +244,29 @@ impl MavinoteClient {
             .await
             .map_err(|e| e.into())
     }
+
+    pub async fn fetch_requests(&self) -> Result<responses::Requests, Error> {
+        self.client
+            .get(format!("{}/note/requests", self.api_url))
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn respond_requests(&self, request: RespondRequests) -> Result<(), Error> {
+        self.client
+            .post(format!("{}/note/respond-requests", self.api_url))
+            .body(serde_json::to_string(&request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
 }
 
 mod requests {
@@ -247,7 +286,7 @@ mod requests {
 
     #[derive(Serialize)]
     pub struct CreateNoteRequest<'a> {
-        pub title: Option<&'a str>,
+        pub name: &'a str,
         pub text: &'a str,
         pub device_id: i32,
     }
@@ -267,6 +306,31 @@ mod requests {
     #[derive(Serialize)]
     pub struct SendCode<'a> {
         pub email: &'a str,
+    }
+
+    #[derive(Serialize)]
+    pub struct AddDevice {
+        pub fingerprint: String,
+    }
+
+    #[derive(Serialize)]
+    pub struct RespondRequests {
+        pub device_id: i32,
+        pub folders: Vec<RespondFolderRequest>,
+        pub notes: Vec<RespondNoteRequest>,
+    }
+
+    #[derive(Serialize)]
+    pub struct RespondFolderRequest {
+        pub folder_id: i32,
+        pub name: String,
+    }
+
+    #[derive(Serialize)]
+    pub struct RespondNoteRequest {
+        pub note_id: i32,
+        pub name: String,
+        pub text: String,
     }
 }
 
@@ -292,6 +356,11 @@ pub mod responses {
     }
 
     #[derive(Deserialize)]
+    pub struct CreatedDevice {
+        pub id: i32,
+    }
+
+    #[derive(Debug, Deserialize)]
     pub struct Folder {
         pub id: i32,
         pub state: State,
@@ -303,7 +372,7 @@ pub mod responses {
         }
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct DeviceFolder {
         pub sender_device_id: i32,
         pub name: String,
@@ -321,7 +390,7 @@ pub mod responses {
         }
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct Note {
         pub id: i32,
         pub commit: i32,
@@ -335,10 +404,10 @@ pub mod responses {
         }
     }
 
-    #[derive(Deserialize)]
+    #[derive(Debug, Deserialize)]
     pub struct DeviceNote {
         pub sender_device_id: i32,
-        pub title: Option<String>,
+        pub name: String,
         pub text: String,
     }
 
@@ -353,5 +422,23 @@ pub mod responses {
         pub fn note_id(&self) -> RemoteId {
             RemoteId(self.note_id)
         }
+    }
+
+    #[derive(Deserialize)]
+    pub struct Requests {
+        pub folder_requests: Vec<FolderRequest>,
+        pub note_requests: Vec<NoteRequest>,
+    }
+
+    #[derive(Deserialize)]
+    pub struct FolderRequest {
+        pub folder_id: i32,
+        pub device_id: i32,
+    }
+
+    #[derive(Deserialize)]
+    pub struct NoteRequest {
+        pub note_id: i32,
+        pub device_id: i32,
     }
 }
