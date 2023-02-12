@@ -5,5 +5,5 @@ use derive::Sanitize;
 
 #[derive(Sanitize, Deserialize)]
 pub struct AddDevice {
-    pub fingerprint: String,
+    pub pubkey: String,
 }

@@ -11,6 +11,7 @@ use actix_web::{
     post,
     web::{block, Data, Json},
 };
+use base64::prelude::{Engine, BASE64_STANDARD};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
 use rand::seq::SliceRandom;
@@ -18,15 +19,23 @@ use rand::seq::SliceRandom;
 use crate::{
     models::PendingUser,
     requests::{CreatePendingDevice, SendCode, SignUp},
-    responses::TokenResponse,
+    responses,
 };
 
-#[post("sign-up")]
 pub async fn sign_up(
     crypto: Data<Crypto>,
     pool: Data<Pool>,
     request: Sanitized<Json<SignUp>>,
-) -> Result<Json<TokenResponse>, HttpError> {
+) -> Result<Json<responses::Token>, HttpError> {
+    match BASE64_STANDARD.decode(&request.pubkey) {
+        Ok(bytes) if bytes.len() == 32 => {},
+        _ => return Err(HttpError::unprocessable_entity("invalid_pubkey")),
+    };
+
+    if request.password.len() < 32 || request.password.len() > 64 {
+        return Err(HttpError::unprocessable_entity("invalid_password"));
+    }
+
     let token = block(move || -> Result<String, HttpError> {
         let mut conn = pool.get().unwrap();
 
@@ -62,9 +71,14 @@ pub async fn sign_up(
                 _ => e.into(),
             })?;
 
-        let (device_id, _) = diesel::insert_into(devices::table)
-            .values(devices::user_id.eq(user_id))
-            .get_result::<(i32, i32)>(&mut conn)?;
+        let device_id = diesel::insert_into(devices::table)
+            .values((
+                devices::user_id.eq(user_id),
+                devices::pubkey.eq(&request.pubkey),
+                devices::password.eq(crypto.sign512(&request.password)),
+            ))
+            .get_result::<(i32, i32, String, String)>(&mut conn)?
+            .0;
 
         diesel::delete(pending_users::table)
             .filter(pending_users::email.eq(&request.email))
@@ -74,7 +88,7 @@ pub async fn sign_up(
     })
     .await??;
 
-    Ok(Json(TokenResponse::new(token)))
+    Ok(Json(responses::Token::new(token)))
 }
 
 #[post("send-code")]
@@ -116,13 +130,13 @@ pub async fn send_code(
     Ok(Json(HttpMessage::success()))
 }
 
-#[post("fingerprint")]
+#[post("pubkey")]
 pub async fn create_pending_device(
     pool: Data<Pool>,
     request: Sanitized<Json<CreatePendingDevice>>,
 ) -> Result<Json<HttpMessage>, HttpError> {
-    if request.fingerprint.len() != 16 {
-        return Err(HttpError::unprocessable_entity("invalid_fingerprint"));
+    if request.pubkey.len() == 0 {
+        return Err(HttpError::unprocessable_entity("invalid_pubkey"));
     }
 
     block(move || {
@@ -140,17 +154,15 @@ pub async fn create_pending_device(
         diesel::insert_into(pending_devices::table)
             .values((
                 pending_devices::email.eq(&request.email),
-                pending_devices::fingerprint.eq(&request.fingerprint)
+                pending_devices::pubkey.eq(&request.pubkey),
             ))
             .execute(&mut conn)
-            .map_err(|e| {
-                match e {
-                    diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UniqueViolation,
-                        _,
-                    ) => HttpError::conflict("fingerprint_already_exists"),
-                    _ => e.into()
-                }
+            .map_err(|e| match e {
+                diesel::result::Error::DatabaseError(
+                    diesel::result::DatabaseErrorKind::UniqueViolation,
+                    _,
+                ) => HttpError::conflict("fingerprint_already_exists"),
+                _ => e.into(),
             })?;
 
         Result::<(), HttpError>::Ok(())
@@ -158,4 +170,208 @@ pub async fn create_pending_device(
     .await??;
 
     Ok(Json(HttpMessage::success()))
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::web::{Data, Json};
+    use base::{
+        crypto::Crypto, sanitize::Sanitized, schema::{devices, pending_users, users}, types::Pool, HttpError,
+    };
+    use base64::prelude::{Engine, BASE64_STANDARD};
+    use diesel::{prelude::*, r2d2::ConnectionManager, PgConnection};
+
+    use crate::requests;
+
+    use super::sign_up;
+
+    fn create_pool() -> Pool {
+        let conn_info = "postgres://mavinote:toor@127.0.0.1/mavinote_test";
+        let manager = ConnectionManager::<PgConnection>::new(conn_info);
+
+        let pool = Pool::builder()
+            .build(manager)
+            .expect("Failed to create pool.");
+
+        pool.get().unwrap().begin_test_transaction().unwrap();
+
+        pool
+    }
+
+    #[actix_web::test]
+    async fn it_returns_invalid_pubkey_error_if_pubkey_is_not_base64_encoded_valid_pubkey_when_sign_up_is_called(
+    ) {
+        let pool = create_pool();
+
+        let request = requests::SignUp {
+            email: "".to_string(),
+            code: "".to_string(),
+            pubkey: "".to_string(),
+            password: "".to_string(),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool),
+            Sanitized(Json(request)),
+        )
+        .await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("invalid_pubkey"),
+            res.map(|_| ()).unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_email_not_found_error_if_there_is_no_pending_users_row_for_given_email_when_sign_up_is_called(
+    ) {
+        let pool = create_pool();
+
+        let request = requests::SignUp {
+            email: "".to_string(),
+            code: "".to_string(),
+            pubkey: BASE64_STANDARD.encode([0; 32]),
+            password: "1234".repeat(10),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool),
+            Sanitized(Json(request)),
+        )
+        .await;
+
+        assert_eq!(
+            HttpError::not_found("email_not_found"),
+            res.map(|_| ()).unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_invalid_password_error_if_password_is_not_between_32_and_64_char_when_sign_up_is_called() {
+        let pool = create_pool();
+
+        diesel::insert_into(pending_users::table)
+            .values((
+                pending_users::email.eq("EMAIL"),
+                pending_users::code.eq("11223344"),
+            ))
+            .execute(&mut pool.get().unwrap())
+            .unwrap();
+
+        let short_password_req = requests::SignUp {
+            email: "EMAIL".to_string(),
+            code: "11223344".to_string(),
+            pubkey: BASE64_STANDARD.encode([0; 32]),
+            password: "1234567890".repeat(3),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool.clone()),
+            Sanitized(Json(short_password_req)),
+        )
+        .await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("invalid_password"),
+            res.map(|_| ()).unwrap_err()
+        );
+
+        let long_password_req = requests::SignUp {
+            email: "EMAIL".to_string(),
+            code: "11223344".to_string(),
+            pubkey: BASE64_STANDARD.encode([0; 32]),
+            password: "1234567890".repeat(7),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool),
+            Sanitized(Json(long_password_req)),
+        )
+        .await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("invalid_password"),
+            res.map(|_| ()).unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_invalid_code_error_if_the_code_for_given_email_is_incorrect_when_sign_up_is_called() {
+        let pool = create_pool();
+
+        diesel::insert_into(pending_users::table)
+            .values((
+                pending_users::email.eq("EMAIL"),
+                pending_users::code.eq("11223344"),
+            ))
+            .execute(&mut pool.get().unwrap())
+            .unwrap();
+
+        let request = requests::SignUp {
+            email: "EMAIL".to_string(),
+            code: "44332211".to_string(),
+            pubkey: BASE64_STANDARD.encode([0; 32]),
+            password: "1234".repeat(10),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool),
+            Sanitized(Json(request)),
+        )
+        .await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("invalid_code"),
+            res.map(|_| ()).unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_creates_user_and_device_when_sign_up_is_called() {
+        let pool = create_pool();
+
+        diesel::insert_into(pending_users::table)
+            .values((
+                pending_users::email.eq("EMAIL"),
+                pending_users::code.eq("11223344"),
+            ))
+            .execute(&mut pool.get().unwrap())
+            .unwrap();
+
+        let request = requests::SignUp {
+            email: "EMAIL".to_string(),
+            code: "11223344".to_string(),
+            pubkey: BASE64_STANDARD.encode([1; 32]),
+            password: "PASSWORD".repeat(4),
+        };
+
+        let res = sign_up(
+            Data::new(Crypto::new("SECRET")),
+            Data::new(pool.clone()),
+            Sanitized(Json(request)),
+        )
+        .await;
+
+        assert!(res.is_ok());
+
+        let user = users::table
+            .filter(users::email.eq("EMAIL"))
+            .select((users::id, users::email))
+            .first::<(i32, String)>(&mut pool.get().unwrap());
+
+        assert!(user.is_ok());
+
+        let device = devices::table
+            .filter(devices::user_id.eq(user.unwrap().0))
+            .filter(devices::pubkey.eq(BASE64_STANDARD.encode([1; 32])))
+            .select(devices::id)
+            .first::<i32>(&mut pool.get().unwrap());
+
+        assert!(device.is_ok());
+    }
 }

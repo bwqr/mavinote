@@ -13,7 +13,7 @@ use base::{
 };
 
 use crate::{
-    models::Device,
+    models::{Device, DEVICE_COLUMNS},
     requests::AddDevice,
     responses::CreatedDevice,
 };
@@ -27,6 +27,7 @@ pub async fn fetch_devices(
         devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load(&mut pool.get().unwrap())
     })
     .await??;
@@ -43,36 +44,37 @@ pub async fn add_device(
     let device_id = block(move || {
         let mut conn = pool.get().unwrap();
 
-        let (email, fingerprint, created_at) = pending_devices::table
-            .filter(pending_devices::fingerprint.eq(&request.fingerprint))
+        let (email, pubkey, created_at) = pending_devices::table
+            .filter(pending_devices::pubkey.eq(&request.pubkey))
             .filter(users::id.eq(device.user_id))
             .inner_join(users::table.on(pending_devices::email.eq(users::email)))
             .select((
                 pending_devices::email,
-                pending_devices::fingerprint,
+                pending_devices::pubkey,
                 pending_devices::created_at,
             ))
             .first::<(String, String, NaiveDateTime)>(&mut conn)?;
 
-        let minutes_since_fingerprint_received = Utc::now()
+        let minutes_since_pubkey_received = Utc::now()
             .naive_utc()
             .signed_duration_since(created_at)
             .num_minutes();
 
-        if minutes_since_fingerprint_received > 5 {
-            return Err(HttpError::unprocessable_entity("fingerprint_expired"));
+        if minutes_since_pubkey_received > 5 {
+            return Err(HttpError::unprocessable_entity("pubkey_expired"));
         }
 
         diesel::delete(pending_devices::table)
             .filter(pending_devices::email.eq(email))
-            .filter(pending_devices::fingerprint.eq(fingerprint))
+            .filter(pending_devices::pubkey.eq(pubkey))
             .execute(&mut conn)?;
 
-        let device: Device = diesel::insert_into(devices::table)
+        let device_id = diesel::insert_into(devices::table)
             .values(devices::user_id.eq(device.user_id))
-            .get_result(&mut conn)?;
+            .get_result::<(i32, i32, String, String)>(&mut conn)?
+            .0;
 
-        Result::<i32, HttpError>::Ok(device.id)
+        Result::<i32, HttpError>::Ok(device_id)
     })
     .await??;
 

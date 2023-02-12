@@ -12,7 +12,7 @@ use base::{
     types::Pool,
     HttpError, HttpMessage,
 };
-use user::models::Device;
+use user::models::{Device, DEVICE_COLUMNS};
 
 use crate::{
     models::{Folder, Note, State},
@@ -62,6 +62,7 @@ pub async fn create_folder(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = folders_to_create
@@ -188,6 +189,7 @@ pub async fn create_note(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = notes_to_create
@@ -297,6 +299,7 @@ pub async fn update_note(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = device_notes
@@ -637,7 +640,8 @@ mod tests {
 
         diesel::insert_into(devices::table)
             .values(devices::user_id.eq(user_id))
-            .get_result(conn)
+            .get_result::<(i32, i32, String, String)>(conn)
+            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2 })
     }
 
     fn create_folder(

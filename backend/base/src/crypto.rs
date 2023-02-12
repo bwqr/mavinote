@@ -1,3 +1,4 @@
+use base64::prelude::{Engine, BASE64_STANDARD};
 use jsonwebtoken::{errors::Error as JWTError, DecodingKey, EncodingKey, Header, Validation};
 use ring::hmac;
 use serde::{de::DeserializeOwned, Serialize};
@@ -13,15 +14,11 @@ pub struct Crypto {
 
 impl Crypto {
     pub fn new(secret: &str) -> Self {
-        let mut validation = Validation::default();
-        validation.set_required_spec_claims::<&'_ str>(&[]);
-        validation.validate_exp = false;
-
         Self {
             encoding_key: EncodingKey::from_secret(secret.as_bytes()),
             decoding_key: DecodingKey::from_secret(secret.as_bytes()),
             header: Header::default(),
-            validation,
+            validation: Validation::new(jsonwebtoken::Algorithm::HS256),
             hmac512_key: hmac::Key::new(hmac::HMAC_SHA512, secret.as_bytes()),
         }
     }
@@ -35,6 +32,6 @@ impl Crypto {
     }
 
     pub fn sign512(&self, message: &str) -> String {
-        base64::encode(hmac::sign(&self.hmac512_key, message.as_bytes()))
+        BASE64_STANDARD.encode(hmac::sign(&self.hmac512_key, message.as_bytes()))
     }
 }

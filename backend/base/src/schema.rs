@@ -37,6 +37,8 @@ diesel::table! {
     devices (id) {
         id -> Int4,
         user_id -> Int4,
+        pubkey -> Varchar,
+        password -> Varchar,
     }
 }
 
@@ -81,9 +83,10 @@ diesel::table! {
 }
 
 diesel::table! {
-    pending_devices (email, fingerprint) {
+    pending_devices (email, pubkey) {
         email -> Varchar,
-        fingerprint -> Varchar,
+        pubkey -> Varchar,
+        password -> Varchar,
         created_at -> Timestamp,
     }
 }

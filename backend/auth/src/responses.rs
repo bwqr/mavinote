@@ -1,11 +1,11 @@
 use serde::Serialize;
 
 #[derive(Serialize)]
-pub struct TokenResponse {
+pub struct Token {
     token: String,
 }
 
-impl TokenResponse {
+impl Token {
     pub fn new(token: String) -> Self {
         Self { token }
     }

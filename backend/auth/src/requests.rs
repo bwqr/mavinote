@@ -5,7 +5,7 @@ use serde::Deserialize;
 
 #[derive(Deserialize, Sanitize)]
 pub struct Login {
-    pub email: String,
+    pub device_id: i32,
     pub password: String,
 }
 
@@ -13,6 +13,8 @@ pub struct Login {
 pub struct SignUp {
     pub email: String,
     pub code: String,
+    pub pubkey: String,
+    pub password: String,
 }
 
 #[derive(Deserialize, Sanitize)]
@@ -23,5 +25,5 @@ pub struct SendCode {
 #[derive(Deserialize, Sanitize)]
 pub struct CreatePendingDevice {
     pub email: String,
-    pub fingerprint: String,
+    pub pubkey: String,
 }

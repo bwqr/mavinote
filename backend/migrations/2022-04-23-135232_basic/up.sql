@@ -22,15 +22,18 @@ create table pending_users(
 
 create table devices(
     id      serial  primary key not null,
-    user_id int not null,
+    user_id int         not null,
+    pubkey  varchar(64) not null,
+    password    varchar(128) not null,
     constraint  fk_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action
 );
 
 create table pending_devices(
     email       varchar(255)    not null,
-    fingerprint varchar(64)     not null,
+    pubkey      varchar(64)     not null,
+    password    varchar(128)    not null,
     created_at  timestamp       not null default current_timestamp,
-    primary key (email, fingerprint),
+    primary key (email, pubkey),
     constraint  fk_pending_devices_email foreign key (email) references users (email) on delete cascade on update no action
 );
 

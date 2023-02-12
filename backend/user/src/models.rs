@@ -15,7 +15,10 @@ use serde::Serialize;
 pub struct Device {
     pub id: i32,
     pub user_id: i32,
+    pub pubkey: String,
 }
+
+pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey) = (devices::id, devices::user_id, devices::pubkey);
 
 #[derive(Queryable, Serialize)]
 pub struct User {
@@ -31,13 +34,13 @@ impl FromRequest for Device {
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
         let conn = req
             .app_data::<Data<Pool>>()
-            .ok_or("Pool could not extracted from request in impl FromRequest for User")
+            .ok_or("Pool could not be extracted from request in impl FromRequest for Device")
             .map(|pool| pool.get().unwrap());
 
         let device_id = req
             .extensions()
             .get::<Token>()
-            .ok_or("Token could not extracted from request in impl FromRequest for User")
+            .ok_or("Token could not be extracted from request in impl FromRequest for Device")
             .map(|token| token.device_id.clone());
 
         Box::pin(async move {
@@ -53,6 +56,7 @@ impl FromRequest for Device {
             block(move || {
                 devices::table
                     .find(device_id)
+                    .select(DEVICE_COLUMNS)
                     .first::<Device>(&mut conn)
                     .map_err(|e| e.into())
             })
