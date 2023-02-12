@@ -7,6 +7,20 @@ pub struct LocalId(pub i32);
 #[derive(Copy, Clone)]
 pub struct RemoteId(pub i32);
 
+#[cfg_attr(feature = "storage", derive(Type))]
+pub enum StoreKey {
+    Version,
+    IdentityPrivKey,
+    IdentityPubKey,
+    Password,
+}
+
+#[cfg_attr(feature = "storage", derive(FromRow))]
+pub struct StoreValue {
+    pub key: StoreKey,
+    pub value: String,
+}
+
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Account {

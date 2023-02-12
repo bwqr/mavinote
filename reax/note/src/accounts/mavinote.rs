@@ -100,8 +100,8 @@ impl MavinoteClient {
             .map(|_| ())
     }
 
-    pub async fn sign_up(&self, email: &str, code: &str) -> Result<Token, Error> {
-        let request = requests::SignUp { email, code };
+    pub async fn sign_up(&self, email: &str, code: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
+        let request = requests::SignUp { email, code, pubkey, password };
 
         self.client
             .post(format!("{}/auth/sign-up", self.api_url))
@@ -301,6 +301,8 @@ mod requests {
     pub struct SignUp<'a> {
         pub email: &'a str,
         pub code: &'a str,
+        pub pubkey: &'a str,
+        pub password: &'a str,
     }
 
     #[derive(Serialize)]

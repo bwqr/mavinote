@@ -40,6 +40,6 @@ create table notes(
 );
 
 create table store(
-    key     varchar(255)    not null    unique,
+    key     varchar(128)    not null    unique,
     value   text            not null
 );

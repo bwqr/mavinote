@@ -27,7 +27,7 @@ pub async fn sync() -> Result<(), Error> {
 async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Account) -> Result<(), Error> {
     log::debug!("syncing mavinote account with id {}", account.id);
 
-    let mavinote = super::mavinote_client(account.id).await?.unwrap();
+    let mavinote = super::mavinote_client(conn, account.id).await?.unwrap();
 
     sync_devices(conn, &mavinote, account.id).await?;
 
