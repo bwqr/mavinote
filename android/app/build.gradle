@@ -29,21 +29,21 @@ android {
     }
 
     buildTypes {
-        def ApiUrl = 'API_ENDPOINT'
-        def NotifyUrl = 'NOTIFY_URL'
+        def ApiUrl = 'API_URL'
+        def WsUrl = 'WS_URL'
 
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             buildConfigField 'String', ApiUrl, '"http://ec2-3-70-235-190.eu-central-1.compute.amazonaws.com/api"'
-            buildConfigField 'String', NotifyUrl, '"ws://ec2-3-70-235-190.eu-central-1.compute.amazonaws.com/api/notify/connect"'
+            buildConfigField 'String', WsUrl, '"ws://ec2-3-70-235-190.eu-central-1.compute.amazonaws.com/api/notify/connect"'
         }
 
         debug {
             debuggable true
 
             buildConfigField 'String', ApiUrl, "\"${localProperties.getProperty("endpoint.apiUrl")}\""
-            buildConfigField 'String', NotifyUrl, "\"${localProperties.getProperty("endpoint.notifyUrl")}\""
+            buildConfigField 'String', WsUrl, "\"${localProperties.getProperty("endpoint.wsUrl")}\""
         }
     }
     compileOptions {

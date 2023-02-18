@@ -12,9 +12,7 @@ import kotlinx.coroutines.flow.Flow
 
 class NoteViewModel {
     companion object {
-        fun init() {
-            _init()
-        }
+        fun init() = _init()
 
         suspend fun sendCode(email: String): Unit = Runtime.runUnitOnce { _sendCode(it, email) }
 
@@ -45,8 +43,8 @@ class NoteViewModel {
         suspend fun deleteAccount(accountId: Int): Unit =
             Runtime.runUnitOnce { _deleteAccount(it, accountId) }
 
-        suspend fun authorizeMavinoteAccount(accountId: Int, password: String): Unit =
-            Runtime.runUnitOnce { _authorizeMavinoteAccount(it, accountId, password) }
+        suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
+            Runtime.runUnitOnce { _addDevice(it, accountId, fingerprint) }
 
         fun folders(): Flow<List<Folder>> = Runtime.runStream({
             deserializeList(it) { deserializer ->
@@ -88,7 +86,7 @@ class NoteViewModel {
     }
 }
 
-private external fun _init()
+private external fun _init(): Long
 
 private external fun _sendCode(onceId: Int, email: String): Long
 private external fun _sync(onceId: Int): Long
@@ -97,7 +95,7 @@ private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _signUp(onceId: Int, name: String, email: String, code: String): Long
 private external fun _deleteAccount(onceId: Int, accountId: Int): Long
-private external fun _authorizeMavinoteAccount(onceId: Int, accountId: Int, password: String): Long
+private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _folders(streamId: Int): Long
 private external fun _folder(onceId: Int, folderId: Int): Long
 private external fun _createFolder(onceId: Int, accountId: Int, name: String): Long

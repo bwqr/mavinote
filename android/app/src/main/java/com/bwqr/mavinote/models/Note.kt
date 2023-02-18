@@ -9,7 +9,7 @@ data class Note constructor(
     val folderId: Int,
     val remoteId: Int?,
     val commit: Int,
-    val title: String?,
+    val name: String,
     val text: String,
     val state: State
 ) {
@@ -22,7 +22,7 @@ data class Note constructor(
                 deserializer.deserialize_i32(),
                 deserializeOption(deserializer) { it.deserialize_i32() },
                 deserializer.deserialize_i32(),
-                deserializeOption(deserializer) { it.deserialize_str() },
+                deserializer.deserialize_str(),
                 deserializer.deserialize_str(),
                 State.deserialize(deserializer)
             )

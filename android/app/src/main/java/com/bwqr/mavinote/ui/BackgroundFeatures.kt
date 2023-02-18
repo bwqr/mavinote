@@ -5,8 +5,6 @@ import androidx.compose.material.Scaffold
 import androidx.compose.material.rememberScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateMapOf
-import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,18 +15,29 @@ import androidx.navigation.navArgument
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.models.NoteError
+import com.bwqr.mavinote.ui.account.*
+import com.bwqr.mavinote.ui.device.DeviceAdd
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
-sealed class NoteScreens(val route: String) {
-    object Accounts : NoteScreens("accounts")
-    object AccountAdd : NoteScreens("account-add")
-    object Account : NoteScreens("account/{accountId}")
-    object Folders : NoteScreens("folders")
-    object FolderCreate : NoteScreens("folder-create")
-    object Notes : NoteScreens("notes/{folderId}")
-    object Note : NoteScreens("note?noteId={noteId}&folderId={folderId}")
+open class Screen(val route: String) {
+    sealed class Note(route: String) : Screen(route) {
+        object Folders : Screen.Note("folders")
+        object FolderCreate : Screen.Note("folder-create")
+        object Notes : Screen.Note("notes/{folderId}")
+        object Note : Screen.Note("note?noteId={noteId}&folderId={folderId}")
+    }
+
+    sealed class Account(route: String) : Screen(route) {
+        object Accounts : Screen.Account("accounts")
+        object AccountAdd : Screen.Account("account-add")
+        object Account : Screen.Account("account/{accountId}")
+    }
+
+    sealed class Device(route: String) : Screen(route) {
+        object DeviceAdd : Screen.Device("device-add?accountId={accountId}")
+    }
 }
 
 @Composable
@@ -44,9 +53,7 @@ fun BackgroundFeatures() {
                     is BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
                         "No internet connection"
                     )
-                    is BusEvent.DisplayNotAuthorized -> scaffoldState.snackbarHostState.showSnackbar(
-                        "Account is not authorized ${event.accountId}"
-                    )
+                    is BusEvent.UnhandledError -> scaffoldState.snackbarHostState.showSnackbar(event.error)
                 }
             }
         }
@@ -62,24 +69,28 @@ fun BackgroundFeatures() {
         scaffoldState = scaffoldState,
         floatingActionButton = {
             when (backstackEntry.value?.destination?.route) {
-                NoteScreens.Folders.route -> FolderFab(navController)
-                NoteScreens.Notes.route -> NotesFab(
+                Screen.Note.Folders.route -> FoldersFab(navController)
+                Screen.Note.Notes.route -> NotesFab(
                     navController,
                     navController.currentBackStackEntry?.arguments?.getInt("folderId")!!
                 )
-                NoteScreens.Accounts.route -> AccountsFab(navController)
+                Screen.Account.Accounts.route -> AccountsFab(navController)
+                Screen.Account.Account.route -> AccountFab(
+                    navController,
+                    navController.currentBackStackEntry?.arguments?.getInt("accountId")!!
+                )
             }
         },
     ) {
 
         NavHost(
             navController,
-            startDestination = NoteScreens.Folders.route,
+            startDestination = Screen.Note.Folders.route,
             modifier = Modifier.padding(it)
         ) {
-            composable(NoteScreens.Accounts.route) { Accounts(navController) }
+            composable(Screen.Account.Accounts.route) { Accounts(navController) }
             composable(
-                NoteScreens.Account.route,
+                Screen.Account.Account.route,
                 arguments = listOf(navArgument("accountId") { type = NavType.IntType })
             ) { backstackEntry ->
                 Account(
@@ -87,13 +98,22 @@ fun BackgroundFeatures() {
                     backstackEntry.arguments?.getInt("accountId")!!
                 )
             }
-            composable(NoteScreens.AccountAdd.route) { AccountAdd(navController) }
+            composable(Screen.Account.AccountAdd.route) { AccountAdd(navController) }
+            composable(
+                Screen.Device.DeviceAdd.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                DeviceAdd(
+                    navController,
+                    backstackEntry.arguments?.getInt("accountId")!!
+                )
+            }
 
-            composable(NoteScreens.Folders.route) { Folders(navController) }
-            composable(NoteScreens.FolderCreate.route) { FolderCreate(navController) }
+            composable(Screen.Note.Folders.route) { Folders(navController) }
+            composable(Screen.Note.FolderCreate.route) { FolderCreate(navController) }
 
             composable(
-                NoteScreens.Notes.route,
+                Screen.Note.Notes.route,
                 arguments = listOf(navArgument("folderId") { type = NavType.IntType })
             ) { backStackEntry ->
                 Notes(
@@ -103,7 +123,7 @@ fun BackgroundFeatures() {
             }
 
             composable(
-                NoteScreens.Note.route,
+                Screen.Note.Note.route,
                 arguments = listOf(
                     navArgument("folderId") { nullable = true },
                     navArgument("noteId") { nullable = true },

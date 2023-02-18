@@ -42,7 +42,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                 val note = NoteViewModel.note(noteId)
 
                 if (note != null) {
-                    title = note.title
+                    title = note.name
                     text = note.text
                 } else {
                     Log.e("Note", "noteId $noteId does not exist")

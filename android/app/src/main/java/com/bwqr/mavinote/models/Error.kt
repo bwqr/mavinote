@@ -23,8 +23,10 @@ open class NoteError : Error() {
     fun handle() {
         when (this) {
             is MavinoteError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
-            is MavinoteError.Unauthorized -> this.accountId?.let { Bus.emit(BusEvent.DisplayNotAuthorized(it)) }
-            else -> Log.e("ReaxError", "Unhandled error, $this")
+            else -> {
+                Log.e("ReaxError", "Unhandled error, $this")
+                Bus.emit(BusEvent.UnhandledError("$this"))
+            }
         }
     }
 }

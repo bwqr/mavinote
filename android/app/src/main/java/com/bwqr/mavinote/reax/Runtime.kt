@@ -134,7 +134,7 @@ class Runtime private constructor(filesDir: String) {
     }
 
     init {
-        _init(BuildConfig.API_ENDPOINT, filesDir)
+        _init(BuildConfig.API_URL, BuildConfig.WS_URL, filesDir)
 
         thread {
             _initHandler { id, isStream, bytes ->
@@ -187,6 +187,6 @@ class Runtime private constructor(filesDir: String) {
     }
 }
 
-private external fun _init(apiUrl: String, storageDir: String)
+private external fun _init(apiUrl: String, wsUrl: String, storageDir: String)
 private external fun _initHandler(callback: (streamId: Int, isStream: Boolean, bytes: ByteArray) -> Unit)
 private external fun _abort(joinHandle: Long)
