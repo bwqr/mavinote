@@ -1,3 +1,4 @@
+drop trigger pending_devices_updated_at on pending_devices;
 drop trigger pending_users_updated_at on pending_users;
 drop trigger notes_updated_at on notes;
 

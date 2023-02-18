@@ -6,11 +6,8 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base = { path = "../base" }
-user = { path = "../user" }
-
 actix = "0.13"
-actix-web.workspace = true
 actix-web-actors = "4.0.1"
 
 log.workspace = true
+serde.workspace = true

@@ -5,7 +5,6 @@ use actix_web::web::{scope, ServiceConfig};
 mod handlers;
 pub mod models;
 mod requests;
-mod responses;
 
 pub fn register(config: &mut ServiceConfig) {
     config.service(

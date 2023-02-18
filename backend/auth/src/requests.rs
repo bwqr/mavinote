@@ -3,9 +3,10 @@ use derive::Sanitize;
 
 use serde::Deserialize;
 
-#[derive(Deserialize, Sanitize)]
+#[derive(Deserialize)]
 pub struct Login {
-    pub device_id: i32,
+    pub email: String,
+    pub pubkey: String,
     pub password: String,
 }
 
@@ -26,4 +27,5 @@ pub struct SendCode {
 pub struct CreatePendingDevice {
     pub email: String,
     pub pubkey: String,
+    pub password: String,
 }

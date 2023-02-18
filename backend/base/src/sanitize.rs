@@ -1,6 +1,6 @@
 use std::ops::Deref;
 
-use actix_web::{web::Json, FromRequest};
+use actix_web::{web::{Json, Query}, FromRequest};
 use futures::{future::Map, FutureExt};
 
 pub struct Sanitized<T: Sanitize>(pub T);
@@ -42,6 +42,17 @@ where
 }
 
 impl<T> Sanitize for Json<T>
+where
+    T: Sanitize,
+{
+    fn sanitize(mut self) -> Self {
+        self.0 = self.0.sanitize();
+
+        self
+    }
+}
+
+impl<T> Sanitize for Query<T>
 where
     T: Sanitize,
 {

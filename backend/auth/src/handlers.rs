@@ -1,6 +1,6 @@
 use base::{
     crypto::Crypto,
-    models::Token,
+    models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
     sanitize::Sanitized,
     schema::{devices, pending_devices, pending_users, users},
     types::Pool,
@@ -8,8 +8,10 @@ use base::{
 };
 
 use actix_web::{
+    http::StatusCode,
     post,
-    web::{block, Data, Json},
+    web::{block, Data, Json, Payload, Query},
+    HttpRequest, HttpResponse,
 };
 use base64::prelude::{Engine, BASE64_STANDARD};
 use chrono::{NaiveDateTime, Utc};
@@ -18,9 +20,40 @@ use rand::seq::SliceRandom;
 
 use crate::{
     models::PendingUser,
-    requests::{CreatePendingDevice, SendCode, SignUp},
+    requests::{CreatePendingDevice, Login, SendCode, SignUp},
     responses,
 };
+
+pub async fn login(
+    crypto: Data<Crypto>,
+    pool: Data<Pool>,
+    request: Json<Login>,
+) -> Result<Json<responses::Token>, HttpError> {
+    let token = block(move || -> Result<String, HttpError> {
+        let device_id = devices::table
+            .filter(devices::pubkey.eq(&request.pubkey))
+            .filter(devices::password.eq(crypto.sign512(&request.password)))
+            .filter(users::email.eq(&request.email))
+            .inner_join(users::table)
+            .select(devices::id)
+            .first::<i32>(&mut pool.get().unwrap())
+            .map_err(|e| match e {
+                diesel::result::Error::NotFound => HttpError {
+                    code: StatusCode::UNAUTHORIZED,
+                    error: "invalid_credentials",
+                    message: None,
+                },
+                e => e.into(),
+            })?;
+
+        crypto
+            .encode(&Token::device(device_id))
+            .map_err(|e| e.into())
+    })
+    .await??;
+
+    Ok(Json(responses::Token { token }))
+}
 
 pub async fn sign_up(
     crypto: Data<Crypto>,
@@ -28,7 +61,7 @@ pub async fn sign_up(
     request: Sanitized<Json<SignUp>>,
 ) -> Result<Json<responses::Token>, HttpError> {
     match BASE64_STANDARD.decode(&request.pubkey) {
-        Ok(bytes) if bytes.len() == 32 => {},
+        Ok(bytes) if bytes.len() == 32 => {}
         _ => return Err(HttpError::unprocessable_entity("invalid_pubkey")),
     };
 
@@ -84,11 +117,13 @@ pub async fn sign_up(
             .filter(pending_users::email.eq(&request.email))
             .execute(&mut conn)?;
 
-        crypto.encode(&Token::new(device_id)).map_err(|e| e.into())
+        crypto
+            .encode(&Token::device(device_id))
+            .map_err(|e| e.into())
     })
     .await??;
 
-    Ok(Json(responses::Token::new(token)))
+    Ok(Json(responses::Token { token }))
 }
 
 #[post("send-code")]
@@ -130,16 +165,22 @@ pub async fn send_code(
     Ok(Json(HttpMessage::success()))
 }
 
-#[post("pubkey")]
+#[post("request-verification")]
 pub async fn create_pending_device(
+    crypto: Data<Crypto>,
     pool: Data<Pool>,
     request: Sanitized<Json<CreatePendingDevice>>,
-) -> Result<Json<HttpMessage>, HttpError> {
-    if request.pubkey.len() == 0 {
-        return Err(HttpError::unprocessable_entity("invalid_pubkey"));
+) -> Result<Json<responses::Token>, HttpError> {
+    match BASE64_STANDARD.decode(&request.pubkey) {
+        Ok(bytes) if bytes.len() == 32 => {}
+        _ => return Err(HttpError::unprocessable_entity("invalid_pubkey")),
+    };
+
+    if request.password.len() < 32 || request.password.len() > 64 {
+        return Err(HttpError::unprocessable_entity("invalid_password"));
     }
 
-    block(move || {
+    let token = block(move || {
         let mut conn = pool.get().unwrap();
 
         let user_exists = diesel::select(diesel::dsl::exists(
@@ -151,32 +192,87 @@ pub async fn create_pending_device(
             return Err(HttpError::unprocessable_entity("email_not_found"));
         }
 
-        diesel::insert_into(pending_devices::table)
+        let password = crypto.sign512(&request.password);
+
+        let existing_dev_pass = devices::table
+            .filter(devices::pubkey.eq(&request.pubkey))
+            .filter(users::email.eq(&request.email))
+            .inner_join(users::table)
+            .select(devices::password)
+            .first::<String>(&mut conn)
+            .optional()?;
+
+        if let Some(pass) = existing_dev_pass {
+            return if pass == password {
+                Err(HttpError::conflict("device_already_exists"))
+            } else {
+                Err(HttpError::conflict("device_exists_but_password_mismatch"))
+            };
+        }
+
+        let (pending_device_id, _, _, _, _) = diesel::insert_into(pending_devices::table)
             .values((
                 pending_devices::email.eq(&request.email),
                 pending_devices::pubkey.eq(&request.pubkey),
+                pending_devices::password.eq(&password),
             ))
-            .execute(&mut conn)
-            .map_err(|e| match e {
-                diesel::result::Error::DatabaseError(
-                    diesel::result::DatabaseErrorKind::UniqueViolation,
-                    _,
-                ) => HttpError::conflict("fingerprint_already_exists"),
-                _ => e.into(),
-            })?;
+            .on_conflict((pending_devices::email, pending_devices::pubkey))
+            .do_update()
+            .set(pending_devices::password.eq(&password))
+            .get_result::<(i32, String, String, String, NaiveDateTime)>(&mut conn)?;
 
-        Result::<(), HttpError>::Ok(())
+        crypto
+            .encode(&Token::pending_device(pending_device_id))
+            .map_err(|e| e.into())
     })
     .await??;
 
-    Ok(Json(HttpMessage::success()))
+    Ok(Json(responses::Token { token }))
+}
+
+pub async fn wait_verification(
+    pool: Data<Pool>,
+    crypto: Data<Crypto>,
+    ws_server: Data<notify::ws::AddrServer>,
+    req: HttpRequest,
+    stream: Payload,
+    query: Query<responses::Token>,
+) -> Result<HttpResponse, HttpError> {
+    let token = crypto.decode::<Token>(&query.token)?;
+
+    if token.kind != TokenKind::PendingDevice {
+        return Err(UNEXPECTED_TOKEN_KIND);
+    }
+
+    let pending_device_id = block(move || {
+        pending_devices::table
+            .filter(pending_devices::id.eq(token.id))
+            .select(pending_devices::id)
+            .first(&mut pool.get().unwrap())
+    })
+    .await??;
+
+    notify::ws::start(
+        notify::ws::Connection::new((&**ws_server).clone(), pending_device_id),
+        &req,
+        stream,
+    )
+    .map_err(|e| HttpError {
+        code: StatusCode::INTERNAL_SERVER_ERROR,
+        error: "failed_to_start_ws",
+        message: Some(format!("{}", e)),
+    })
 }
 
 #[cfg(test)]
 mod tests {
     use actix_web::web::{Data, Json};
     use base::{
-        crypto::Crypto, sanitize::Sanitized, schema::{devices, pending_users, users}, types::Pool, HttpError,
+        crypto::Crypto,
+        sanitize::Sanitized,
+        schema::{devices, pending_users, users},
+        types::Pool,
+        HttpError,
     };
     use base64::prelude::{Engine, BASE64_STANDARD};
     use diesel::{prelude::*, r2d2::ConnectionManager, PgConnection};
@@ -249,7 +345,8 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn it_returns_invalid_password_error_if_password_is_not_between_32_and_64_char_when_sign_up_is_called() {
+    async fn it_returns_invalid_password_error_if_password_is_not_between_32_and_64_char_when_sign_up_is_called(
+    ) {
         let pool = create_pool();
 
         diesel::insert_into(pending_users::table)
@@ -300,7 +397,8 @@ mod tests {
     }
 
     #[actix_web::test]
-    async fn it_returns_invalid_code_error_if_the_code_for_given_email_is_incorrect_when_sign_up_is_called() {
+    async fn it_returns_invalid_code_error_if_the_code_for_given_email_is_incorrect_when_sign_up_is_called(
+    ) {
         let pool = create_pool();
 
         diesel::insert_into(pending_users::table)

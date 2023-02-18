@@ -1,4 +1,9 @@
-use base::{models::Token, schema::devices, types::Pool, HttpError};
+use base::{
+    models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
+    schema::devices,
+    types::Pool,
+    HttpError,
+};
 
 use actix_web::{
     http::StatusCode,
@@ -18,7 +23,8 @@ pub struct Device {
     pub pubkey: String,
 }
 
-pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey) = (devices::id, devices::user_id, devices::pubkey);
+pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey) =
+    (devices::id, devices::user_id, devices::pubkey);
 
 #[derive(Queryable, Serialize)]
 pub struct User {
@@ -37,11 +43,11 @@ impl FromRequest for Device {
             .ok_or("Pool could not be extracted from request in impl FromRequest for Device")
             .map(|pool| pool.get().unwrap());
 
-        let device_id = req
+        let token = req
             .extensions()
             .get::<Token>()
             .ok_or("Token could not be extracted from request in impl FromRequest for Device")
-            .map(|token| token.device_id.clone());
+            .map(|token| (token.id, token.kind.clone()));
 
         Box::pin(async move {
             let map_err = |message: &'static str| HttpError {
@@ -51,7 +57,11 @@ impl FromRequest for Device {
             };
 
             let mut conn = conn.map_err(map_err)?;
-            let device_id = device_id.map_err(map_err)?;
+            let (device_id, kind) = token.map_err(map_err)?;
+
+            if kind != TokenKind::Device {
+                return Err(UNEXPECTED_TOKEN_KIND);
+            }
 
             block(move || {
                 devices::table

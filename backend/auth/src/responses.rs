@@ -1,12 +1,7 @@
-use serde::Serialize;
+use serde::{Serialize, Deserialize};
 
-#[derive(Serialize)]
+#[derive(Deserialize, Serialize)]
 pub struct Token {
-    token: String,
+    pub token: String,
 }
 
-impl Token {
-    pub fn new(token: String) -> Self {
-        Self { token }
-    }
-}

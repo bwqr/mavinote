@@ -29,13 +29,20 @@ create table devices(
 );
 
 create table pending_devices(
+    id          serial primary key  not null,
     email       varchar(255)    not null,
     pubkey      varchar(64)     not null,
     password    varchar(128)    not null,
-    created_at  timestamp       not null default current_timestamp,
-    primary key (email, pubkey),
+    updated_at  timestamp       not null default current_timestamp,
+    unique(email, pubkey),
     constraint  fk_pending_devices_email foreign key (email) references users (email) on delete cascade on update no action
 );
+
+create trigger pending_devices_updated_at
+    before update
+    on pending_devices
+    for each row
+execute procedure update_timestamp();
 
 create table folders(
     id          serial  primary key not null,
