@@ -106,27 +106,29 @@ impl MavinoteClient {
     }
 
     pub async fn wait_verification(ws_url: &str, token: &str) -> Result<(), Error> {
+        let ws_failed = || Error::Message("ws_failed".to_string());
+
         let (mut sock, _) = connect_async(format!("{}/auth/wait-verification?token={}", ws_url, token)).await
-            .map_err(|_| Error::NoConnection)?;
+            .map_err(|e| {
+                log::debug!("failed to establish ws connection, {:?}", e);
 
-        while let Some(msg) = sock.next().await {
-            match msg {
-                Ok(msg) => {
-                    let msg = msg.into_text().unwrap();
+                ws_failed()
+            })?;
 
-                    if msg == "accepted" {
-                        return Ok(());
-                    }
-
-                    log::debug!("msg is received, {}", msg);
-                },
-                Err(e) => log::debug!("error on next, {e:?}"),
-            };
+        match sock.next().await {
+            Some(Ok(msg)) => {
+                match msg.into_text() {
+                    Ok(msg) if msg == "accepted" => return Ok(()),
+                    Ok(msg) if msg == "timeout" => return Err(Error::Message("ws_timeout".to_string())),
+                    Ok(msg) => log::debug!("unexpected message is received, {}", msg),
+                    Err(e) => log::debug!("non text message is received, {:?}", e),
+                }
+            }
+            Some(Err(e)) => log::debug!("failed to receive message, {:?}", e),
+            None => log::debug!("no message is received"),
         }
 
-        log::debug!("connection is closed");
-
-        Ok(())
+        Err(ws_failed())
     }
 
     pub async fn request_verification(&self, email: &str, pubkey: &str, password: &str) -> Result<Token, Error> {

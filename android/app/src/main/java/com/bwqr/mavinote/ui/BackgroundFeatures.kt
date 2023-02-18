@@ -50,10 +50,7 @@ fun BackgroundFeatures() {
         launch {
             while (true) {
                 when (val event = Bus.listen()) {
-                    is BusEvent.DisplayNoInternetWarning -> scaffoldState.snackbarHostState.showSnackbar(
-                        "No internet connection"
-                    )
-                    is BusEvent.UnhandledError -> scaffoldState.snackbarHostState.showSnackbar(event.error)
+                    is BusEvent.ShowMessage -> scaffoldState.snackbarHostState.showSnackbar(event.message)
                 }
             }
         }

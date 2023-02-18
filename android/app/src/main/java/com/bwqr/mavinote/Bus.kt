@@ -5,8 +5,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.suspendCoroutine
 
 sealed class BusEvent {
-    object DisplayNoInternetWarning : BusEvent()
-    class UnhandledError(val error: String) : BusEvent()
+    class ShowMessage(val message: String) : BusEvent()
 }
 
 class Bus {

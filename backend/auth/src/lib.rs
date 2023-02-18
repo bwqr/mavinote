@@ -10,8 +10,8 @@ pub fn register(config: &mut ServiceConfig) {
         scope("api/auth")
             .route("sign-up", post().to(handlers::sign_up))
             .route("login", post().to(handlers::login))
-            .service(handlers::send_code)
-            .service(handlers::create_pending_device)
+            .route("send-code", post().to(handlers::send_code))
+            .route("request-verification", post().to(handlers::request_verification))
             .route("wait-verification", get().to(handlers::wait_verification)),
     );
 }

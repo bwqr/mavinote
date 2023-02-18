@@ -1,8 +1,8 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use actix::prelude::*;
 use actix_web_actors::ws::{Message as WebSocketMessage, ProtocolError, WebsocketContext};
-use log::error;
+use log::debug;
 
 pub type AddrServer = Addr<Server>;
 
@@ -24,21 +24,23 @@ impl Actor for Server {
     type Context = Context<Self>;
 }
 
-impl Handler<messages::ConnectionRequest> for Server {
-    type Result = <messages::ConnectionRequest as Message>::Result;
+impl Handler<messages::AddConnection> for Server {
+    type Result = <messages::AddConnection as Message>::Result;
 
-    fn handle(&mut self, msg: messages::ConnectionRequest, _: &mut Self::Context) -> Self::Result {
-        match msg.kind {
-            messages::ConnectionRequestKind::Add => {
-                if self.pending_devices.insert(msg.pending_device_id, msg.conn).is_some() {
-                    error!("A pending device is added twice into connection list");
-                }
-            }
-            messages::ConnectionRequestKind::Remove => {
-                if self.pending_devices.remove(&msg.pending_device_id).is_none() {
-                    error!("An unknown pending device is removed from connection list");
-                }
-            }
+    fn handle(&mut self, msg: messages::AddConnection, _: &mut Self::Context) -> Self::Result {
+        if let Some(addr) = self.pending_devices.insert(msg.pending_device_id, msg.conn) {
+            debug!("A pending device is added twice into connection list");
+            addr.do_send(messages::StopConnection);
+        }
+    }
+}
+
+impl Handler<messages::RemoveConnection> for Server {
+    type Result = <messages::RemoveConnection as Message>::Result;
+
+    fn handle(&mut self, msg: messages::RemoveConnection, _: &mut Self::Context) -> Self::Result {
+        if self.pending_devices.remove(&msg.0).is_none() {
+            debug!("An unknown pending device is removed from connection list");
         }
     }
 }
@@ -74,22 +76,23 @@ impl Actor for Connection {
 
     fn started(&mut self, ctx: &mut Self::Context) {
         self.server
-            .send(messages::ConnectionRequest {
+            .send(messages::AddConnection {
                 conn: ctx.address(),
                 pending_device_id: self.pending_device_id,
-                kind: messages::ConnectionRequestKind::Add,
             })
             .into_actor(self)
             .then(|_, _, _| fut::ready(()))
             .wait(ctx);
+
+        // Close connection after 5 minutes.
+        ctx.run_later(Duration::from_secs(60 * 5), |_, ctx| {
+            ctx.text("timeout");
+            ctx.stop()
+        });
     }
 
-    fn stopping(&mut self, ctx: &mut Self::Context) -> Running {
-        self.server.do_send(messages::ConnectionRequest {
-            conn: ctx.address(),
-            pending_device_id: self.pending_device_id,
-            kind: messages::ConnectionRequestKind::Remove,
-        });
+    fn stopping(&mut self, _: &mut Self::Context) -> Running {
+        self.server.do_send(messages::RemoveConnection(self.pending_device_id));
 
         Running::Stop
     }
@@ -123,23 +126,37 @@ impl Handler<messages::AcceptPendingDevice> for Connection {
     }
 }
 
+impl Handler<messages::StopConnection> for Connection {
+    type Result = <messages::StopConnection as Message>::Result;
+
+    fn handle(&mut self, _: messages::StopConnection, ctx: &mut Self::Context) -> Self::Result {
+        ctx.stop();
+    }
+}
+
 pub mod messages {
     use actix::prelude::{Addr, Message};
 
     use super::Connection;
 
-    pub enum ConnectionRequestKind {
-        Add,
-        Remove,
+    pub struct StopConnection;
+
+    impl Message for StopConnection {
+        type Result = ();
     }
 
-    pub struct ConnectionRequest {
+    pub struct RemoveConnection(pub i32);
+
+    impl Message for RemoveConnection {
+        type Result = ();
+    }
+
+    pub struct AddConnection {
         pub conn: Addr<Connection>,
         pub pending_device_id: i32,
-        pub kind: ConnectionRequestKind,
     }
 
-    impl Message for ConnectionRequest {
+    impl Message for AddConnection {
         type Result = ();
     }
 

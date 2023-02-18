@@ -639,7 +639,7 @@ mod tests {
             .get_result(conn)?;
 
         diesel::insert_into(devices::table)
-            .values(devices::user_id.eq(user_id))
+            .values((devices::user_id.eq(user_id), devices::pubkey.eq("pubkey"), devices::password.eq("password")))
             .get_result::<(i32, i32, String, String)>(conn)
             .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2 })
     }

@@ -20,6 +20,8 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.DatabaseError
 import com.bwqr.mavinote.models.MavinoteError
@@ -52,6 +54,11 @@ sealed class Step {
 
 @Composable
 fun AccountAdd(navController: NavController) {
+    fun onAccountAdd() {
+        Bus.emit(BusEvent.ShowMessage("Account is successfully added"))
+        navController.navigateUp()
+    }
+
     val accountAddNavController = rememberNavController()
 
     Column(modifier = Modifier.padding(12.dp)) {
@@ -71,7 +78,7 @@ fun AccountAdd(navController: NavController) {
             composable(
                 AccountAddScreen.AddExistingAccount.EnterAccountInfo.route,
             ) {
-                EnterAccountInfo(accountAddNavController)
+                EnterAccountInfo(accountAddNavController) { onAccountAdd() }
             }
 
             composable(
@@ -84,9 +91,7 @@ fun AccountAdd(navController: NavController) {
                 ShowPublicKey(
                     it.arguments?.getString("email")!!,
                     it.arguments?.getString("token")!!,
-                ) {
-                    navController.navigateUp()
-                }
+                ) { onAccountAdd() }
             }
 
             composable(AccountAddScreen.CreateAccount.SendCode.route) {
@@ -154,7 +159,7 @@ private enum class AddExistingAccountValidationError {
 }
 
 @Composable
-fun EnterAccountInfo(navController: NavController) {
+fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<AddExistingAccountValidationError>>(setOf()) }
     var error by remember { mutableStateOf<String?>(null) }
     var inProgress by remember { mutableStateOf(false) }
@@ -226,6 +231,19 @@ fun EnterAccountInfo(navController: NavController) {
                                 e is MavinoteError.Message && e.message == "email_not_found" -> {
                                     error = "Email could not be found. Please check your input."
                                 }
+                                e is MavinoteError.Message && e.message == "device_already_exists" -> {
+                                    try {
+                                        AccountViewModel.addAccount(email)
+                                        onAccountAdd()
+                                    } catch (e: NoteError) {
+                                        e.handle()
+                                    }
+                                }
+                                e is MavinoteError.Message && e.message == "device_exists_but_passwords_mismatch" -> {
+                                    error = "An unexpected state is occurred. A device with our public key is already added. " +
+                                            "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
+                                            "you can remove the device with our public key and try to add account again."
+                                }
                                 e is DatabaseError && e.message == "email_already_exists" -> {
                                     error = "An account with this email already exists. You can find it under Accounts page."
                                 }
@@ -253,9 +271,10 @@ fun EnterAccountInfo(navController: NavController) {
 }
 
 @Composable
-fun ShowPublicKey(email: String, token: String, onAccept: () -> Unit) {
+fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
     val scrollState = rememberScrollState()
 
+    var error by remember { mutableStateOf<String?>(null) }
     var publicKey by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = 1) {
@@ -270,9 +289,17 @@ fun ShowPublicKey(email: String, token: String, onAccept: () -> Unit) {
         try {
             AccountViewModel.waitVerification(token)
             AccountViewModel.addAccount(email)
-            onAccept()
+            onAccountAdd()
         } catch (e: NoteError) {
-            e.handle()
+            when {
+                e is MavinoteError.Message && e.message == "ws_failed" -> {
+                    error = "Could not to wait for verification. Please try again."
+                }
+                e is MavinoteError.Message && e.message == "ws_timeout" -> {
+                    error = "5 minutes waiting is timed out. Please try again."
+                }
+                else -> e.handle()
+            }
         }
     }
 
@@ -286,6 +313,11 @@ fun ShowPublicKey(email: String, token: String, onAccept: () -> Unit) {
             Text(
                 "In order to complete the progress, on the other device that has already account added, " +
                         "you need to choose Add Device and enter the Public Key displayed below. Please note that Public Key does not contain any line break.",
+                modifier = Modifier.padding(0.dp, 8.dp)
+            )
+
+            Text(
+                "You have 5 min to complete progress",
                 modifier = Modifier.padding(0.dp, 16.dp)
             )
 
@@ -297,6 +329,14 @@ fun ShowPublicKey(email: String, token: String, onAccept: () -> Unit) {
                 Text(it, fontWeight = FontWeight.Bold)
             }
         }
+    }
+
+    error?.let {
+        AlertDialog(
+            onDismissRequest = { error = null },
+            text = { Text(it) },
+            buttons = { }
+        )
     }
 }
 
@@ -514,7 +554,7 @@ fun EnterEmailPreview() {
     val navController = rememberNavController()
 
     MavinoteTheme {
-        EnterAccountInfo(navController)
+        EnterAccountInfo(navController) { }
     }
 }
 

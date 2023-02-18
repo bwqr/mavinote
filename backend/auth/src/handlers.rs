@@ -9,7 +9,6 @@ use base::{
 
 use actix_web::{
     http::StatusCode,
-    post,
     web::{block, Data, Json, Payload, Query},
     HttpRequest, HttpResponse,
 };
@@ -126,7 +125,6 @@ pub async fn sign_up(
     Ok(Json(responses::Token { token }))
 }
 
-#[post("send-code")]
 pub async fn send_code(
     pool: Data<Pool>,
     request: Sanitized<Json<SendCode>>,
@@ -165,8 +163,7 @@ pub async fn send_code(
     Ok(Json(HttpMessage::success()))
 }
 
-#[post("request-verification")]
-pub async fn create_pending_device(
+pub async fn request_verification(
     crypto: Data<Crypto>,
     pool: Data<Pool>,
     request: Sanitized<Json<CreatePendingDevice>>,
@@ -206,7 +203,7 @@ pub async fn create_pending_device(
             return if pass == password {
                 Err(HttpError::conflict("device_already_exists"))
             } else {
-                Err(HttpError::conflict("device_exists_but_password_mismatch"))
+                Err(HttpError::conflict("device_exists_but_passwords_mismatch"))
             };
         }
 
