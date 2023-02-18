@@ -1,9 +1,12 @@
 use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}, StatusCode};
 use serde::{Deserialize, Serialize};
+use futures_util::StreamExt;
+use tokio_tungstenite::connect_async;
 
 use crate::models::RemoteId;
 
 pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest};
+pub use responses::Device;
 
 #[derive(Deserialize)]
 pub struct Token {
@@ -87,6 +90,60 @@ impl MavinoteClient {
 }
 
 impl MavinoteClient {
+    pub async fn login(&self, email: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
+        let request = requests::Login { email, pubkey, password };
+
+        self.client
+            .post(format!("{}/auth/login", self.api_url))
+            .body(serde_json::to_string(&request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+    }
+
+    pub async fn wait_verification(ws_url: &str, token: &str) -> Result<(), Error> {
+        let (mut sock, _) = connect_async(format!("{}/auth/wait-verification?token={}", ws_url, token)).await
+            .map_err(|_| Error::NoConnection)?;
+
+        while let Some(msg) = sock.next().await {
+            match msg {
+                Ok(msg) => {
+                    let msg = msg.into_text().unwrap();
+
+                    if msg == "accepted" {
+                        return Ok(());
+                    }
+
+                    log::debug!("msg is received, {}", msg);
+                },
+                Err(e) => log::debug!("error on next, {e:?}"),
+            };
+        }
+
+        log::debug!("connection is closed");
+
+        Ok(())
+    }
+
+    pub async fn request_verification(&self, email: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
+        let request = requests::RequestVerification { email, pubkey, password };
+
+        self.client
+            .post(format!("{}/auth/request-verification", self.api_url))
+            .body(serde_json::to_string(&request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+    }
+
     pub async fn send_code(&self, email: &str) -> Result<(), Error> {
         let request = requests::SendCode { email };
 
@@ -127,8 +184,8 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn add_device(&self, fingerprint: String) -> Result<i32, Error> {
-        let request = requests::AddDevice { fingerprint };
+    pub async fn add_device(&self, pubkey: String) -> Result<responses::Device, Error> {
+        let request = requests::AddDevice { pubkey };
 
         self.client
             .post(format!("{}/user/device", self.api_url))
@@ -137,9 +194,8 @@ impl MavinoteClient {
             .await
             .map(|r| async { self.error_for_status(r).await })?
             .await?
-            .json::<responses::CreatedDevice>()
+            .json()
             .await
-            .map(|device| device.id)
             .map_err(|e| e.into())
     }
 
@@ -155,7 +211,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn create_folder<'a>(&self, request: Vec<requests::CreateFolderRequest<'a>>) -> Result<responses::CreatedFolder, Error> {
+    pub async fn create_folder<'a>(&self, request: Vec<requests::CreateFolderRequest>) -> Result<responses::CreatedFolder, Error> {
         self.client
             .post(format!("{}/note/folder", self.api_url))
             .body(serde_json::to_string(&request).unwrap())
@@ -273,14 +329,15 @@ mod requests {
     use serde::Serialize;
 
     #[derive(Serialize)]
-    pub struct LoginRequest<'a> {
+    pub struct Login<'a> {
         pub email: &'a str,
+        pub pubkey: &'a str,
         pub password: &'a str,
     }
 
     #[derive(Serialize)]
-    pub struct CreateFolderRequest<'a> {
-        pub name: &'a str,
+    pub struct CreateFolderRequest {
+        pub name: String,
         pub device_id: i32,
     }
 
@@ -306,13 +363,20 @@ mod requests {
     }
 
     #[derive(Serialize)]
+    pub struct RequestVerification<'a> {
+        pub email: &'a str,
+        pub pubkey: &'a str,
+        pub password: &'a str,
+    }
+
+    #[derive(Serialize)]
     pub struct SendCode<'a> {
         pub email: &'a str,
     }
 
     #[derive(Serialize)]
     pub struct AddDevice {
-        pub fingerprint: String,
+        pub pubkey: String,
     }
 
     #[derive(Serialize)]
@@ -355,11 +419,7 @@ pub mod responses {
     #[derive(Deserialize)]
     pub struct Device {
         pub id: i32,
-    }
-
-    #[derive(Deserialize)]
-    pub struct CreatedDevice {
-        pub id: i32,
+        pub pubkey: String,
     }
 
     #[derive(Debug, Deserialize)]

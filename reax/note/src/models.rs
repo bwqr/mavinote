@@ -40,6 +40,7 @@ pub enum AccountKind {
 pub struct Device {
     pub id: i32,
     pub account_id: i32,
+    pub pubkey: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

@@ -43,17 +43,22 @@ pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(co
 }
 
 pub async fn fetch_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
-    sqlx::query_as("select id, account_id from devices where account_id = ?")
+    sqlx::query_as("select id, account_id, pubkey from devices where account_id = ?")
         .bind(account_id)
         .fetch_all(conn)
         .await
 }
 
-pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, device_ids: &[i32]) -> Result<(), Error> {
-    let device_ids: String = itertools::Itertools::intersperse(device_ids.into_iter().map(|id| format!("({}, {})", id, account_id)), ",".to_string()).collect();
-    let query = format!("insert into devices (id, account_id) values {}", device_ids);
+pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, devices: &[crate::accounts::mavinote::Device]) -> Result<(), Error> {
+    let binds: String = itertools::Itertools::intersperse(devices.into_iter().map(|_| "(?, ?, ?)"), ",")
+        .collect();
 
-    let query = sqlx::query(&query);
+    let query = format!("insert into devices (id, account_id, pubkey) values {}", binds);
+    let mut query = sqlx::query(&query);
+
+    for dev in devices {
+        query = query.bind(dev.id).bind(account_id).bind(&dev.pubkey);
+    }
 
     query.execute(conn)
         .await
@@ -68,12 +73,13 @@ pub async fn delete_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) 
         .map(|_| ())
 }
 
-pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
-    sqlx::query_as::<Sqlite, (i32,)>("select id from accounts where name = ?")
-        .bind(name)
-        .fetch_optional(conn)
-        .await
-        .map(|opt| opt.is_some())
+pub async fn account_with_email_exists(conn: &mut PoolConnection<Sqlite>, email: &str) -> Result<bool, Error> {
+    let accounts = sqlx::query_as::<Sqlite, (Json<Mavinote>,)>("select data from accounts where kind = ?")
+        .bind(AccountKind::Mavinote)
+        .fetch_all(conn)
+        .await?;
+
+    Ok(accounts.into_iter().find(|data| data.0.0.email == email).is_some())
 }
 
 pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {

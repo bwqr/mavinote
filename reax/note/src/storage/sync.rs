@@ -41,10 +41,7 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
 }
 
 async fn sync_devices(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
-    let new_devices = mavinote.fetch_devices().await?
-        .into_iter()
-        .map(|dev| dev.id)
-        .collect::<Vec<i32>>();
+    let new_devices = mavinote.fetch_devices().await?;
 
     db::delete_devices(conn, account_id).await?;
 
@@ -160,7 +157,7 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
 
                 let request = devices
                     .into_iter()
-                    .map(|device| CreateFolderRequest{ device_id: device.id, name: &local_folder.name })
+                    .map(|device| CreateFolderRequest{ device_id: device.id, name: local_folder.name.clone() })
                     .collect();
 
                 match mavinote.create_folder(request).await {
@@ -172,10 +169,7 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
                         break;
                     },
                     Err(crate::accounts::mavinote::Error::Message(msg)) if msg == "devices_mismatch" => {
-                        let new_devices = mavinote.fetch_devices().await?
-                            .into_iter()
-                            .map(|dev| dev.id)
-                            .collect::<Vec<i32>>();
+                        let new_devices = mavinote.fetch_devices().await?;
 
                         db::delete_devices(conn, account_id).await?;
 

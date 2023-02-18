@@ -18,6 +18,7 @@ use serde::Serialize;
 use tokio::task::JoinHandle;
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
+mod account;
 mod log;
 mod note;
 
@@ -91,12 +92,20 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
     env: JNIEnv,
     _: JClass,
     api_url: JString,
+    ws_url: JString,
     storage_dir: JString,
 ) {
     capture_stderr();
 
     let api_url = env
         .get_string(api_url)
+        .unwrap()
+        .to_str()
+        .unwrap()
+        .to_owned();
+
+    let ws_url = env
+        .get_string(ws_url)
         .unwrap()
         .to_str()
         .unwrap()
@@ -143,6 +152,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
 
     runtime::put::<Arc<Config>>(Arc::new(Config {
         api_url,
+        ws_url,
         storage_dir,
     }));
 

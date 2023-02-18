@@ -19,9 +19,12 @@ serde.workspace = true
 sqlx = { workspace = true, optional = true }
 tokio.workspace = true
 
+aes-gcm-siv = "0.11.1"
 x25519-dalek = "1.2.0"
 rand = { version = "0.7.3", features = ["getrandom"] }
 base64ct = {version = "1.5.3", features = ["alloc"] }
+futures-util = "0.3.21"
+tokio-tungstenite = "0.17.1"
 
 [features]
 storage = ["dep:sqlx"]

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use aes_gcm_siv::{Aes256GcmSiv, Nonce, KeyInit, aead::Aead};
 use base64ct::{Base64, Encoding};
 use rand::{Rng, thread_rng, distributions::Alphanumeric, rngs::OsRng};
 use once_cell::sync::OnceCell;
@@ -54,6 +55,58 @@ pub(crate) async fn mavinote_client(conn: &mut PoolConnection<Sqlite>, account_i
         .map_err(|e| e.into())
 }
 
+pub async fn public_key() -> Result<String, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await
+        .map(|opt| opt.unwrap().value)
+        .map_err(|e| e.into())
+}
+
+pub async fn request_verification(email: String) -> Result<String, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    if db::account_with_email_exists(&mut conn, &email).await? {
+        return Err(Error::Database("email_already_exists".to_string()));
+    }
+
+    let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
+    let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
+
+    MavinoteClient::new(None, config.api_url.clone(), None)
+        .request_verification(&email, &identity_public_key, &password).await
+        .map(|token| token.token)
+        .map_err(|e| e.into())
+}
+
+pub async fn wait_verification(token: String) -> Result<(), Error> {
+    let config = runtime::get::<Arc<Config>>().unwrap();
+
+    MavinoteClient::wait_verification(&config.ws_url, &token)
+        .await?;
+
+    Ok(())
+}
+
+pub async fn add_account(email: String) -> Result<(), Error> {
+    let config = runtime::get::<Arc<Config>>().unwrap();
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
+    let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
+
+    let token = MavinoteClient::new(None, config.api_url.clone(), None)
+        .login(&email, &identity_public_key, &password)
+        .await?;
+
+    db::create_account(&mut conn, email.clone(), AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token }))).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+
+    Ok(())
+}
+
 pub async fn send_code(email: String) -> Result<(), Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
@@ -93,7 +146,7 @@ pub async fn mavinote_account(account_id: i32) -> Result<Option<Mavinote>, Error
 pub async fn sign_up(name: String, email: String, code: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-    if db::account_with_name_exists(&mut conn, &email).await? {
+    if db::account_with_email_exists(&mut conn, &email).await? {
         return Err(Error::Storage(StorageError::AccountNameUsed));
     }
 
@@ -137,7 +190,7 @@ pub async fn delete_account(account_id: i32) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn add_device(account_id: i32, fingerprint: String) -> Result<(), Error> {
+pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let account = db::fetch_account(&mut conn, account_id)
@@ -150,9 +203,9 @@ pub async fn add_device(account_id: i32, fingerprint: String) -> Result<(), Erro
 
     let mavinote = mavinote_client(&mut conn, account_id).await?.unwrap();
 
-    let device_id = mavinote.add_device(fingerprint).await?;
+    let device = mavinote.add_device(pubkey).await?;
 
-    db::create_devices(&mut conn, account_id, &[device_id]).await?;
+    db::create_devices(&mut conn, account_id, &[device]).await?;
 
     Ok(())
 }
@@ -195,10 +248,18 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
         let mavinote = mavinote_client(&mut conn, account.id).await?.unwrap();
 
         let devices = db::fetch_devices(&mut conn, account.id).await?;
+        let privkey = StaticSecret::from(<Vec<u8> as TryInto::<[u8; 32]>>::try_into(Base64::decode_vec(&db::fetch_value(&mut conn, StoreKey::IdentityPrivKey).await?.unwrap().value).unwrap()).unwrap());
 
         let device_folders = devices
             .into_iter()
-            .map(|device| CreateFolderRequest{ device_id: device.id, name: &name })
+            .map(|device| {
+                let pubkey = PublicKey::from(<Vec<u8> as TryInto::<[u8; 32]>>::try_into(Base64::decode_vec(&device.pubkey).unwrap()).unwrap());
+                let shared_secret = privkey.diffie_hellman(&pubkey);
+                let cipher = Aes256GcmSiv::new_from_slice(&shared_secret.to_bytes()).unwrap();
+                let nonce = Nonce::from_slice(b"unique nonce");
+                let ciphertext = Base64::encode_string(cipher.encrypt(nonce, name.as_bytes()).unwrap().as_slice());
+                CreateFolderRequest{ device_id: device.id, name: ciphertext }
+            })
             .collect();
 
         match mavinote.create_folder(device_folders).await {

@@ -26,5 +26,6 @@ impl<T, E> From<Result<T, E>> for State<T, E> {
 #[derive(Debug)]
 pub struct Config {
     pub api_url: String,
+    pub ws_url: String,
     pub storage_dir: String,
 }
