@@ -1,6 +1,6 @@
 use base::middlewares::auth_user::AuthUser;
 
-use actix_web::web::{scope, ServiceConfig};
+use actix_web::web::{get, post, delete, scope, ServiceConfig};
 
 mod handlers;
 pub mod models;
@@ -10,7 +10,8 @@ pub fn register(config: &mut ServiceConfig) {
     config.service(
         scope("api/user")
             .wrap(AuthUser)
-            .service(handlers::fetch_devices)
-            .service(handlers::add_device)
+            .route("devices", get().to(handlers::fetch_devices))
+            .route("device", post().to(handlers::add_device))
+            .route("device", delete().to(handlers::delete_device))
     );
 }

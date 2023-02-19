@@ -38,12 +38,6 @@ create table pending_devices(
     constraint  fk_pending_devices_email foreign key (email) references users (email) on delete cascade on update no action
 );
 
-create trigger pending_devices_updated_at
-    before update
-    on pending_devices
-    for each row
-execute procedure update_timestamp();
-
 create table folders(
     id          serial  primary key not null,
     user_id     int         not null,
@@ -61,7 +55,6 @@ create table notes(
     updated_at  timestamp       not null default current_timestamp,
     constraint  fk_notes_folder_id foreign key (folder_id) references folders (id) on delete no action on update no action
 );
-
 
 create table device_folders(
     folder_id           int,
@@ -105,6 +98,12 @@ create table folder_requests(
 create trigger pending_users_updated_at
     before update
     on pending_users
+    for each row
+execute procedure update_timestamp();
+
+create trigger pending_devices_updated_at
+    before update
+    on pending_devices
     for each row
 execute procedure update_timestamp();
 

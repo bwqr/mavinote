@@ -166,26 +166,30 @@ pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn delete_account(account_id: i32) -> Result<(), Error> {
+pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let account = db::fetch_account(&mut conn, account_id).await?
         .ok_or_else(|| {
-            log::error!("trying to delete an unknown account, {account_id}");
+            log::error!("trying to remove an unknown account, {account_id}");
 
             Error::Storage(StorageError::AccountNotFound)
         })?;
 
     if account.kind != AccountKind::Mavinote {
-        log::error!("can delete only mavinote account");
+        log::error!("can remove only mavinote account");
 
         return Err(Error::Storage(StorageError::NotMavinoteAccount));
     }
 
+    mavinote_client(&mut conn, account_id).await?.unwrap()
+        .delete_device()
+        .await?;
+
     db::delete_account(&mut conn, account_id).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(db::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
-    FOLDERS.get().unwrap().send_replace(db::fetch_folders(&mut conn).await.map_err(|e| e.into()).into());
+    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    FOLDERS.get().unwrap().send_replace(State::Initial);
 
     Ok(())
 }

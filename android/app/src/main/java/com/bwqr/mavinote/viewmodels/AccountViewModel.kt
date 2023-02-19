@@ -25,6 +25,10 @@ class AccountViewModel {
             _addAccount(it, email)
         }
 
+        suspend fun removeAccount(accountId: Int) = Runtime.runUnitOnce {
+            _removeAccount(it, accountId)
+        }
+
         suspend fun publicKey(): String = Runtime.runOnce(
             onNext = { it.deserialize_str() },
             onStart = { _publicKey(it) }
@@ -37,4 +41,5 @@ private external fun _waitVerification(onceId: Int, token: String): Long
 private external fun _sendVerificationCode(onceId: Int, email: String): Long
 private external fun _signUp(onceId: Int, email: String, code: String): Long
 private external fun _addAccount(onceId: Int, email: String): Long
+private external fun _removeAccount(onceId: Int, accountId: Int): Long
 private external fun _publicKey(onceId: Int): Long

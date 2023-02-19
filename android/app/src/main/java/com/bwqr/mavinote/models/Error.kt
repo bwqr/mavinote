@@ -22,10 +22,10 @@ open class NoteError : Error() {
 
     fun handle() {
         when (this) {
-            is MavinoteError.NoConnection -> Bus.emit(BusEvent.ShowMessage("No Internet Connection"))
+            is MavinoteError.NoConnection -> Bus.message("No Internet Connection")
             else -> {
                 Log.e("ReaxError", "Unhandled error, $this")
-                Bus.emit(BusEvent.ShowMessage("$this"))
+                Bus.message(this.toString())
             }
         }
     }

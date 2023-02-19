@@ -1,15 +1,10 @@
 package com.bwqr.mavinote.ui.account
 
-import android.util.Log
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -18,15 +13,13 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.R
-import com.bwqr.mavinote.models.Account
-import com.bwqr.mavinote.models.AccountKind
-import com.bwqr.mavinote.models.Mavinote
-import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.Screen
+import com.bwqr.mavinote.models.*
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.Typography
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
@@ -50,17 +43,13 @@ fun Account(navController: NavController, accountId: Int) {
                     }
                 }
             }
-
-            if (account == null) {
-                Log.e("Account", "accountId $accountId does not exist")
-            }
         } catch (e: NoteError) {
             e.handle()
         }
     }
 
     account?.let { it ->
-        AccountView(navController, it, mavinote) {
+        AccountView(it, mavinote) {
             if (inProgress) {
                 return@AccountView
             }
@@ -69,11 +58,16 @@ fun Account(navController: NavController, accountId: Int) {
 
             scope.launch {
                 try {
-                    NoteViewModel.deleteAccount(accountId)
-
+                    AccountViewModel.removeAccount(accountId)
+                    Bus.message("Account is removed")
                     navController.navigateUp()
                 } catch (e: NoteError) {
-                    e.handle()
+                    when {
+                        e is MavinoteError.Message && e.message == "cannot_delete_only_remaining_device" -> {
+                            Bus.message("This device is the only remaining device for this account. If you want to close the account, choose Close Account option.")
+                        }
+                        else -> e.handle()
+                    }
                 } finally {
                     inProgress = false
                 }
@@ -81,35 +75,24 @@ fun Account(navController: NavController, accountId: Int) {
         }
     }
 
+
 }
 
 @Composable
 fun AccountView(
-    navController: NavController,
     account: Account,
     mavinote: Mavinote?,
-    onDelete: () -> Unit
+    onRemove: () -> Unit
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(modifier = Modifier.padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+        Row {
             Title(account.name, modifier = Modifier.weight(1f))
-            IconButton(onClick = { expanded = true }) {
-                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-                DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(onClick = onDelete) {
-                        Text(text = stringResource(R.string.remove))
-                    }
-                }
-            }
         }
 
         Text(
             text = stringResource(R.string.account),
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
         )
-
 
         Column {
             Row(
@@ -152,13 +135,16 @@ fun AccountView(
         mavinote?.let {
             Divider()
 
-            MavinoteAccountView(navController, account.id, it)
+            MavinoteAccountView(it, onRemove)
         }
+
     }
 }
 
 @Composable
-fun MavinoteAccountView(navController: NavController, accountId: Int, mavinote: Mavinote) {
+fun MavinoteAccountView(mavinote: Mavinote, onRemove: () -> Unit) {
+    var showRemoveWarn by remember { mutableStateOf(false) }
+
     Column {
         Row(
             modifier = Modifier
@@ -177,6 +163,43 @@ fun MavinoteAccountView(navController: NavController, accountId: Int, mavinote: 
                 modifier = Modifier.weight(1f)
             )
         }
+
+        Divider(modifier = Modifier.padding(0.dp, 16.dp), thickness = 2.dp)
+
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .clickable { showRemoveWarn = true }
+                .padding(8.dp, 20.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Text(
+                "Remove Account",
+                modifier = Modifier
+                    .weight(1f),
+                color = MaterialTheme.colors.error
+            )
+        }
+    }
+
+    if (showRemoveWarn) {
+        AlertDialog(
+            onDismissRequest = { showRemoveWarn = false },
+            text = { Text("Are you sure about removing account with ${mavinote.email} email address?") },
+            buttons = {
+                Box(contentAlignment = Alignment.Center, modifier = Modifier.fillMaxWidth()) {
+                    Button(
+                        onClick = {
+                            showRemoveWarn = false
+                            onRemove()
+                        },
+                        colors = ButtonDefaults.buttonColors(backgroundColor = MaterialTheme.colors.error)
+                    ) {
+                        Text("Remove")
+                    }
+                }
+            }
+        )
     }
 }
 
@@ -204,9 +227,8 @@ fun AccountFab(navController: NavController, accountId: Int) {
 @Preview(showBackground = true)
 @Composable
 fun AccountPreview() {
-    val navController = rememberNavController()
     val account = Account(1, "Account on My Phone", AccountKind.Mavinote)
     val mavinote = Mavinote("email@email.com", "")
 
-    AccountView(navController, account, mavinote) {}
+    AccountView(account, mavinote) {}
 }

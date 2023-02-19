@@ -201,6 +201,16 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
+    pub async fn delete_device(&self) -> Result<(), Error> {
+        self.client
+            .delete(format!("{}/user/device", self.api_url))
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
+
     pub async fn fetch_folders(&self) -> Result<Vec<responses::Folder>, Error> {
         self.client
             .get(format!("{}/note/folders", self.api_url))

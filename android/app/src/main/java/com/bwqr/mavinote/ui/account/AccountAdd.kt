@@ -50,7 +50,7 @@ sealed class AccountAddScreen(route: String) : Screen(route) {
 @Composable
 fun AccountAdd(navController: NavController) {
     fun onAccountAdd() {
-        Bus.emit(BusEvent.ShowMessage("Account is successfully added"))
+        Bus.message("Account is successfully added")
         navController.navigateUp()
     }
 
@@ -98,7 +98,7 @@ fun AccountAdd(navController: NavController) {
                 arguments = listOf(navArgument("email") { type = NavType.StringType })
             ) {
                 VerifyCode(it.arguments?.getString("email")!!) {
-                    Bus.emit(BusEvent.ShowMessage("Account is successfully created"))
+                    Bus.message("Account is successfully created")
                     navController.navigateUp()
                 }
             }

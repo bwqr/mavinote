@@ -34,9 +34,6 @@ class NoteViewModel {
             }
         }, { _mavinoteAccount(it, accountId) })
 
-        suspend fun deleteAccount(accountId: Int): Unit =
-            Runtime.runUnitOnce { _deleteAccount(it, accountId) }
-
         suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
             Runtime.runUnitOnce { _addDevice(it, accountId, fingerprint) }
 
@@ -86,7 +83,6 @@ private external fun _sync(onceId: Int): Long
 private external fun _accounts(streamId: Int): Long
 private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
-private external fun _deleteAccount(onceId: Int, accountId: Int): Long
 private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _folders(streamId: Int): Long
 private external fun _folder(onceId: Int, folderId: Int): Long

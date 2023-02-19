@@ -1,7 +1,4 @@
-use actix_web::{
-    get, post,
-    web::{self, block, Data, Json},
-};
+use actix_web::web::{self, block, Data, Json};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
 
@@ -9,7 +6,7 @@ use base::{
     sanitize::Sanitized,
     schema::{devices, pending_devices, users},
     types::Pool,
-    HttpError
+    HttpError, HttpMessage
 };
 
 use crate::{
@@ -17,7 +14,6 @@ use crate::{
     requests::AddDevice,
 };
 
-#[get("/devices")]
 pub async fn fetch_devices(
     pool: Data<Pool>,
     device: Device,
@@ -34,7 +30,6 @@ pub async fn fetch_devices(
     Ok(Json(devices))
 }
 
-#[post("/device")]
 pub async fn add_device(
     pool: Data<Pool>,
     ws_server: Data<notify::ws::AddrServer>,
@@ -77,4 +72,31 @@ pub async fn add_device(
     ws_server.do_send(notify::ws::messages::AcceptPendingDevice(pending_device_id));
 
     Ok(Json(device))
+}
+
+pub async fn delete_device(
+    pool: Data<Pool>,
+    device: Device,
+) -> Result<Json<HttpMessage>, HttpError> {
+    block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let device_ids = devices::table
+            .filter(devices::user_id.eq(device.user_id))
+            .select(devices::id)
+            .load::<i32>(&mut conn)?;
+
+        if device_ids.len() == 1 && device_ids[0] == device.id {
+            return Err(HttpError::conflict("cannot_delete_only_remaining_device"));
+        }
+
+        diesel::delete(devices::table)
+            .filter(devices::id.eq(device.id))
+            .execute(&mut conn)?;
+
+        Result::<(), HttpError>::Ok(())
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
 }

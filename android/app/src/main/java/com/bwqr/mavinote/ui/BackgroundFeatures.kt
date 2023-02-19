@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.ui
 
+import android.util.Log
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.Scaffold
 import androidx.compose.material.rememberScaffoldState
@@ -19,6 +20,7 @@ import com.bwqr.mavinote.ui.account.*
 import com.bwqr.mavinote.ui.device.DeviceAdd
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.channels.consumeEach
 import kotlinx.coroutines.launch
 
 open class Screen(val route: String) {
@@ -48,11 +50,13 @@ fun BackgroundFeatures() {
 
     LaunchedEffect(key1 = 1) {
         launch {
-            while (true) {
-                when (val event = Bus.listen()) {
-                    is BusEvent.ShowMessage -> scaffoldState.snackbarHostState.showSnackbar(event.message)
+            Bus.listen().consumeEach {
+                when (it) {
+                    is BusEvent.ShowMessage -> scaffoldState.snackbarHostState.showSnackbar(it.message)
                 }
             }
+
+            Log.e("BackgroundFeatures", "Bus listening is stopped")
         }
 
         try {

@@ -112,3 +112,19 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1signUp(
 
     Box::into_raw(Box::new(handle)) as jlong
 }
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1removeAccount(
+    _: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::storage::remove_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
