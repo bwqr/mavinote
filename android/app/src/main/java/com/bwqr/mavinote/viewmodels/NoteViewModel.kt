@@ -77,7 +77,7 @@ class NoteViewModel {
     }
 }
 
-private external fun _init(): Long
+private external fun _init()
 
 private external fun _sync(onceId: Int): Long
 private external fun _accounts(streamId: Int): Long
