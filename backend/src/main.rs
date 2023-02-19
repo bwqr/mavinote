@@ -7,7 +7,7 @@ use diesel::{
 };
 
 use base::{crypto::Crypto, types::Pool};
-use notify::{Server, SessionManager};
+use notify::ws::Server;
 
 fn setup_database() -> Pool {
     let conn_info = std::env::var("DATABASE_URL").expect("DATABASE_URL is not provided in env");
@@ -32,7 +32,6 @@ async fn main() -> std::io::Result<()> {
     );
 
     let notify_server = Server::new().start();
-    let session_manager = SessionManager::new(notify_server.clone()).start();
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -55,11 +54,9 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(crypto.clone()))
             .app_data(Data::new(notify_server.clone()))
-            .app_data(Data::new(session_manager.clone()))
             .wrap(Logger::default())
             .configure(auth::register)
             .configure(note::register)
-            .configure(notify::register)
             .configure(user::register)
     })
     .bind(

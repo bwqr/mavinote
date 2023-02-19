@@ -1,32 +1,32 @@
 package com.bwqr.mavinote.ui
 
+import androidx.compose.foundation.layout.padding
+import androidx.compose.material.MaterialTheme
 import androidx.compose.material.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.*
+import androidx.compose.ui.unit.dp
+import com.bwqr.mavinote.ui.theme.Typography
 
-@OptIn(ExperimentalUnitApi::class)
 @Composable
 fun Title(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = TextUnit(6f, TextUnitType.Em),
+        style = Typography.h4,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
         maxLines = 1,
     )
 }
 
-@OptIn(ExperimentalUnitApi::class)
 @Composable
-fun SubTitle(text: String, modifier: Modifier = Modifier) {
-    Text(
-        text,
-        fontWeight = FontWeight.ExtraBold,
-        fontSize = TextUnit(4.5f, TextUnitType.Em),
-        modifier = modifier
-    )
+fun ErrorText(error: String?) {
+    error?.let {
+        Text(
+            text = it,
+            color = MaterialTheme.colors.error,
+            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 16.dp)
+        )
+    }
 }

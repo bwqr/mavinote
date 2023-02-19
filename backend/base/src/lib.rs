@@ -10,7 +10,7 @@ pub mod sanitize;
 pub mod schema;
 pub mod types;
 
-#[derive(Serialize)]
+#[derive(Debug, Eq, PartialEq, Serialize)]
 pub struct HttpMessage {
     message: &'static str,
 }
@@ -21,7 +21,7 @@ impl HttpMessage {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Eq, PartialEq)]
 pub struct HttpError {
     pub code: StatusCode,
     pub error: &'static str,
@@ -102,8 +102,6 @@ impl From<BlockingError> for HttpError {
 
 impl From<diesel::result::Error> for HttpError {
     fn from(e: diesel::result::Error) -> Self {
-        log::error!("db error, {:?}", e);
-
         if let diesel::result::Error::NotFound = e {
             return HttpError {
                 code: StatusCode::NOT_FOUND,
@@ -111,6 +109,8 @@ impl From<diesel::result::Error> for HttpError {
                 message: None,
             };
         };
+
+        log::error!("db error, {:?}", e);
 
         HttpError {
             code: StatusCode::INTERNAL_SERVER_ERROR,
@@ -121,11 +121,29 @@ impl From<diesel::result::Error> for HttpError {
 }
 
 impl From<jsonwebtoken::errors::Error> for HttpError {
-    fn from(_: jsonwebtoken::errors::Error) -> Self {
-        HttpError {
-            code: StatusCode::INTERNAL_SERVER_ERROR,
-            error: "crypto_error",
-            message: None,
+    fn from(e: jsonwebtoken::errors::Error) -> Self {
+        use jsonwebtoken::errors::ErrorKind::*;
+
+        match e.kind() {
+            ExpiredSignature => HttpError {
+                code: StatusCode::UNAUTHORIZED,
+                error: "expired_token",
+                message: None,
+            },
+            InvalidSignature | InvalidToken => HttpError {
+                code: StatusCode::UNAUTHORIZED,
+                error: "invalid_token",
+                message: None,
+            },
+            _ => {
+                log::error!("crypto error, {:?}", e);
+
+                HttpError {
+                    code: StatusCode::INTERNAL_SERVER_ERROR,
+                    error: "crypto_error",
+                    message: None,
+                }
+            }
         }
     }
 }

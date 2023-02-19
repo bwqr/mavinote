@@ -1,4 +1,9 @@
-use base::{models::Token, schema::devices, types::Pool, HttpError};
+use base::{
+    models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
+    schema::devices,
+    types::Pool,
+    HttpError,
+};
 
 use actix_web::{
     http::StatusCode,
@@ -11,11 +16,15 @@ use diesel::Queryable;
 use futures::future::LocalBoxFuture;
 use serde::Serialize;
 
-#[derive(Queryable, Serialize)]
+#[derive(Clone, Queryable, Serialize)]
 pub struct Device {
     pub id: i32,
     pub user_id: i32,
+    pub pubkey: String,
 }
+
+pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey) =
+    (devices::id, devices::user_id, devices::pubkey);
 
 #[derive(Queryable, Serialize)]
 pub struct User {
@@ -31,14 +40,14 @@ impl FromRequest for Device {
     fn from_request(req: &actix_web::HttpRequest, _: &mut actix_web::dev::Payload) -> Self::Future {
         let conn = req
             .app_data::<Data<Pool>>()
-            .ok_or("Pool could not extracted from request in impl FromRequest for User")
+            .ok_or("Pool could not be extracted from request in impl FromRequest for Device")
             .map(|pool| pool.get().unwrap());
 
-        let device_id = req
+        let token = req
             .extensions()
             .get::<Token>()
-            .ok_or("Token could not extracted from request in impl FromRequest for User")
-            .map(|token| token.device_id.clone());
+            .ok_or("Token could not be extracted from request in impl FromRequest for Device")
+            .map(|token| (token.id, token.kind.clone()));
 
         Box::pin(async move {
             let map_err = |message: &'static str| HttpError {
@@ -48,11 +57,16 @@ impl FromRequest for Device {
             };
 
             let mut conn = conn.map_err(map_err)?;
-            let device_id = device_id.map_err(map_err)?;
+            let (device_id, kind) = token.map_err(map_err)?;
+
+            if kind != TokenKind::Device {
+                return Err(UNEXPECTED_TOKEN_KIND);
+            }
 
             block(move || {
                 devices::table
                     .find(device_id)
+                    .select(DEVICE_COLUMNS)
                     .first::<Device>(&mut conn)
                     .map_err(|e| e.into())
             })

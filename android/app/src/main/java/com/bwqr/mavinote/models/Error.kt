@@ -2,7 +2,6 @@ package com.bwqr.mavinote.models
 
 import android.util.Log
 import com.bwqr.mavinote.Bus
-import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.reax.deserializeOption
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
@@ -22,9 +21,11 @@ open class NoteError : Error() {
 
     fun handle() {
         when (this) {
-            is MavinoteError.NoConnection -> Bus.emit(BusEvent.DisplayNoInternetWarning)
-            is MavinoteError.Unauthorized -> this.accountId?.let { Bus.emit(BusEvent.DisplayNotAuthorized(it)) }
-            else -> Log.e("ReaxError", "Unhandled error, $this")
+            is MavinoteError.NoConnection -> Bus.message("No Internet Connection")
+            else -> {
+                Log.e("ReaxError", "Unhandled error, $this")
+                Bus.message(this.toString())
+            }
         }
     }
 }
@@ -56,7 +57,7 @@ sealed class StorageError : NoteError() {
     class InvalidState(override val message: String) : StorageError()
     object NotMavinoteAccount : StorageError()
     object AccountNotFound : StorageError()
-    object AccountNameUsed : StorageError()
+    object AccountEmailUsed : StorageError()
     object FolderNotFound : StorageError()
 
     companion object {
@@ -65,7 +66,7 @@ sealed class StorageError : NoteError() {
                 0 -> StorageError.InvalidState(deserializer.deserialize_str())
                 1 -> StorageError.NotMavinoteAccount
                 2 -> StorageError.AccountNotFound
-                3 -> StorageError.AccountNameUsed
+                3 -> StorageError.AccountEmailUsed
                 4 -> StorageError.FolderNotFound
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }

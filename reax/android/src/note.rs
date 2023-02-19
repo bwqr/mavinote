@@ -105,54 +105,17 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1mavinoteAc
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1signUp(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addDevice(
     env: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    name: JString,
-    email: JString,
-    code: JString,
-) -> jlong {
-    let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
-    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
-
-    let handle = spawn(async move {
-        let res = note::storage::add_account(name, email, code).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1sendCode(
-    env: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    email: JString,
-) -> jlong {
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
-
-    let handle = spawn(async move {
-        let res = note::storage::send_code(email).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteAccount(
-    _: JNIEnv,
     _: JClass,
     once_id: jint,
     account_id: jint,
+    fingerprint: JString,
 ) -> jlong {
+    let fingerprint = env.get_string(fingerprint).unwrap().to_str().unwrap().to_owned();
+
     let handle = spawn(async move {
-        let res = note::storage::delete_account(account_id).await;
+        let res = note::storage::add_device(account_id, fingerprint).await;
 
         send_once(once_id, res);
     });

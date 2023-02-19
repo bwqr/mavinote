@@ -125,7 +125,7 @@ fun NotesView(
                 LazyColumn {
                     items(notes) { note ->
                         Text(
-                            note.title ?: "New Note",
+                            note.name,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .clickable { navController.navigate("note?noteId=${note.id}") }

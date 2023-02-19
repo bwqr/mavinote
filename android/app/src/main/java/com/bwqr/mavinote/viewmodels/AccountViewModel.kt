@@ -1,0 +1,45 @@
+package com.bwqr.mavinote.viewmodels
+
+import com.bwqr.mavinote.reax.Runtime
+
+class AccountViewModel {
+    companion object {
+        suspend fun requestVerification(email: String): String = Runtime.runOnce(
+            onNext = { it.deserialize_str() },
+            onStart = { _requestVerification(it, email) }
+        )
+
+        suspend fun waitVerification(token: String) = Runtime.runUnitOnce {
+            _waitVerification(it, token)
+        }
+
+        suspend fun sendVerificationCode(email: String) = Runtime.runUnitOnce {
+            _sendVerificationCode(it, email)
+        }
+
+        suspend fun signUp(email: String, code: String) = Runtime.runUnitOnce {
+            _signUp(it, email, code)
+        }
+
+        suspend fun addAccount(email: String) = Runtime.runUnitOnce {
+            _addAccount(it, email)
+        }
+
+        suspend fun removeAccount(accountId: Int) = Runtime.runUnitOnce {
+            _removeAccount(it, accountId)
+        }
+
+        suspend fun publicKey(): String = Runtime.runOnce(
+            onNext = { it.deserialize_str() },
+            onStart = { _publicKey(it) }
+        )
+    }
+}
+
+private external fun _requestVerification(onceId: Int, email: String): Long
+private external fun _waitVerification(onceId: Int, token: String): Long
+private external fun _sendVerificationCode(onceId: Int, email: String): Long
+private external fun _signUp(onceId: Int, email: String, code: String): Long
+private external fun _addAccount(onceId: Int, email: String): Long
+private external fun _removeAccount(onceId: Int, accountId: Int): Long
+private external fun _publicKey(onceId: Int): Long

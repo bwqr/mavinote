@@ -23,10 +23,10 @@ import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.*
 import com.bwqr.mavinote.models.State
-import com.bwqr.mavinote.ui.NoteScreens
-import com.bwqr.mavinote.ui.SubTitle
+import com.bwqr.mavinote.ui.Screen
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
+import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -84,7 +84,7 @@ fun FoldersView(
             IconButton(onClick = { expanded = true }) {
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(onClick = { navController.navigate(NoteScreens.Accounts.route) }) {
+                    DropdownMenuItem(onClick = { navController.navigate(Screen.Account.Accounts.route) }) {
                         Text(text = stringResource(R.string.manage_accounts))
                     }
                 }
@@ -99,8 +99,9 @@ fun FoldersView(
                     .fillMaxWidth()
                     .padding(0.dp, 0.dp, 0.dp, 6.dp)
             ) {
-                SubTitle(
+                Text(
                     account.account.name,
+                    style = Typography.h6,
                     modifier = Modifier
                         .padding(24.dp + 16.dp, 0.dp, 0.dp, 0.dp)
                 )
@@ -143,10 +144,12 @@ fun FoldersView(
 }
 
 @Composable
-fun FolderFab(navController: NavController) {
-    FloatingActionButton(onClick = { navController.navigate(NoteScreens.FolderCreate.route) }) {
-        Icon(Icons.Filled.Add, contentDescription = null)
-    }
+fun FoldersFab(navController: NavController) {
+    ExtendedFloatingActionButton(
+        text = { Text("Folder") },
+        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+        onClick = { navController.navigate(Screen.Note.FolderCreate.route) }
+    )
 }
 
 @Preview(showBackground = true)

@@ -3,7 +3,23 @@ use sqlx::Connection;
 use sqlx::types::Json;
 use sqlx::{Sqlite, pool::PoolConnection, Error};
 
-use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote, Device};
+use crate::models::{Folder, Note, State, RemoteId, LocalId, Account, AccountKind, Mavinote, Device, StoreValue, StoreKey};
+
+pub async fn store_value(conn: &mut PoolConnection<Sqlite>, key: StoreKey, value: &str) -> Result<(), Error> {
+    sqlx::query("insert into store (key, value) values (?, ?) on conflict (key) do update set value = excluded.value")
+        .bind(key)
+        .bind(value)
+        .execute(conn)
+        .await
+        .map(|_| ())
+}
+
+pub async fn fetch_value(conn: &mut PoolConnection<Sqlite>, key: StoreKey) -> Result<Option<StoreValue>, Error> {
+    sqlx::query_as("select key, value from store where key = ?")
+        .bind(key)
+        .fetch_optional(conn)
+        .await
+}
 
 pub async fn fetch_accounts(conn: &mut PoolConnection<Sqlite>) -> Result<Vec<Account>, Error> {
     sqlx::query_as("select id, name, kind from accounts order by id")
@@ -26,20 +42,25 @@ pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(co
         .map(|opt| opt.map(|json| json.0.0))
 }
 
-pub async fn devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
-    sqlx::query_as("select id, account_id from devices where account_id = ?")
+pub async fn fetch_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
+    sqlx::query_as("select id, account_id, pubkey from devices where account_id = ?")
         .bind(account_id)
         .fetch_all(conn)
         .await
 }
 
-pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, device_ids: &[i32]) -> Result<(), Error> {
-    let device_ids: String = itertools::Itertools::intersperse(device_ids.into_iter().map(|id| format!("({}, {})", id, account_id)), ",".to_string()).collect();
-    let query = format!("insert into devices (id, account_id) values {}", device_ids);
+pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, devices: &[crate::accounts::mavinote::Device]) -> Result<(), Error> {
+    let binds: String = itertools::Itertools::intersperse(devices.into_iter().map(|_| "(?, ?, ?)"), ",")
+        .collect();
 
-    let query = sqlx::query(&query);
+    let query = format!("insert into devices (id, account_id, pubkey) values {}", binds);
+    let mut query = sqlx::query(&query);
 
-    query.execute(&mut *conn)
+    for dev in devices {
+        query = query.bind(dev.id).bind(account_id).bind(&dev.pubkey);
+    }
+
+    query.execute(conn)
         .await
         .map(|_| ())
 }
@@ -47,17 +68,18 @@ pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, 
 pub async fn delete_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
     sqlx::query("delete from devices where account_id = ?")
         .bind(account_id)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }
 
-pub async fn account_with_name_exists(conn: &mut PoolConnection<Sqlite>, name: &str) -> Result<bool, Error> {
-    sqlx::query_as::<Sqlite, (i32,)>("select id from accounts where name = ?")
-        .bind(name)
-        .fetch_optional(conn)
-        .await
-        .map(|opt| opt.is_some())
+pub async fn account_with_email_exists(conn: &mut PoolConnection<Sqlite>, email: &str) -> Result<bool, Error> {
+    let accounts = sqlx::query_as::<Sqlite, (Json<Mavinote>,)>("select data from accounts where kind = ?")
+        .bind(AccountKind::Mavinote)
+        .fetch_all(conn)
+        .await?;
+
+    Ok(accounts.into_iter().find(|data| data.0.0.email == email).is_some())
 }
 
 pub async fn fetch_account_folders(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Folder>, Error> {
@@ -89,7 +111,7 @@ pub async fn update_account_data(conn: &mut PoolConnection<Sqlite>, account_id: 
     sqlx::query("update accounts set data = ? where id = ?")
         .bind(data)
         .bind(account_id)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }
@@ -97,7 +119,7 @@ pub async fn update_account_data(conn: &mut PoolConnection<Sqlite>, account_id: 
 pub async fn delete_account(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
     sqlx::query("delete from accounts where id = ?")
         .bind(account_id)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }
@@ -147,7 +169,7 @@ pub async fn update_folder_remote_id(conn: &mut PoolConnection<Sqlite>, local_id
     sqlx::query("update folders set remote_id = ? where id = ?")
         .bind(remote_id.0)
         .bind(local_id.0)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }
@@ -155,7 +177,7 @@ pub async fn update_folder_remote_id(conn: &mut PoolConnection<Sqlite>, local_id
 pub async fn delete_folder(conn: &mut PoolConnection<Sqlite>, local_id: LocalId) -> Result<(), Error> {
     sqlx::query("delete from folders where id = ?")
         .bind(local_id.0)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }
@@ -169,7 +191,7 @@ pub async fn delete_folder_local(conn: &mut PoolConnection<Sqlite>, local_id: Lo
 
     sqlx::query("delete from notes where folder_id = ?")
         .bind(local_id.0)
-        .execute(conn)
+        .execute(&mut *conn)
         .await
         .map(|_| ())
 }
@@ -213,12 +235,12 @@ pub async fn fetch_note_by_remote_id(conn: &mut PoolConnection<Sqlite>, note_id:
         .await
 }
 
-pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, title: Option<String>, text: String, commit: i32) -> Result<Note, Error> {
+pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, remote_id: Option<RemoteId>, name: String, text: String, commit: i32) -> Result<Note, Error> {
     conn.transaction(|conn| Box::pin(async move {
-        sqlx::query("insert into notes (folder_id, remote_id, title, text, 'commit', state) values(?, ?, ?, ?, ?, ?)")
+        sqlx::query("insert into notes (folder_id, remote_id, name, text, 'commit', state) values(?, ?, ?, ?, ?, ?)")
             .bind(folder_id.0)
             .bind(remote_id.map(|id| id.0))
-            .bind(title.as_ref())
+            .bind(name.as_str())
             .bind(text.as_str())
             .bind(commit)
             .bind(State::Clean)
@@ -233,9 +255,9 @@ pub async fn create_note(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId, 
      .await
 }
 
-pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, title: Option<&str>, text: &str, commit: i32, state: State) -> Result<(), Error> {
-    sqlx::query("update notes set title=?, text=?, 'commit'=?, state=? where id=?")
-        .bind(title)
+pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, name: &str, text: &str, commit: i32, state: State) -> Result<(), Error> {
+    sqlx::query("update notes set name=?, text=?, 'commit'=?, state=? where id=?")
+        .bind(name)
         .bind(text)
         .bind(commit)
         .bind(state)
@@ -267,7 +289,7 @@ pub async fn delete_note_local(conn: &mut PoolConnection<Sqlite>, local_id: Loca
     sqlx::query("update notes set state = ? where id = ?")
         .bind(State::Deleted)
         .bind(local_id.0)
-        .execute(&mut *conn)
+        .execute(conn)
         .await
         .map(|_| ())
 }

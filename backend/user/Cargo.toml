@@ -8,6 +8,7 @@ edition = "2021"
 [dependencies]
 base = { path = "../base" }
 derive = { path = "../derive" }
+notify = { path = "../notify" }
 
 actix-web.workspace = true
 futures = "0.3.21"

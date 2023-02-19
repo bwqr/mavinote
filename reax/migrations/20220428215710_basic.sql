@@ -10,7 +10,8 @@ insert into accounts (name, kind) values ('Local', 'Local');
 
 create table devices(
     id  integer,
-    account_id  integer,
+    account_id  integer     not null,
+    pubkey      varchar(64) not null,
     foreign key(account_id) references accounts(id) on delete cascade on update no action,
     unique(id, account_id)
 );
@@ -31,7 +32,7 @@ create table notes(
     folder_id   integer         not null,
     remote_id   integer         default null,
     'commit'    integer         not null,
-    title       varchar(255)    default null,
+    name        varchar(255)    not null,
     text        text            not null,
     state       varchar(8)      not null,
     foreign key(folder_id) references folders(id) on delete cascade on update no action,
@@ -40,6 +41,6 @@ create table notes(
 );
 
 create table store(
-    key     varchar(255)    not null    unique,
+    key     varchar(128)    not null    unique,
     value   text            not null
 );

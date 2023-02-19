@@ -7,6 +7,20 @@ pub struct LocalId(pub i32);
 #[derive(Copy, Clone)]
 pub struct RemoteId(pub i32);
 
+#[cfg_attr(feature = "storage", derive(Type))]
+pub enum StoreKey {
+    Version,
+    IdentityPrivKey,
+    IdentityPubKey,
+    Password,
+}
+
+#[cfg_attr(feature = "storage", derive(FromRow))]
+pub struct StoreValue {
+    pub key: StoreKey,
+    pub value: String,
+}
+
 #[derive(Debug, Serialize)]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Account {
@@ -26,6 +40,7 @@ pub enum AccountKind {
 pub struct Device {
     pub id: i32,
     pub account_id: i32,
+    pub pubkey: String,
 }
 
 #[derive(Debug, Deserialize, Serialize)]
@@ -61,7 +76,7 @@ pub struct Note {
     pub folder_id: i32,
     pub remote_id: Option<i32>,
     pub commit: i32,
-    pub title: Option<String>,
+    pub name: String,
     pub text: String,
     pub state: State,
 }

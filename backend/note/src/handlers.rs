@@ -1,21 +1,26 @@
 use actix_web::{
     delete, get, post, put,
-    web::{block, Data, Json, Path},
+    web::{block, Data, Json, Path, Query},
 };
 use diesel::prelude::*;
 
 use base::{
     sanitize::Sanitized,
-    schema::{device_folders, device_notes, devices, folders, notes},
+    schema::{
+        device_folders, device_notes, devices, folder_requests, folders, note_requests, notes,
+    },
     types::Pool,
     HttpError, HttpMessage,
 };
-use user::models::Device;
+use user::models::{Device, DEVICE_COLUMNS};
 
 use crate::{
     models::{Folder, Note, State},
-    requests::{CreateFolderRequest, CreateNoteRequest, UpdateNoteRequest},
-    responses::{self, Commit, CreatedFolder, CreatedNote},
+    requests::{
+        CreateFolderRequest, CreateNoteRequest, CreateRequests, FolderId, RespondRequests,
+        UpdateNoteRequest,
+    },
+    responses::{self, Commit, CreatedFolder, CreatedNote, FolderRequest, NoteRequest, Requests},
 };
 
 #[get("folders")]
@@ -57,6 +62,7 @@ pub async fn create_folder(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = folders_to_create
@@ -161,10 +167,10 @@ pub async fn fetch_commits(
     Ok(Json(commits))
 }
 
-#[post("/folder/{folder_id}/note")]
+#[post("/note")]
 pub async fn create_note(
     pool: Data<Pool>,
-    folder_id: Path<i32>,
+    query: Query<FolderId>,
     request: Sanitized<Json<Vec<CreateNoteRequest>>>,
     device: Device,
 ) -> Result<Json<CreatedNote>, HttpError> {
@@ -174,7 +180,7 @@ pub async fn create_note(
         let mut conn = pool.get().unwrap();
 
         let folder_id = folders::table
-            .filter(folders::id.eq(folder_id.into_inner()))
+            .filter(folders::id.eq(query.folder_id))
             .filter(folders::state.eq(State::Clean))
             .filter(folders::user_id.eq(device.user_id))
             .select(folders::id)
@@ -183,6 +189,7 @@ pub async fn create_note(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = notes_to_create
@@ -212,7 +219,7 @@ pub async fn create_note(
                             device_notes::note_id.eq(note.id),
                             device_notes::receiver_device_id.eq(note_to_create.device_id),
                             device_notes::sender_device_id.eq(device.id),
-                            device_notes::title.eq(note_to_create.title),
+                            device_notes::name.eq(note_to_create.name),
                             device_notes::text.eq(note_to_create.text),
                         )
                     })
@@ -252,7 +259,7 @@ pub async fn fetch_note(
                 notes::state,
                 (
                     device_notes::sender_device_id,
-                    device_notes::title.nullable(),
+                    device_notes::name,
                     device_notes::text,
                 )
                     .nullable(),
@@ -292,6 +299,7 @@ pub async fn update_note(
         let devices = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .filter(devices::id.ne(device.id))
+            .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
         let device_not_exist_in_request = device_notes
@@ -320,7 +328,7 @@ pub async fn update_note(
                 .filter(device_notes::receiver_device_id.eq(device_note.device_id))
                 .set((
                     device_notes::sender_device_id.eq(device.id),
-                    device_notes::title.eq(device_note.title),
+                    device_notes::name.eq(device_note.name),
                     device_notes::text.eq(device_note.text),
                 ))
                 .execute(&mut conn)?;
@@ -366,4 +374,432 @@ pub async fn delete_note(
     .await??;
 
     Ok(Json(HttpMessage::success()))
+}
+
+#[get("requests")]
+pub async fn fetch_requests(pool: Data<Pool>, device: Device) -> Result<Json<Requests>, HttpError> {
+    let requests = block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let folders: Vec<FolderRequest> = folder_requests::table
+            .filter(devices::user_id.eq(device.user_id))
+            .filter(devices::id.ne(device.id))
+            .inner_join(devices::table)
+            .select((folder_requests::folder_id, devices::id))
+            .get_results(&mut conn)?;
+
+        let notes: Vec<NoteRequest> = note_requests::table
+            .filter(devices::user_id.eq(device.user_id))
+            .filter(devices::id.ne(device.id))
+            .inner_join(devices::table)
+            .select((note_requests::note_id, devices::id))
+            .get_results(&mut conn)?;
+
+        Result::<_, HttpError>::Ok(Requests {
+            folder_requests: folders,
+            note_requests: notes,
+        })
+    })
+    .await??;
+
+    Ok(Json(requests))
+}
+
+pub async fn create_requests(
+    pool: Data<Pool>,
+    device: Device,
+    request: Sanitized<Json<CreateRequests>>,
+) -> Result<Json<HttpMessage>, HttpError> {
+    let request = request.0 .0;
+
+    if request.folder_ids.len() == 0 && request.note_ids.len() == 0 {
+        return Err(HttpError::unprocessable_entity("no_request_specified"));
+    }
+
+    block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let folder_count = folders::table
+            .filter(folders::user_id.eq(device.user_id))
+            .filter(folders::id.eq_any(request.folder_ids.as_slice()))
+            .filter(folders::state.eq(State::Clean))
+            .select(diesel::dsl::count(folders::id))
+            .get_result::<i64>(&mut conn)?;
+
+        if folder_count != request.folder_ids.len() as i64 {
+            return Err(HttpError::unprocessable_entity("unknown_folder"));
+        }
+
+        let note_count = notes::table
+            .filter(folders::user_id.eq(device.user_id))
+            .filter(notes::id.eq_any(request.note_ids.as_slice()))
+            .filter(notes::state.eq(State::Clean))
+            .inner_join(folders::table)
+            .select(diesel::dsl::count(notes::id))
+            .get_result::<i64>(&mut conn)?;
+
+        if note_count != request.note_ids.len() as i64 {
+            return Err(HttpError::unprocessable_entity("unknown_note"));
+        }
+
+        conn.transaction(move |conn| {
+            let values = request
+                .folder_ids
+                .into_iter()
+                .map(|id| {
+                    (
+                        folder_requests::folder_id.eq(id),
+                        folder_requests::device_id.eq(device.id),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            diesel::insert_into(folder_requests::table)
+                .values(values)
+                .execute(conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::DatabaseError(
+                        diesel::result::DatabaseErrorKind::UniqueViolation,
+                        _,
+                    ) => HttpError::conflict("one_request_already_exists"),
+                    _ => e.into(),
+                })?;
+
+            let values = request
+                .note_ids
+                .into_iter()
+                .map(|id| {
+                    (
+                        note_requests::note_id.eq(id),
+                        note_requests::device_id.eq(device.id),
+                    )
+                })
+                .collect::<Vec<_>>();
+
+            diesel::insert_into(note_requests::table)
+                .values(values)
+                .execute(conn)
+                .map_err(|e| match e {
+                    diesel::result::Error::DatabaseError(
+                        diesel::result::DatabaseErrorKind::UniqueViolation,
+                        _,
+                    ) => HttpError::conflict("one_request_already_exists"),
+                    _ => e.into(),
+                })
+        })
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
+}
+
+#[post("respond-requests")]
+pub async fn respond_requests(
+    pool: Data<Pool>,
+    device: Device,
+    request: Sanitized<Json<RespondRequests>>,
+) -> Result<Json<HttpMessage>, HttpError> {
+    let request = request.0 .0;
+
+    if request.folders.len() == 0 && request.notes.len() == 0 {
+        return Err(HttpError::unprocessable_entity("no_request_specified"));
+    }
+
+    block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let requested_folder_ids: Vec<i32> =
+            request.folders.iter().map(|req| req.folder_id).collect();
+        let requested_note_ids: Vec<i32> = request.notes.iter().map(|req| req.note_id).collect();
+
+        let folder_count = folders::table
+            .filter(folders::user_id.eq(device.user_id))
+            .filter(folders::id.eq_any(requested_folder_ids.as_slice()))
+            .filter(folder_requests::device_id.eq(request.device_id))
+            .inner_join(folder_requests::table)
+            .select(diesel::dsl::count(folders::id))
+            .get_result::<i64>(&mut conn)?;
+
+        if folder_count != requested_folder_ids.len() as i64 {
+            return Err(HttpError::unprocessable_entity("unknown_folder"));
+        }
+
+        let note_count = notes::table
+            .filter(folders::user_id.eq(device.user_id))
+            .filter(notes::id.eq_any(requested_note_ids.as_slice()))
+            .inner_join(folders::table)
+            .inner_join(
+                note_requests::table.on(note_requests::note_id
+                    .eq(notes::id)
+                    .and(note_requests::device_id.eq(request.device_id))),
+            )
+            .select(diesel::dsl::count(notes::id))
+            .get_result::<i64>(&mut conn)?;
+
+        if note_count != requested_note_ids.len() as i64 {
+            return Err(HttpError::unprocessable_entity("unknown_note"));
+        }
+
+        conn.transaction(move |conn| {
+            if requested_folder_ids.len() > 0 {
+                let values = request
+                    .folders
+                    .into_iter()
+                    .map(|req| {
+                        (
+                            device_folders::folder_id.eq(req.folder_id),
+                            device_folders::receiver_device_id.eq(request.device_id),
+                            device_folders::sender_device_id.eq(device.id),
+                            device_folders::name.eq(req.name),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                diesel::insert_into(device_folders::table)
+                    .values(values)
+                    .on_conflict_do_nothing()
+                    .execute(conn)?;
+
+                diesel::delete(folder_requests::table)
+                    .filter(folder_requests::device_id.eq(request.device_id))
+                    .filter(folder_requests::folder_id.eq_any(requested_folder_ids.as_slice()))
+                    .execute(conn)?;
+            }
+
+            if requested_note_ids.len() > 0 {
+                let values = request
+                    .notes
+                    .into_iter()
+                    .map(|req| {
+                        (
+                            device_notes::note_id.eq(req.note_id),
+                            device_notes::receiver_device_id.eq(request.device_id),
+                            device_notes::sender_device_id.eq(device.id),
+                            device_notes::name.eq(req.name),
+                            device_notes::text.eq(req.text),
+                        )
+                    })
+                    .collect::<Vec<_>>();
+
+                diesel::insert_into(device_notes::table)
+                    .values(values)
+                    .on_conflict_do_nothing()
+                    .execute(conn)?;
+
+                diesel::delete(note_requests::table)
+                    .filter(note_requests::device_id.eq(request.device_id))
+                    .filter(note_requests::note_id.eq_any(requested_note_ids.as_slice()))
+                    .execute(conn)?;
+            }
+
+            Ok(())
+        })
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::{
+        models::{Folder, Note},
+        requests::CreateRequests,
+    };
+    use base::{
+        sanitize::Sanitized,
+        schema::{devices, folder_requests, folders, notes, users, note_requests},
+        types::Pool,
+        HttpError, HttpMessage,
+    };
+    use chrono::NaiveDateTime;
+    use user::models::Device;
+
+    use super::create_requests;
+
+    use actix_web::web::{Data, Json};
+    use diesel::{prelude::*, r2d2::ConnectionManager, PgConnection};
+
+    fn create_pool() -> Pool {
+        let conn_info = "postgres://mavinote:toor@127.0.0.1/mavinote_test";
+        let manager = ConnectionManager::<PgConnection>::new(conn_info);
+
+        let pool = Pool::builder()
+            .build(manager)
+            .expect("Failed to create pool.");
+
+        pool.get().unwrap().begin_test_transaction().unwrap();
+
+        pool
+    }
+
+    fn create_device(conn: &mut PgConnection) -> Result<Device, diesel::result::Error> {
+        let (user_id, _, _): (i32, String, NaiveDateTime) = diesel::insert_into(users::table)
+            .values(users::email.eq("device@email.com"))
+            .get_result(conn)?;
+
+        diesel::insert_into(devices::table)
+            .values((devices::user_id.eq(user_id), devices::pubkey.eq("pubkey"), devices::password.eq("password")))
+            .get_result::<(i32, i32, String, String)>(conn)
+            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2 })
+    }
+
+    fn create_folder(
+        conn: &mut PgConnection,
+        user_id: Option<i32>,
+    ) -> Result<Folder, diesel::result::Error> {
+        let user_id = if let Some(user_id) = user_id {
+            user_id
+        } else {
+            diesel::insert_into(users::table)
+                .values(users::email.eq("folder@email.com"))
+                .get_result::<(i32, String, NaiveDateTime)>(conn)?
+                .0
+        };
+
+        diesel::insert_into(folders::table)
+            .values(folders::user_id.eq(user_id))
+            .get_result(conn)
+    }
+
+    fn create_note(
+        conn: &mut PgConnection,
+        folder_id: Option<i32>,
+    ) -> Result<Note, diesel::result::Error> {
+        let folder_id = if let Some(folder_id) = folder_id {
+            folder_id
+        } else {
+            let user_id = diesel::insert_into(users::table)
+                .values(users::email.eq("note@email.com"))
+                .get_result::<(i32, String, NaiveDateTime)>(conn)?
+                .0;
+
+            diesel::insert_into(folders::table)
+                .values(folders::user_id.eq(user_id))
+                .get_result::<Folder>(conn)?
+                .id
+        };
+
+        diesel::insert_into(notes::table)
+            .values(notes::folder_id.eq(folder_id))
+            .get_result(conn)
+    }
+
+    #[actix_web::test]
+    async fn it_returns_no_request_specified_error_if_ids_are_empty_when_create_request_is_called()
+    {
+        let pool = create_pool();
+
+        let device = create_device(&mut pool.get().unwrap()).unwrap();
+        let request = CreateRequests {
+            folder_ids: Vec::new(),
+            note_ids: Vec::new(),
+        };
+
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("no_request_specified"),
+            res.unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_unknown_folder_error_if_one_of_the_folder_id_does_not_belong_to_user_when_create_request_is_called(
+    ) {
+        let pool = create_pool();
+
+        let (device, folder) = {
+            let mut conn = pool.get().unwrap();
+            let device = create_device(&mut conn).unwrap();
+            let folder = create_folder(&mut conn, None).unwrap();
+
+            (device, folder)
+        };
+
+        let request = CreateRequests {
+            folder_ids: vec![folder.id],
+            note_ids: Vec::new(),
+        };
+
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("unknown_folder"),
+            res.unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_unknown_note_error_if_one_of_the_note_id_does_not_belong_to_user_when_create_request_is_called(
+    ) {
+        let pool = create_pool();
+
+        let (device, note) = {
+            let mut conn = pool.get().unwrap();
+            let device = create_device(&mut conn).unwrap();
+            let note = create_note(&mut conn, None).unwrap();
+
+            (device, note)
+        };
+
+        let request = CreateRequests {
+            folder_ids: Vec::new(),
+            note_ids: vec![note.id],
+        };
+
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+
+        assert_eq!(
+            HttpError::unprocessable_entity("unknown_note"),
+            res.unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_creates_rows_for_folders_and_notes_when_create_request_is_called() {
+        let pool = create_pool();
+
+        let (device, folder, note) = {
+            let mut conn = pool.get().unwrap();
+            let device = create_device(&mut conn).unwrap();
+            let folder = create_folder(&mut conn, Some(device.user_id)).unwrap();
+            let note = create_note(&mut conn, Some(folder.id)).unwrap();
+
+            (device, folder, note)
+        };
+
+        let request = CreateRequests {
+            folder_ids: vec![folder.id],
+            note_ids: vec![note.id],
+        };
+
+        let res = create_requests(
+            Data::new(pool.clone()),
+            device.clone(),
+            Sanitized(Json(request)),
+        )
+        .await;
+
+        assert_eq!(HttpMessage::success(), res.unwrap().0);
+
+        let folder_request_exist = diesel::select(diesel::dsl::exists(
+            folder_requests::table
+                .filter(folder_requests::folder_id.eq(folder.id))
+                .filter(folder_requests::device_id.eq(device.id)),
+        ))
+        .get_result::<bool>(&mut pool.get().unwrap())
+        .unwrap();
+
+        let note_request_exist = diesel::select(diesel::dsl::exists(
+            note_requests::table
+                .filter(note_requests::note_id.eq(note.id))
+                .filter(note_requests::device_id.eq(device.id)),
+        ))
+        .get_result::<bool>(&mut pool.get().unwrap())
+        .unwrap();
+
+        assert!(folder_request_exist);
+        assert!(note_request_exist);
+    }
 }

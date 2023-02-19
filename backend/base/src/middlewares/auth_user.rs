@@ -14,21 +14,9 @@ use futures::future::LocalBoxFuture;
 
 use crate::{crypto::Crypto, models::Token, HttpError};
 
-const INVALID_TOKEN_ERROR: HttpError = HttpError {
-    code: StatusCode::UNAUTHORIZED,
-    error: "invalid_token",
-    message: None,
-};
-
 const TOKEN_NOT_FOUND_ERROR: HttpError = HttpError {
     code: StatusCode::UNAUTHORIZED,
     error: "token_not_found",
-    message: None,
-};
-
-const EXPIRED_TOKEN_ERROR: HttpError = HttpError {
-    code: StatusCode::UNAUTHORIZED,
-    error: "expired_token",
     message: None,
 };
 
@@ -92,7 +80,7 @@ fn parse_token(req: &ServiceRequest) -> Result<Token, HttpError> {
 
         auth_header
             .split_once("Bearer ")
-            .ok_or(INVALID_TOKEN_ERROR)?
+            .ok_or(TOKEN_NOT_FOUND_ERROR)?
             .1
     } else {
         let query_string = req.query_string();
@@ -109,8 +97,5 @@ fn parse_token(req: &ServiceRequest) -> Result<Token, HttpError> {
 
     let crypto = req.app_data::<Data<Crypto>>().unwrap();
 
-    crypto.decode::<Token>(token).map_err(|e| match e.kind() {
-        jsonwebtoken::errors::ErrorKind::ExpiredSignature => EXPIRED_TOKEN_ERROR,
-        _ => INVALID_TOKEN_ERROR,
-    })
+    crypto.decode::<Token>(token).map_err(|e| e.into())
 }

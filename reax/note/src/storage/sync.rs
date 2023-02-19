@@ -1,11 +1,12 @@
+use std::collections::{HashSet, HashMap};
 use std::sync::Arc;
 
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 
 use super::db;
 use crate::Error;
-use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest};
-use crate::models::{AccountKind, State as ModelState, Account};
+use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest};
+use crate::models::{AccountKind, State as ModelState, Account, RemoteId, Note};
 
 pub async fn sync() -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
@@ -26,23 +27,45 @@ pub async fn sync() -> Result<(), Error> {
 async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Account) -> Result<(), Error> {
     log::debug!("syncing mavinote account with id {}", account.id);
 
-    let mavinote = super::mavinote_client(account.id).await.unwrap().unwrap();
+    let mavinote = super::mavinote_client(conn, account.id).await?.unwrap();
 
+    sync_devices(conn, &mavinote, account.id).await?;
+
+    sync_remote(conn, &mavinote, account.id).await?;
+
+    sync_local(conn, &mavinote, account.id).await?;
+
+    respond_device_requests(conn, &mavinote, account.id).await?;
+
+    Ok(())
+}
+
+async fn sync_devices(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
+    let new_devices = mavinote.fetch_devices().await?;
+
+    db::delete_devices(conn, account_id).await?;
+
+    if !new_devices.is_empty() {
+        db::create_devices(conn, account_id, &new_devices).await?;
+    }
+
+    Ok(())
+}
+
+async fn sync_remote(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
     let remote_folders = mavinote.fetch_folders().await?;
-
-    log::debug!("fetched folders length {}", remote_folders.len());
 
     for remote_folder in remote_folders {
         if let ModelState::Deleted = remote_folder.state {
-            db::delete_folder_by_remote_id(conn, remote_folder.id(), account.id).await?;
+            db::delete_folder_by_remote_id(conn, remote_folder.id(), account_id).await?;
             continue
         }
 
-        let folder = if let Some(folder) = db::fetch_folder_by_remote_id(conn, remote_folder.id(), account.id).await? {
+        let folder = if let Some(folder) = db::fetch_folder_by_remote_id(conn, remote_folder.id(), account_id).await? {
             folder
         } else {
             if let Some(device_folder) = &remote_folder.device_folder {
-                db::create_folder(conn, Some(remote_folder.id()), account.id, device_folder.name.clone()).await?
+                db::create_folder(conn, Some(remote_folder.id()), account_id, device_folder.name.clone()).await?
             } else {
                 log::warn!("A folder with no device folder is received. Some other devices must create our device folder");
                 continue;
@@ -70,7 +93,7 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                                 db::update_note(
                                     conn,
                                     note.local_id(),
-                                    device_note.title.as_ref().map(|title| title.as_str()),
+                                    device_note.name.as_str(),
                                     device_note.text.as_str(),
                                     remote_note.commit,
                                     ModelState::Clean,
@@ -92,7 +115,7 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                                 conn,
                                 folder.local_id(),
                                 Some(remote_id),
-                                device_note.title,
+                                device_note.name,
                                 device_note.text,
                                 remote_commit
                             ).await?;
@@ -107,7 +130,11 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
         }
     }
 
-    let local_folders = db::fetch_account_folders(conn, account.id).await?;
+    Ok(())
+}
+
+async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
+    let local_folders = db::fetch_account_folders(conn, account_id).await?;
 
     for local_folder in local_folders {
         if let ModelState::Deleted = local_folder.state {
@@ -126,11 +153,11 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
 
         if remote_folder_id.is_none() {
             for _ in 0..2 {
-                let devices = db::devices(conn, account.id).await?;
+                let devices = db::fetch_devices(conn, account_id).await?;
 
                 let request = devices
                     .into_iter()
-                    .map(|device| CreateFolderRequest{ device_id: device.id, name: &local_folder.name })
+                    .map(|device| CreateFolderRequest{ device_id: device.id, name: local_folder.name.clone() })
                     .collect();
 
                 match mavinote.create_folder(request).await {
@@ -142,15 +169,12 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                         break;
                     },
                     Err(crate::accounts::mavinote::Error::Message(msg)) if msg == "devices_mismatch" => {
-                        let new_devices = mavinote.fetch_devices().await?
-                            .into_iter()
-                            .map(|dev| dev.id)
-                            .collect::<Vec<i32>>();
+                        let new_devices = mavinote.fetch_devices().await?;
 
-                        db::delete_devices(conn, account.id).await?;
+                        db::delete_devices(conn, account_id).await?;
 
                         if !new_devices.is_empty() {
-                            db::create_devices(conn, account.id, &new_devices).await?;
+                            db::create_devices(conn, account_id, &new_devices).await?;
                         }
                     },
                     Err(e) => {
@@ -176,10 +200,10 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                 } else if let Some(remote_id) = local_note.remote_id() {
                     if ModelState::Modified == local_note.state {
 
-                        let devices = db::devices(conn, account.id).await?;
+                        let devices = db::fetch_devices(conn, account_id).await?;
                         let device_notes = devices
                             .into_iter()
-                            .map(|device| CreateNoteRequest{ device_id: device.id, title: local_note.title.as_ref().map(|title| title.as_str()), text: &local_note.text })
+                            .map(|device| CreateNoteRequest{ device_id: device.id, name: &local_note.name, text: &local_note.text })
                             .collect();
 
                         match mavinote.update_note(remote_id, local_note.commit, device_notes).await {
@@ -188,10 +212,10 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                         }
                     }
                 } else if local_note.remote_id().is_none() {
-                    let devices = db::devices(conn, account.id).await?;
+                    let devices = db::fetch_devices(conn, account_id).await?;
                     let device_notes = devices
                         .into_iter()
-                        .map(|device| CreateNoteRequest{ device_id: device.id, title: local_note.title.as_ref().map(|title| title.as_str()), text: &local_note.text })
+                        .map(|device| CreateNoteRequest{ device_id: device.id, name: &local_note.name, text: &local_note.text })
                         .collect();
 
                     match mavinote.create_note(remote_folder_id, device_notes).await {
@@ -207,6 +231,78 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
                     }
                 }
             }
+        }
+    }
+
+    Ok(())
+}
+
+async fn respond_device_requests(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
+    let requests = mavinote.fetch_requests().await?;
+
+    let mut note_ids: HashMap<i32, HashSet<i32>> = HashMap::new();
+    let mut folder_ids: HashMap<i32, HashSet<i32>> = HashMap::new();
+    let mut device_ids: HashSet<i32> = HashSet::new();
+
+    for req in &requests.folder_requests {
+        device_ids.insert(req.device_id);
+        folder_ids.entry(req.folder_id).or_insert(HashSet::new()).insert(req.device_id);
+    }
+
+    for req in &requests.note_requests {
+        device_ids.insert(req.device_id);
+        note_ids.entry(req.note_id).or_insert(HashSet::new()).insert(req.device_id);
+    }
+
+    let devices = db::fetch_devices(conn, account_id).await?;
+
+    log::debug!("note_ids {note_ids:?}");
+    log::debug!("folder_ids {folder_ids:?}");
+    log::debug!("devices {}", devices.len());
+
+    let missing_device = device_ids.iter().find(|dev| devices.iter().find(|local_dev| **dev == local_dev.id).is_none()).is_some();
+    if missing_device {
+        log::error!("devices in requests do not match the local devices");
+        return Err(Error::Storage(crate::StorageError::InvalidState("local devices and remote devices mismatch".to_string())));
+    }
+
+    let mut device_responses: HashMap<i32, RespondRequests> = HashMap::new();
+
+    for (folder_id, devs) in folder_ids {
+        let folder = db::fetch_folder_by_remote_id(conn, RemoteId(folder_id), account_id).await?;
+
+        if let Some(folder) = folder {
+            for dev in devs {
+                device_responses
+                    .entry(dev)
+                    .or_insert(RespondRequests { device_id: dev, folders: Vec::new(), notes: Vec::new() })
+                    .folders
+                    .push(RespondFolderRequest { folder_id, name: folder.name.clone() });
+            }
+        }
+    }
+
+    for (note_id, devs) in note_ids {
+        let note: Option<Note> = sqlx::query_as("select notes.* from notes inner join folders on folders.id = notes.folder_id where notes.remote_id = ? and folders.account_id = ?")
+            .bind(note_id)
+            .bind(account_id)
+            .fetch_optional(&mut *conn)
+            .await?;
+
+        if let Some(note) = note {
+            for dev in devs {
+                device_responses
+                    .entry(dev)
+                    .or_insert(RespondRequests { device_id: dev, folders: Vec::new(), notes: Vec::new() })
+                    .notes
+                    .push(RespondNoteRequest { note_id, name: note.name.clone(), text: note.text.clone() });
+            }
+        }
+    }
+
+    for (device_id, resp) in device_responses {
+        if let Err(e) = mavinote.respond_requests(resp).await {
+            log::error!("failed to respond requests for device {}, {e:?}", device_id);
         }
     }
 
