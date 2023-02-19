@@ -2,7 +2,6 @@ package com.bwqr.mavinote.models
 
 import android.util.Log
 import com.bwqr.mavinote.Bus
-import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.reax.deserializeOption
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer

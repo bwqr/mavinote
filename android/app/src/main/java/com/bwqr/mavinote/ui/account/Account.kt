@@ -14,7 +14,6 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bwqr.mavinote.Bus
-import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.*
 import com.bwqr.mavinote.ui.Title

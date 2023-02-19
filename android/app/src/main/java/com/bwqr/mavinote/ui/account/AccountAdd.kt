@@ -21,7 +21,6 @@ import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bwqr.mavinote.Bus
-import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
