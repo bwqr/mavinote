@@ -146,7 +146,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn send_code(&self, email: &str) -> Result<(), Error> {
+    pub async fn send_verification_code(&self, email: &str) -> Result<(), Error> {
         let request = requests::SendCode { email };
 
         self.client

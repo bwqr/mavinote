@@ -19,7 +19,7 @@ pub enum StorageError {
     InvalidState(String),
     NotMavinoteAccount,
     AccountNotFound,
-    AccountNameUsed,
+    AccountEmailUsed,
     FolderNotFound,
 }
 

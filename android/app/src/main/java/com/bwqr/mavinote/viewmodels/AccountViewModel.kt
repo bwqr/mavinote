@@ -13,6 +13,14 @@ class AccountViewModel {
             _waitVerification(it, token)
         }
 
+        suspend fun sendVerificationCode(email: String) = Runtime.runUnitOnce {
+            _sendVerificationCode(it, email)
+        }
+
+        suspend fun signUp(email: String, code: String) = Runtime.runUnitOnce {
+            _signUp(it, email, code)
+        }
+
         suspend fun addAccount(email: String) = Runtime.runUnitOnce {
             _addAccount(it, email)
         }
@@ -26,5 +34,7 @@ class AccountViewModel {
 
 private external fun _requestVerification(onceId: Int, email: String): Long
 private external fun _waitVerification(onceId: Int, token: String): Long
+private external fun _sendVerificationCode(onceId: Int, email: String): Long
+private external fun _signUp(onceId: Int, email: String, code: String): Long
 private external fun _addAccount(onceId: Int, email: String): Long
 private external fun _publicKey(onceId: Int): Long

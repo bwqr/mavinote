@@ -74,3 +74,41 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1publicK
 
     Box::into_raw(Box::new(handle)) as jlong
 }
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendVerificationCode(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    email: JString,
+) -> jlong {
+    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::storage::send_verification_code(email).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1signUp(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    email: JString,
+    code: JString,
+) -> jlong {
+    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::storage::sign_up(email, code).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}

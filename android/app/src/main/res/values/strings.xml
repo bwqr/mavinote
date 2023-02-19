@@ -12,7 +12,7 @@
     <string name="add_account">Add Account</string>
     <string name="account_name">Account Name</string>
     <string name="email">Email</string>
-    <string name="password">Password</string>
+    <string name="code">Code</string>
     <string name="delete">Delete</string>
     <string name="remove">Remove</string>
     <string name="folder">Folder</string>

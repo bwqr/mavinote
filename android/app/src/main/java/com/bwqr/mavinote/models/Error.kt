@@ -58,7 +58,7 @@ sealed class StorageError : NoteError() {
     class InvalidState(override val message: String) : StorageError()
     object NotMavinoteAccount : StorageError()
     object AccountNotFound : StorageError()
-    object AccountNameUsed : StorageError()
+    object AccountEmailUsed : StorageError()
     object FolderNotFound : StorageError()
 
     companion object {
@@ -67,7 +67,7 @@ sealed class StorageError : NoteError() {
                 0 -> StorageError.InvalidState(deserializer.deserialize_str())
                 1 -> StorageError.NotMavinoteAccount
                 2 -> StorageError.AccountNotFound
-                3 -> StorageError.AccountNameUsed
+                3 -> StorageError.AccountEmailUsed
                 4 -> StorageError.FolderNotFound
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }

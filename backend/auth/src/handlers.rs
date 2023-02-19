@@ -99,7 +99,7 @@ pub async fn sign_up(
                 diesel::result::Error::DatabaseError(
                     diesel::result::DatabaseErrorKind::UniqueViolation,
                     _,
-                ) => HttpError::conflict("user_already_exists"),
+                ) => HttpError::conflict("email_already_used"),
                 _ => e.into(),
             })?;
 
@@ -138,7 +138,7 @@ pub async fn send_code(
         .get_result::<bool>(&mut conn)?;
 
         if user_exists {
-            return Err(HttpError::unprocessable_entity("user_exists"));
+            return Err(HttpError::conflict("email_already_used"));
         }
 
         let code: String = b"0123456789"

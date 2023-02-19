@@ -14,12 +14,6 @@ class NoteViewModel {
     companion object {
         fun init() = _init()
 
-        suspend fun sendCode(email: String): Unit = Runtime.runUnitOnce { _sendCode(it, email) }
-
-        suspend fun signUp(
-            name: String, email: String, code: String
-        ): Unit = Runtime.runUnitOnce { _signUp(it, name, email, code) }
-
         suspend fun sync(): Unit = Runtime.runUnitOnce { _sync(it) }
 
         fun accounts(): Flow<List<Account>> = Runtime.runStream({
@@ -88,12 +82,10 @@ class NoteViewModel {
 
 private external fun _init(): Long
 
-private external fun _sendCode(onceId: Int, email: String): Long
 private external fun _sync(onceId: Int): Long
 private external fun _accounts(streamId: Int): Long
 private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
-private external fun _signUp(onceId: Int, name: String, email: String, code: String): Long
 private external fun _deleteAccount(onceId: Int, accountId: Int): Long
 private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _folders(streamId: Int): Long

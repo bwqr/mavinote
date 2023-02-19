@@ -68,7 +68,7 @@ pub async fn request_verification(email: String) -> Result<String, Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
     if db::account_with_email_exists(&mut conn, &email).await? {
-        return Err(Error::Database("email_already_exists".to_string()));
+        return Err(Error::Storage(StorageError::AccountEmailUsed));
     }
 
     let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
@@ -107,11 +107,11 @@ pub async fn add_account(email: String) -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn send_code(email: String) -> Result<(), Error> {
+pub async fn send_verification_code(email: String) -> Result<(), Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
     MavinoteClient::new(None, config.api_url.clone(), None)
-        .send_code(&email).await
+        .send_verification_code(&email).await
         .map_err(|e| e.into())
 }
 
@@ -143,11 +143,11 @@ pub async fn mavinote_account(account_id: i32) -> Result<Option<Mavinote>, Error
     db::fetch_account_data::<Mavinote>(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
-pub async fn sign_up(name: String, email: String, code: String) -> Result<(), Error> {
+pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     if db::account_with_email_exists(&mut conn, &email).await? {
-        return Err(Error::Storage(StorageError::AccountNameUsed));
+        return Err(Error::Storage(StorageError::AccountEmailUsed));
     }
 
     let config = runtime::get::<Arc<Config>>().unwrap();
@@ -159,9 +159,9 @@ pub async fn sign_up(name: String, email: String, code: String) -> Result<(), Er
         .sign_up(&email, &code, &identity_public_key, &password)
         .await?;
 
-    db::create_account(&mut conn, name, AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token }))).await?;
+    db::create_account(&mut conn, email.clone(), AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token }))).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(db::fetch_accounts(&mut conn).await.map_err(|e| e.into()).into());
+    ACCOUNTS.get().unwrap().send_replace(State::Initial);
 
     Ok(())
 }
