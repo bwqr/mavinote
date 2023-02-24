@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -159,6 +160,7 @@ private enum class ValidationErrors {
     InvalidCode,
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -265,7 +267,7 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
@@ -335,11 +337,12 @@ fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendVerificationCode(navController: NavController) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -433,11 +436,12 @@ fun SendVerificationCode(navController: NavController) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerifyCode(email: String, onVerify: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -534,7 +538,7 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }

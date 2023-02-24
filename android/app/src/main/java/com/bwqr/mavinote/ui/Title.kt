@@ -1,8 +1,8 @@
 package com.bwqr.mavinote.ui
 
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.MaterialTheme
-import androidx.compose.material.Text
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.style.TextOverflow
@@ -13,7 +13,7 @@ import com.bwqr.mavinote.ui.theme.Typography
 fun Title(text: String, modifier: Modifier = Modifier) {
     Text(
         text,
-        style = Typography.h4,
+        style = Typography.headlineLarge,
         overflow = TextOverflow.Ellipsis,
         modifier = modifier,
         maxLines = 1,
@@ -25,7 +25,7 @@ fun ErrorText(error: String?) {
     error?.let {
         Text(
             text = it,
-            color = MaterialTheme.colors.error,
+            color = MaterialTheme.colorScheme.error,
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 16.dp)
         )
     }

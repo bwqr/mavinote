@@ -2,10 +2,13 @@ package com.bwqr.mavinote.ui
 
 import android.util.Log
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -42,9 +45,10 @@ open class Screen(val route: String) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundFeatures() {
-    val scaffoldState = rememberScaffoldState()
+    val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
 
@@ -52,7 +56,7 @@ fun BackgroundFeatures() {
         launch {
             Bus.listen().consumeEach {
                 when (it) {
-                    is BusEvent.ShowMessage -> scaffoldState.snackbarHostState.showSnackbar(it.message)
+                    is BusEvent.ShowMessage -> snackbarHostState.showSnackbar(it.message)
                 }
             }
 
@@ -67,7 +71,7 @@ fun BackgroundFeatures() {
     }
 
     Scaffold(
-        scaffoldState = scaffoldState,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             when (backstackEntry.value?.destination?.route) {
                 Screen.Note.Folders.route -> FoldersFab(navController)

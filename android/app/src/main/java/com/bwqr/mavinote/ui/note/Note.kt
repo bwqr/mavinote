@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -114,6 +115,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
         })
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteView(
     title: String?,
@@ -129,9 +131,10 @@ fun NoteView(
             IconButton(onClick = { expanded = true }) {
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(onClick = onDelete) {
-                        Text(text = "Delete")
-                    }
+                    DropdownMenuItem(
+                        onClick = onDelete,
+                        text = { Text(text = "Delete") }
+                    )
                 }
             }
         }

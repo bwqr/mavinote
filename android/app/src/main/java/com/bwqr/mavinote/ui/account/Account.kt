@@ -2,9 +2,9 @@ package com.bwqr.mavinote.ui.account
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -101,7 +101,7 @@ fun AccountView(
             ) {
                 Text(
                     text = stringResource(R.string.name),
-                    style = Typography.subtitle1,
+                    style = Typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
@@ -120,7 +120,7 @@ fun AccountView(
             ) {
                 Text(
                     text = stringResource(R.string.kind),
-                    style = Typography.subtitle1,
+                    style = Typography.labelMedium,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.weight(1f)
                 )
@@ -152,7 +152,7 @@ fun MavinoteAccountView(mavinote: Mavinote, onRemove: () -> Unit) {
         ) {
             Text(
                 text = "Email",
-                style = Typography.subtitle1,
+                style = Typography.labelMedium,
                 fontWeight = FontWeight.Bold,
                 modifier = Modifier.weight(1f)
             )

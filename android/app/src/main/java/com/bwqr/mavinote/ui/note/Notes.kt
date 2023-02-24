@@ -8,10 +8,10 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -103,9 +103,10 @@ fun NotesView(
             IconButton(onClick = { expanded = true }) {
                 Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                 DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(onClick = onDelete) {
-                        Text(text = stringResource(R.string.delete))
-                    }
+                    DropdownMenuItem(
+                        onClick = onDelete,
+                        text = { Text(text = stringResource(R.string.delete)) }
+                    )
                 }
             }
         }
@@ -116,7 +117,6 @@ fun NotesView(
             Text(text = "There is no note in this folder")
         } else {
             Card(
-                elevation = 1.dp,
                 modifier = Modifier
                     .padding(24.dp, 0.dp, 0.dp, 0.dp)
                     .fillMaxWidth()
