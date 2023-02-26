@@ -27,6 +27,7 @@ import com.bwqr.mavinote.ui.Screen
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.ui.theme.Typography
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.combine
@@ -45,7 +46,7 @@ fun Folders(navController: NavController) {
     }
 
     LaunchedEffect(key1 = 1) {
-        NoteViewModel
+        AccountViewModel
             .accounts()
             .combine(NoteViewModel.folders()) { accounts, folders ->
                 accounts.map {

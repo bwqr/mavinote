@@ -1,18 +1,15 @@
 package com.bwqr.mavinote.ui.device
 
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
-import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.ErrorText
@@ -24,31 +21,49 @@ import kotlinx.coroutines.launch
 fun DeviceAdd(navController: NavController, accountId: Int) {
     val scope = rememberCoroutineScope()
     var inProgress by remember { mutableStateOf(false) }
+    var validationErrors by remember { mutableStateOf(setOf<ValidationErrors>()) }
     var error by remember { mutableStateOf<String?>(null) }
 
-    DeviceAddView(error) { fingerprint ->
+    DeviceAddView(
+        inProgress,
+        error,
+        validationErrors,
+        { error = null },
+    ) { pubkey ->
         if (inProgress) {
             return@DeviceAddView
         }
 
-        error = null
+        val mutableValidationErrors = mutableSetOf<ValidationErrors>()
 
-        if (fingerprint.isBlank()) {
-            error = "Please type the device fingerprint"
+        if (pubkey.isBlank()) {
+            mutableValidationErrors.add(ValidationErrors.InvalidPubkey)
+        }
+
+        if (mutableValidationErrors.size != 0) {
+            validationErrors = mutableValidationErrors
             return@DeviceAddView
         }
 
+        validationErrors = setOf()
         inProgress = true
 
         scope.launch {
             try {
-                NoteViewModel.addDevice(accountId, fingerprint)
+                NoteViewModel.addDevice(accountId, pubkey)
                 navController.navigateUp()
             } catch (e: NoteError) {
-                if (e is MavinoteError.Message && e.message == "item_not_found") {
-                    error = "Fingerprint not found"
-                } else {
-                    e.handle()
+                when {
+                    e is MavinoteError.Message && e.message == "item_not_found" -> {
+                        error = "Public Key is not found"
+                    }
+                    e is MavinoteError.Message && e.message == "device_already_exists" -> {
+                        error = "Device with this public key is already added"
+                    }
+                    e is MavinoteError.Message && e.message == "pubkey_expired" -> {
+                        error = "5 minutes waiting is timed out. Please try the steps on new device again."
+                    }
+                    else -> e.handle()
                 }
             } finally {
                 inProgress = false
@@ -57,46 +72,87 @@ fun DeviceAdd(navController: NavController, accountId: Int) {
     }
 }
 
+private enum class ValidationErrors {
+    InvalidPubkey,
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DeviceAddView(error: String?, onDeviceAdd: (fingerprint: String) -> Unit) {
+private fun DeviceAddView(
+    inProgress: Boolean,
+    error: String?,
+    validationErrors: Set<ValidationErrors>,
+    onDismissError: () -> Unit,
+    onDeviceAdd: (fingerprint: String) -> Unit
+) {
     val scrollState = rememberScrollState()
 
-    var fingerprint by remember { mutableStateOf("") }
+    var pubkey by remember { mutableStateOf("") }
 
-    Column(modifier = Modifier
-        .padding(12.dp)
-        .verticalScroll(scrollState)) {
+    Column(modifier = Modifier.padding(12.dp)) {
         Title(
-            stringResource(R.string.add_device),
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
-        )
-
-        Text(
-            text = "Device Fingerprint",
+            text = "Add Device",
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
         )
-        TextField(
-            value = fingerprint,
-            onValueChange = { fingerprint = it },
-            modifier = Modifier.fillMaxWidth()
-        )
-        
-        ErrorText(error)
+        Column {
+            Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
+                Text(
+                    "Cryptographic keys, called Public Key, are used to identify devices.",
+                    modifier = Modifier.padding(0.dp, 8.dp)
+                )
 
-        Button(
-            onClick = { onDeviceAdd(fingerprint) },
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Text(text = "Add Device")
+                Text(
+                    "In order to add a new device into this account, you first need to choose Add an Existing Account in Add Account page on new device.",
+                    modifier = Modifier.padding(0.dp, 8.dp)
+                )
+
+                Text(
+                    "Then you need to type the Public Key of the new device below and tap Add Device.",
+                    modifier = Modifier.padding(0.dp, 8.dp)
+                )
+
+                Text(
+                    "Device Public Key",
+                    modifier = Modifier.padding(0.dp, 16.dp, 0.dp, 12.dp)
+                )
+                TextField(
+                    value = pubkey,
+                    onValueChange = { pubkey = it },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(0.dp, 0.dp, 0.dp, 12.dp)
+                )
+
+                if (validationErrors.contains(ValidationErrors.InvalidPubkey)) {
+                    ErrorText(error = "Please specify a valid Public Key")
+                }
+            }
+
+            Button(
+                modifier = Modifier.fillMaxWidth(),
+                enabled = !inProgress,
+                onClick = { onDeviceAdd(pubkey) },
+            ) {
+                Text("Add Device")
+            }
         }
+    }
+
+    error?.let {
+        AlertDialog(
+            onDismissRequest = onDismissError,
+            text = { Text(it) },
+            confirmButton = { }
+        )
     }
 }
 
 @Preview(showBackground = true)
 @Composable
 fun DeviceAddPreview() {
+    val inProgress = false
     val error: String? = null
+    val validationErrors = setOf<ValidationErrors>()
 
-    DeviceAddView(error) { }
+    DeviceAddView(inProgress, error, validationErrors, { }) { }
 }

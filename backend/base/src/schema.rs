@@ -39,6 +39,7 @@ diesel::table! {
         user_id -> Int4,
         pubkey -> Varchar,
         password -> Varchar,
+        created_at -> Timestamp,
     }
 }
 

@@ -21,6 +21,8 @@ import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.account.*
 import com.bwqr.mavinote.ui.device.DeviceAdd
+import com.bwqr.mavinote.ui.device.Devices
+import com.bwqr.mavinote.ui.device.DevicesFab
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.channels.consumeEach
@@ -41,6 +43,7 @@ open class Screen(val route: String) {
     }
 
     sealed class Device(route: String) : Screen(route) {
+        object Devices : Screen.Device("devices?accountId={accountId}")
         object DeviceAdd : Screen.Device("device-add?accountId={accountId}")
     }
 }
@@ -80,7 +83,7 @@ fun BackgroundFeatures() {
                     navController.currentBackStackEntry?.arguments?.getInt("folderId")!!
                 )
                 Screen.Account.Accounts.route -> AccountsFab(navController)
-                Screen.Account.Account.route -> AccountFab(
+                Screen.Device.Devices.route -> DevicesFab(
                     navController,
                     navController.currentBackStackEntry?.arguments?.getInt("accountId")!!
                 )
@@ -104,6 +107,13 @@ fun BackgroundFeatures() {
                 )
             }
             composable(Screen.Account.AccountAdd.route) { AccountAdd(navController) }
+
+            composable(
+                Screen.Device.Devices.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                 Devices(backstackEntry.arguments?.getInt("accountId")!!)
+            }
             composable(
                 Screen.Device.DeviceAdd.route,
                 arguments = listOf(navArgument("accountId") { type = NavType.IntType })

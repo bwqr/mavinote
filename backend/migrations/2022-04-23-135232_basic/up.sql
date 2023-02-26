@@ -24,7 +24,8 @@ create table devices(
     id      serial  primary key not null,
     user_id int         not null,
     pubkey  varchar(64) not null,
-    password    varchar(128) not null,
+    password    varchar(128)    not null,
+    created_at  timestamp       not null default current_timestamp,
     constraint  fk_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action
 );
 

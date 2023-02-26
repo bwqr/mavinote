@@ -111,7 +111,7 @@ fun NotesView(
             }
         }
 
-        Text(text = stringResource(R.string.folder), modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
+        Text(text = "Notes", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
 
         if (notes.isEmpty()) {
             Text(text = "There is no note in this folder")

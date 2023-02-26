@@ -17,6 +17,7 @@ import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -32,7 +33,7 @@ fun FolderCreate(navController: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = 0) {
-        NoteViewModel
+        AccountViewModel
             .accounts()
             .onEach { accounts = it }
             .catch {
@@ -89,8 +90,7 @@ fun FolderCreateView(
         )
 
         Column(
-            modifier = Modifier
-                .padding(40.dp, 0.dp, 0.dp, 0.dp)
+            modifier = Modifier.padding(40.dp, 0.dp, 0.dp, 0.dp).weight(1f)
         ) {
             Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
                 Text(
@@ -127,13 +127,11 @@ fun FolderCreateView(
             }
         }
 
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-            Button(
-                onClick = { onCreateFolder(accountId, folderName) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(id = R.string.create_folder))
-            }
+        Button(
+            onClick = { onCreateFolder(accountId, folderName) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = stringResource(id = R.string.create_folder))
         }
     }
 }

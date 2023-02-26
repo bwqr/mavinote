@@ -1,6 +1,5 @@
 package com.bwqr.mavinote.viewmodels
 
-import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Mavinote
 import com.bwqr.mavinote.models.Note
@@ -15,18 +14,6 @@ class NoteViewModel {
         fun init() = _init()
 
         suspend fun sync(): Unit = Runtime.runUnitOnce { _sync(it) }
-
-        fun accounts(): Flow<List<Account>> = Runtime.runStream({
-            deserializeList(it) { deserializer ->
-                Account.deserialize(deserializer)
-            }
-        }, { _accounts(it) })
-
-        suspend fun account(accountId: Int): Account? = Runtime.runOnce({
-            deserializeOption(it) { deserializer ->
-                Account.deserialize(deserializer)
-            }
-        }, { _account(it, accountId) })
 
         suspend fun mavinoteAccount(accountId: Int): Mavinote? = Runtime.runOnce({
             deserializeOption(it) { deserializer ->
@@ -80,8 +67,6 @@ class NoteViewModel {
 private external fun _init()
 
 private external fun _sync(onceId: Int): Long
-private external fun _accounts(streamId: Int): Long
-private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _folders(streamId: Int): Long

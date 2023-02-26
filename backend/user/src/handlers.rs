@@ -36,8 +36,19 @@ pub async fn add_device(
     device: Device,
     request: Sanitized<Json<AddDevice>>,
 ) -> Result<Json<Device>, HttpError> {
-    let (device, pending_device_id) = block(move || {
+    let (created_device, pending_device_id) = block(move || {
         let mut conn = pool.get().unwrap();
+
+        let device_exists = diesel::dsl::select(diesel::dsl::exists(
+            devices::table
+                .filter(devices::pubkey.eq(&request.pubkey))
+                .filter(devices::user_id.eq(&device.user_id))
+        ))
+            .get_result::<bool>(&mut conn)?;
+
+        if device_exists {
+            return Err(HttpError::conflict("device_already_exists"));
+        }
 
         let (pending_device_id, email, pubkey, password, updated_at) = pending_devices::table
             .filter(pending_devices::pubkey.eq(&request.pubkey))
@@ -62,8 +73,8 @@ pub async fn add_device(
 
         let device = diesel::insert_into(devices::table)
             .values((devices::user_id.eq(device.user_id), devices::pubkey.eq(pubkey), devices::password.eq(password)))
-            .get_result::<(i32, i32, String, String)>(&mut conn)
-            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2 })?;
+            .get_result::<(i32, i32, String, String, NaiveDateTime)>(&mut conn)
+            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2, created_at: row.4 })?;
 
         Ok((device, pending_device_id))
     })
@@ -71,7 +82,7 @@ pub async fn add_device(
 
     ws_server.do_send(notify::ws::messages::AcceptPendingDevice(pending_device_id));
 
-    Ok(Json(device))
+    Ok(Json(created_device))
 }
 
 pub async fn delete_device(
