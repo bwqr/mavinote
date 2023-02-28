@@ -40,6 +40,7 @@ open class Screen(val route: String) {
         object Accounts : Screen.Account("accounts")
         object AccountAdd : Screen.Account("account-add")
         object Account : Screen.Account("account/{accountId}")
+        object AccountClose : Screen.Account("account-close?accountId={accountId}")
     }
 
     sealed class Device(route: String) : Screen(route) {
@@ -107,6 +108,15 @@ fun BackgroundFeatures() {
                 )
             }
             composable(Screen.Account.AccountAdd.route) { AccountAdd(navController) }
+            composable(
+                Screen.Account.AccountClose.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                AccountClose(
+                    navController,
+                    backstackEntry.arguments?.getInt("accountId")!!
+                )
+            }
 
             composable(
                 Screen.Device.Devices.route,

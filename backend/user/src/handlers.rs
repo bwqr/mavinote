@@ -1,17 +1,18 @@
 use actix_web::web::{self, block, Data, Json};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
+use rand::seq::SliceRandom;
 
 use base::{
     sanitize::Sanitized,
-    schema::{devices, pending_devices, users},
+    schema::{devices, pending_devices, users, pending_delete_users},
     types::Pool,
     HttpError, HttpMessage
 };
 
 use crate::{
     models::{Device, DEVICE_COLUMNS},
-    requests::AddDevice,
+    requests::{AddDevice, CloseAccount},
 };
 
 pub async fn fetch_devices(
@@ -63,7 +64,7 @@ pub async fn add_device(
             .num_minutes();
 
         if minutes_since_pubkey_received > 5 {
-            return Err(HttpError::unprocessable_entity("pubkey_expired"));
+            return Err(HttpError::unprocessable_entity("expired_pubkey"));
         }
 
         diesel::delete(pending_devices::table)
@@ -106,6 +107,66 @@ pub async fn delete_device(
             .execute(&mut conn)?;
 
         Result::<(), HttpError>::Ok(())
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
+}
+
+pub async fn send_close_account_code(
+    pool: Data<Pool>,
+    device: Device,
+) -> Result<Json<HttpMessage>, HttpError> {
+    block(move || {
+        let code: String = b"0123456789"
+            .choose_multiple(&mut rand::thread_rng(), 8)
+            .map(|num| char::from(*num))
+            .collect();
+
+        diesel::insert_into(pending_delete_users::table)
+            .values((pending_delete_users::user_id.eq(device.user_id), pending_delete_users::code.eq(&code)))
+            .on_conflict(pending_delete_users::user_id)
+            .do_update()
+            .set(pending_delete_users::code.eq(&code))
+            .execute(&mut pool.get().unwrap())
+    })
+    .await??;
+
+    Ok(Json(HttpMessage::success()))
+}
+
+pub async fn close_account(
+    pool: Data<Pool>,
+    device: Device,
+    request: Sanitized<Json<CloseAccount>>,
+) -> Result<Json<HttpMessage>, HttpError> {
+    block(move || {
+        let mut conn = pool.get().unwrap();
+
+        let (pending_code, pending_updated_at) = pending_delete_users::table
+            .filter(pending_delete_users::user_id.eq(&device.user_id))
+            .select((pending_delete_users::code, pending_delete_users::updated_at))
+            .first::<(String, NaiveDateTime)>(&mut conn)?;
+
+        let minutes_since_code_sent = Utc::now()
+            .naive_utc()
+            .signed_duration_since(pending_updated_at)
+            .num_minutes();
+
+        if minutes_since_code_sent > 5 {
+            return Err(HttpError::unprocessable_entity("expired_code"));
+        }
+
+        if pending_code != request.code {
+            return Err(HttpError::unprocessable_entity("invalid_code"));
+        }
+
+        diesel::delete(devices::table.filter(devices::user_id.eq(device.user_id)))
+            .execute(&mut conn)?;
+
+        diesel::delete(users::table.filter(users::id.eq(device.user_id)))
+            .execute(&mut conn)
+            .map_err(|e| e.into())
     })
     .await??;
 

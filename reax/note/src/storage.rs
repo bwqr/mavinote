@@ -194,6 +194,29 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     Ok(())
 }
 
+pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let mavinote = mavinote_client(&mut conn, account_id).await?.ok_or(Error::Storage(StorageError::NotMavinoteAccount))?;
+
+    mavinote.send_account_close_code().await
+        .map_err(|e| e.into())
+}
+
+pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let mavinote = mavinote_client(&mut conn, account_id).await?.ok_or(Error::Storage(StorageError::NotMavinoteAccount))?;
+
+    mavinote.close_account(&code)
+        .await?;
+
+    db::delete_account(&mut conn, account_id).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    FOLDERS.get().unwrap().send_replace(State::Initial);
+
+    Ok(())
+}
+
 pub async fn devices(account_id: i32) -> Result<Vec<Device>, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 

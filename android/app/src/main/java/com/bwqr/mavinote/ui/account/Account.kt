@@ -55,26 +55,6 @@ fun Account(navController: NavController, accountId: Int) {
         }
     }
 
-    fun closeAccount() {
-        if (inProgress) {
-            return
-        }
-
-        inProgress = true
-
-        scope.launch {
-            try {
-                AccountViewModel.closeAccount(accountId)
-                Bus.message("Account is closed")
-                navController.navigateUp()
-            } catch (e: NoteError) {
-                e.handle()
-            } finally {
-                inProgress = false
-            }
-        }
-    }
-
     LaunchedEffect(key1 = 0) {
         try {
             account = AccountViewModel.account(accountId)
@@ -82,7 +62,7 @@ fun Account(navController: NavController, accountId: Int) {
             account?.let {
                 if (AccountKind.Mavinote == it.kind) {
                     try {
-                        mavinote = NoteViewModel.mavinoteAccount(it.id)
+                        mavinote = AccountViewModel.mavinoteAccount(it.id)
                     } catch (e: NoteError) {
                         e.handle()
                     }
@@ -98,9 +78,7 @@ fun Account(navController: NavController, accountId: Int) {
             navController,
             it,
             mavinote,
-            { removeAccount() },
-            { closeAccount() }
-        )
+        ) { removeAccount() }
     }
 }
 
@@ -110,7 +88,6 @@ fun AccountView(
     account: Account,
     mavinote: Mavinote?,
     onRemoveAccount: () -> Unit,
-    onCloseAccount: () -> Unit,
 ) {
     Column(modifier = Modifier.padding(12.dp)) {
         Row {
@@ -163,7 +140,7 @@ fun AccountView(
         mavinote?.let {
             Divider()
 
-            MavinoteAccountView(navController, account.id, it, onRemoveAccount, onCloseAccount)
+            MavinoteAccountView(navController, account.id, it, onRemoveAccount)
         }
     }
 }
@@ -174,10 +151,8 @@ fun MavinoteAccountView(
     accountId: Int,
     mavinote: Mavinote,
     onRemoveAccount: () -> Unit,
-    onCloseAccount: () -> Unit
 ) {
     var showRemoveWarn by remember { mutableStateOf(false) }
-    var showCloseWarn by remember { mutableStateOf(false) }
 
     Column {
         Row(
@@ -237,7 +212,7 @@ fun MavinoteAccountView(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .clickable { showCloseWarn = true }
+                .clickable { navController.navigate("account-close?accountId=$accountId") }
                 .padding(8.dp, 20.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
@@ -247,6 +222,8 @@ fun MavinoteAccountView(
                     .weight(1f),
                 color = MaterialTheme.colorScheme.error
             )
+
+            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
         }
     }
 
@@ -268,25 +245,6 @@ fun MavinoteAccountView(
             }
         )
     }
-
-    if (showCloseWarn) {
-        AlertDialog(
-            onDismissRequest = { showCloseWarn = false },
-            text = { Text("Closing account will permanently delete it and other related information from the server and other devices. Are you sure about closing this account?") },
-            confirmButton = {
-                Button(
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
-                    onClick = {
-                        showCloseWarn = false
-                        onCloseAccount()
-                    },
-                ) {
-                    Text("Close Account")
-                }
-            }
-        )
-    }
 }
 
 @Preview(showBackground = true)
@@ -296,5 +254,5 @@ fun AccountPreview() {
     val account = Account(1, "Account on My Phone", AccountKind.Mavinote)
     val mavinote = Mavinote("email@email.com", "")
 
-    AccountView(navController, account, mavinote, {}) {}
+    AccountView(navController, account, mavinote) {}
 }

@@ -60,7 +60,7 @@ fun DeviceAdd(navController: NavController, accountId: Int) {
                     e is MavinoteError.Message && e.message == "device_already_exists" -> {
                         error = "Device with this public key is already added"
                     }
-                    e is MavinoteError.Message && e.message == "pubkey_expired" -> {
+                    e is MavinoteError.Message && e.message == "expired_pubkey" -> {
                         error = "5 minutes waiting is timed out. Please try the steps on new device again."
                     }
                     else -> e.handle()

@@ -15,4 +15,5 @@ futures = "0.3.21"
 
 chrono.workspace = true
 diesel.workspace = true
+rand.workspace = true
 serde.workspace = true

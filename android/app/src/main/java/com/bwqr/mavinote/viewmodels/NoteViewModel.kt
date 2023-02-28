@@ -15,11 +15,6 @@ class NoteViewModel {
 
         suspend fun sync(): Unit = Runtime.runUnitOnce { _sync(it) }
 
-        suspend fun mavinoteAccount(accountId: Int): Mavinote? = Runtime.runOnce({
-            deserializeOption(it) { deserializer ->
-                Mavinote.deserialize(deserializer)
-            }
-        }, { _mavinoteAccount(it, accountId) })
 
         suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
             Runtime.runUnitOnce { _addDevice(it, accountId, fingerprint) }
@@ -67,7 +62,6 @@ class NoteViewModel {
 private external fun _init()
 
 private external fun _sync(onceId: Int): Long
-private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _folders(streamId: Int): Long
 private external fun _folder(onceId: Int, folderId: Int): Long

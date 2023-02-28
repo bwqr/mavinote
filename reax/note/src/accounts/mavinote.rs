@@ -159,6 +159,27 @@ impl MavinoteClient {
             .map(|_| ())
     }
 
+    pub async fn send_account_close_code(&self) -> Result<(), Error> {
+        self.client
+            .post(format!("{}/user/send-close-code", self.api_url))
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
+
+    pub async fn close_account(&self, code: &str) -> Result<(), Error> {
+        self.client
+            .put(format!("{}/user/close", self.api_url))
+            .body(serde_json::to_string(&requests::CloseAccount { code }).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
+
     pub async fn sign_up(&self, email: &str, code: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
         let request = requests::SignUp { email, code, pubkey, password };
 
@@ -345,6 +366,11 @@ mod requests {
         pub email: &'a str,
         pub pubkey: &'a str,
         pub password: &'a str,
+    }
+
+    #[derive(Serialize)]
+    pub struct CloseAccount<'a> {
+        pub code: &'a str
     }
 
     #[derive(Serialize)]

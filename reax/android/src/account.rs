@@ -63,6 +63,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1account
 }
 
 #[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1mavinoteAccount(
+    _: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::storage::mavinote_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1devices(
     _: JNIEnv,
     _: JClass,
@@ -194,6 +210,41 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1removeA
 ) -> jlong {
     let handle = spawn(async move {
         let res = note::storage::remove_account(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendAccountCloseCode(
+    _: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+) -> jlong {
+    let handle = spawn(async move {
+        let res = note::storage::send_account_close_code(account_id).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle)) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1closeAccount(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+    code: JString,
+) -> jlong {
+    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
+
+    let handle = spawn(async move {
+        let res = note::storage::close_account(account_id, code).await;
 
         send_once(once_id, res);
     });

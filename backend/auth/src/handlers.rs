@@ -85,7 +85,7 @@ pub async fn sign_up(
             .num_minutes();
 
         if minutes_since_code_sent > 5 {
-            return Err(HttpError::unprocessable_entity("code_expired"));
+            return Err(HttpError::unprocessable_entity("expired_code"));
         }
 
         if pending_user.code != request.code {

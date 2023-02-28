@@ -18,6 +18,8 @@ drop table pending_devices;
 
 drop table devices;
 
+drop table pending_delete_users;
+
 drop table pending_users;
 
 drop table users;

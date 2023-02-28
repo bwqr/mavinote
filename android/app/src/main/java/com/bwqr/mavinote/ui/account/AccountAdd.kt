@@ -34,16 +34,16 @@ import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
 sealed class AccountAddScreen(route: String) : Screen(route) {
-    object ChooseAccountAddKind : AccountAddScreen("account-add/choose-account-add-kind")
+    object ChooseAccountAddKind : AccountAddScreen("choose-account-add-kind")
 
     class AddExistingAccount(route: String) : AccountAddScreen(route) {
-        object EnterAccountInfo : AccountAddScreen("account-add/enter-account-info")
-        object ShowPublicKey : AccountAddScreen("account-add/show-public-key?email={email}&token={token}")
+        object EnterAccountInfo : AccountAddScreen("enter-account-info")
+        object ShowPublicKey : AccountAddScreen("show-public-key?email={email}&token={token}")
     }
 
     sealed class CreateAccount(route: String) : AccountAddScreen(route) {
-        object SendVerificationCode : CreateAccount("account-add/send-code")
-        object VerifyCode : CreateAccount("account-add/verify-code?email={email}")
+        object SendVerificationCode : CreateAccount("send-code")
+        object VerifyCode : CreateAccount("verify-code?email={email}")
     }
 }
 
@@ -227,7 +227,7 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
                 coroutineScope.launch {
                     try {
                         val token = AccountViewModel.requestVerification(email)
-                        navController.navigate("account-add/show-public-key?email=$email&token=$token")
+                        navController.navigate("show-public-key?email=$email&token=$token")
                     } catch (e: NoteError) {
                         when {
                             e is MavinoteError.Message && e.message == "email_not_found" -> {
@@ -407,7 +407,7 @@ fun SendVerificationCode(navController: NavController) {
                 coroutineScope.launch {
                     try {
                         AccountViewModel.sendVerificationCode(email)
-                        navController.navigate("account-add/verify-code?email=$email")
+                        navController.navigate("verify-code?email=$email")
                     } catch (e: NoteError) {
                         when {
                             e is StorageError.AccountEmailUsed -> {
@@ -510,7 +510,7 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
                             e is StorageError.AccountEmailUsed -> {
                                 error = "An account with this email already exists. You can find it under Accounts page."
                             }
-                            e is MavinoteError.Message && e.message == "code_expired" -> {
+                            e is MavinoteError.Message && e.message == "expired_code" -> {
                                 error = "5 minutes waiting is timed out. Please try again."
                             }
                             e is MavinoteError.Message && e.message == "invalid_code" -> {
