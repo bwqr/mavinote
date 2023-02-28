@@ -2,10 +2,13 @@ package com.bwqr.mavinote.ui
 
 import android.util.Log
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material.Scaffold
-import androidx.compose.material.rememberScaffoldState
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -18,6 +21,8 @@ import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.account.*
 import com.bwqr.mavinote.ui.device.DeviceAdd
+import com.bwqr.mavinote.ui.device.Devices
+import com.bwqr.mavinote.ui.device.DevicesFab
 import com.bwqr.mavinote.ui.note.*
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.channels.consumeEach
@@ -35,16 +40,19 @@ open class Screen(val route: String) {
         object Accounts : Screen.Account("accounts")
         object AccountAdd : Screen.Account("account-add")
         object Account : Screen.Account("account/{accountId}")
+        object AccountClose : Screen.Account("account-close?accountId={accountId}")
     }
 
     sealed class Device(route: String) : Screen(route) {
+        object Devices : Screen.Device("devices?accountId={accountId}")
         object DeviceAdd : Screen.Device("device-add?accountId={accountId}")
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundFeatures() {
-    val scaffoldState = rememberScaffoldState()
+    val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
 
@@ -52,7 +60,7 @@ fun BackgroundFeatures() {
         launch {
             Bus.listen().consumeEach {
                 when (it) {
-                    is BusEvent.ShowMessage -> scaffoldState.snackbarHostState.showSnackbar(it.message)
+                    is BusEvent.ShowMessage -> snackbarHostState.showSnackbar(it.message)
                 }
             }
 
@@ -67,7 +75,7 @@ fun BackgroundFeatures() {
     }
 
     Scaffold(
-        scaffoldState = scaffoldState,
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         floatingActionButton = {
             when (backstackEntry.value?.destination?.route) {
                 Screen.Note.Folders.route -> FoldersFab(navController)
@@ -76,7 +84,7 @@ fun BackgroundFeatures() {
                     navController.currentBackStackEntry?.arguments?.getInt("folderId")!!
                 )
                 Screen.Account.Accounts.route -> AccountsFab(navController)
-                Screen.Account.Account.route -> AccountFab(
+                Screen.Device.Devices.route -> DevicesFab(
                     navController,
                     navController.currentBackStackEntry?.arguments?.getInt("accountId")!!
                 )
@@ -100,6 +108,22 @@ fun BackgroundFeatures() {
                 )
             }
             composable(Screen.Account.AccountAdd.route) { AccountAdd(navController) }
+            composable(
+                Screen.Account.AccountClose.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                AccountClose(
+                    navController,
+                    backstackEntry.arguments?.getInt("accountId")!!
+                )
+            }
+
+            composable(
+                Screen.Device.Devices.route,
+                arguments = listOf(navArgument("accountId") { type = NavType.IntType })
+            ) { backstackEntry ->
+                 Devices(backstackEntry.arguments?.getInt("accountId")!!)
+            }
             composable(
                 Screen.Device.DeviceAdd.route,
                 arguments = listOf(navArgument("accountId") { type = NavType.IntType })

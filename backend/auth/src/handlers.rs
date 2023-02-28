@@ -85,7 +85,7 @@ pub async fn sign_up(
             .num_minutes();
 
         if minutes_since_code_sent > 5 {
-            return Err(HttpError::unprocessable_entity("code_expired"));
+            return Err(HttpError::unprocessable_entity("expired_code"));
         }
 
         if pending_user.code != request.code {
@@ -109,7 +109,7 @@ pub async fn sign_up(
                 devices::pubkey.eq(&request.pubkey),
                 devices::password.eq(crypto.sign512(&request.password)),
             ))
-            .get_result::<(i32, i32, String, String)>(&mut conn)?
+            .get_result::<(i32, i32, String, String, NaiveDateTime)>(&mut conn)?
             .0;
 
         diesel::delete(pending_users::table)

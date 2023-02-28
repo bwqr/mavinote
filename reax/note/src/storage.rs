@@ -10,7 +10,7 @@ use x25519_dalek::{StaticSecret, PublicKey};
 
 use base::{State, observable_map::{ObservableMap, Receiver}, Config};
 
-use crate::{Error, StorageError, models::StoreKey};
+use crate::{Error, StorageError, models::{StoreKey, Device}};
 use crate::accounts::mavinote::{MavinoteClient, CreateFolderRequest, CreateNoteRequest};
 use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
@@ -192,6 +192,36 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     FOLDERS.get().unwrap().send_replace(State::Initial);
 
     Ok(())
+}
+
+pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let mavinote = mavinote_client(&mut conn, account_id).await?.ok_or(Error::Storage(StorageError::NotMavinoteAccount))?;
+
+    mavinote.send_account_close_code().await
+        .map_err(|e| e.into())
+}
+
+pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let mavinote = mavinote_client(&mut conn, account_id).await?.ok_or(Error::Storage(StorageError::NotMavinoteAccount))?;
+
+    mavinote.close_account(&code)
+        .await?;
+
+    db::delete_account(&mut conn, account_id).await?;
+
+    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    FOLDERS.get().unwrap().send_replace(State::Initial);
+
+    Ok(())
+}
+
+pub async fn devices(account_id: i32) -> Result<Vec<Device>, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    db::fetch_devices(&mut conn, account_id).await
+        .map_err(|e| e.into())
 }
 
 pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {

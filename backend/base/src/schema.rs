@@ -39,6 +39,7 @@ diesel::table! {
         user_id -> Int4,
         pubkey -> Varchar,
         password -> Varchar,
+        created_at -> Timestamp,
     }
 }
 
@@ -83,6 +84,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    pending_delete_users (user_id) {
+        user_id -> Int4,
+        code -> Varchar,
+        updated_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     pending_devices (id) {
         id -> Int4,
         email -> Varchar,
@@ -117,6 +126,7 @@ diesel::joinable!(folders -> users (user_id));
 diesel::joinable!(note_requests -> devices (device_id));
 diesel::joinable!(note_requests -> notes (note_id));
 diesel::joinable!(notes -> folders (folder_id));
+diesel::joinable!(pending_delete_users -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     device_folders,
@@ -126,6 +136,7 @@ diesel::allow_tables_to_appear_in_same_query!(
     folders,
     note_requests,
     notes,
+    pending_delete_users,
     pending_devices,
     pending_users,
     users,

@@ -10,11 +10,10 @@ base = { path = "../base" }
 derive = { path = "../derive" }
 notify = { path = "../notify" }
 
-rand = "0.8.5"
-
 actix-web.workspace = true
 base64.workspace = true
 chrono.workspace = true
 diesel.workspace = true
 log.workspace = true
+rand.workspace = true
 serde.workspace = true

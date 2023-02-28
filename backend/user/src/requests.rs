@@ -7,3 +7,8 @@ use derive::Sanitize;
 pub struct AddDevice {
     pub pubkey: String,
 }
+
+#[derive(Sanitize, Deserialize)]
+pub struct CloseAccount {
+    pub code: String,
+}

@@ -20,11 +20,19 @@ create table pending_users(
     primary key (email)
 );
 
+create table pending_delete_users(
+    user_id int  primary key    not null,
+    code    varchar(8)      not null,
+    updated_at  timestamp   not null default current_timestamp,
+    constraint  fk_pending_delete_users_user_id foreign key (user_id) references users (id) on delete cascade on update no action
+);
+
 create table devices(
     id      serial  primary key not null,
     user_id int         not null,
     pubkey  varchar(64) not null,
-    password    varchar(128) not null,
+    password    varchar(128)    not null,
+    created_at  timestamp       not null default current_timestamp,
     constraint  fk_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action
 );
 

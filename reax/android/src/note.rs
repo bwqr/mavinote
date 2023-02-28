@@ -44,67 +44,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1sync(
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1accounts(
-    _: JNIEnv,
-    _: JClass,
-    stream_id: jint,
-) -> jlong {
-    let handle = spawn(async move {
-        let mut rx = note::storage::accounts().await;
-
-        match &*rx.borrow() {
-            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
-            _ => {},
-        };
-
-        while rx.changed().await.is_ok() {
-            match &*rx.borrow() {
-                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
-                _ => {},
-            };
-        }
-
-        send_stream::<()>(stream_id, Message::Complete);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1account(
-    _: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    account_id: jint,
-) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1mavinoteAccount(
-    _: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    account_id: jint,
-) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::mavinote_account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addDevice(
     env: JNIEnv,
     _: JClass,

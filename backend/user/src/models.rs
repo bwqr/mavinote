@@ -21,10 +21,11 @@ pub struct Device {
     pub id: i32,
     pub user_id: i32,
     pub pubkey: String,
+    pub created_at: NaiveDateTime,
 }
 
-pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey) =
-    (devices::id, devices::user_id, devices::pubkey);
+pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey, devices::created_at) =
+    (devices::id, devices::user_id, devices::pubkey, devices::created_at);
 
 #[derive(Queryable, Serialize)]
 pub struct User {

@@ -7,6 +7,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -33,16 +34,16 @@ import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
 sealed class AccountAddScreen(route: String) : Screen(route) {
-    object ChooseAccountAddKind : AccountAddScreen("account-add/choose-account-add-kind")
+    object ChooseAccountAddKind : AccountAddScreen("choose-account-add-kind")
 
     class AddExistingAccount(route: String) : AccountAddScreen(route) {
-        object EnterAccountInfo : AccountAddScreen("account-add/enter-account-info")
-        object ShowPublicKey : AccountAddScreen("account-add/show-public-key?email={email}&token={token}")
+        object EnterAccountInfo : AccountAddScreen("enter-account-info")
+        object ShowPublicKey : AccountAddScreen("show-public-key?email={email}&token={token}")
     }
 
     sealed class CreateAccount(route: String) : AccountAddScreen(route) {
-        object SendVerificationCode : CreateAccount("account-add/send-code")
-        object VerifyCode : CreateAccount("account-add/verify-code?email={email}")
+        object SendVerificationCode : CreateAccount("send-code")
+        object VerifyCode : CreateAccount("verify-code?email={email}")
     }
 }
 
@@ -159,6 +160,7 @@ private enum class ValidationErrors {
     InvalidCode,
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -171,7 +173,7 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var email by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState)) {
+        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
             Text(
                 "Email address is used to identify accounts.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -199,65 +201,63 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
             }
         }
 
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !inProgress,
-                onClick = {
-                    if (inProgress) {
-                        return@Button
-                    }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !inProgress,
+            onClick = {
+                if (inProgress) {
+                    return@Button
+                }
 
-                    val mutableValidationErrors = mutableSetOf<ValidationErrors>()
+                val mutableValidationErrors = mutableSetOf<ValidationErrors>()
 
-                    if (email.isBlank()) {
-                        mutableValidationErrors.add(ValidationErrors.InvalidEmail)
-                    }
+                if (email.isBlank()) {
+                    mutableValidationErrors.add(ValidationErrors.InvalidEmail)
+                }
 
 
-                    if (mutableValidationErrors.size != 0) {
-                        validationErrors = mutableValidationErrors
-                        return@Button
-                    }
+                if (mutableValidationErrors.size != 0) {
+                    validationErrors = mutableValidationErrors
+                    return@Button
+                }
 
-                    validationErrors = setOf()
-                    inProgress = true
+                validationErrors = setOf()
+                inProgress = true
 
-                    coroutineScope.launch {
-                        try {
-                            val token = AccountViewModel.requestVerification(email)
-                            navController.navigate("account-add/show-public-key?email=$email&token=$token")
-                        } catch (e: NoteError) {
-                            when {
-                                e is MavinoteError.Message && e.message == "email_not_found" -> {
-                                    error = "Email could not be found. Please check your input."
-                                }
-                                e is MavinoteError.Message && e.message == "device_already_exists" -> {
-                                    try {
-                                        AccountViewModel.addAccount(email)
-                                        onAccountAdd()
-                                    } catch (e: NoteError) {
-                                        e.handle()
-                                    }
-                                }
-                                e is MavinoteError.Message && e.message == "device_exists_but_passwords_mismatch" -> {
-                                    error = "An unexpected state is occurred. A device with our public key is already added. " +
-                                            "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
-                                            "you can remove the device with our public key and try to add account again."
-                                }
-                                e is StorageError.AccountEmailUsed -> {
-                                    error = "An account with this email already exists. You can find it under Accounts page."
-                                }
-                                else -> e.handle()
+                coroutineScope.launch {
+                    try {
+                        val token = AccountViewModel.requestVerification(email)
+                        navController.navigate("show-public-key?email=$email&token=$token")
+                    } catch (e: NoteError) {
+                        when {
+                            e is MavinoteError.Message && e.message == "email_not_found" -> {
+                                error = "Email could not be found. Please check your input."
                             }
-                        } finally {
-                            inProgress = false
+                            e is MavinoteError.Message && e.message == "device_already_exists" -> {
+                                try {
+                                    AccountViewModel.addAccount(email)
+                                    onAccountAdd()
+                                } catch (e: NoteError) {
+                                    e.handle()
+                                }
+                            }
+                            e is MavinoteError.Message && e.message == "device_exists_but_passwords_mismatch" -> {
+                                error = "An unexpected state is occurred. A device with our public key is already added. " +
+                                        "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
+                                        "you can remove the device with our public key and try to add account again."
+                            }
+                            e is StorageError.AccountEmailUsed -> {
+                                error = "An account with this email already exists. You can find it under Accounts page."
+                            }
+                            else -> e.handle()
                         }
+                    } finally {
+                        inProgress = false
                     }
-                },
-            ) {
-                Text("Request Verification")
-            }
+                }
+            },
+        ) {
+            Text("Request Verification")
         }
     }
 
@@ -265,7 +265,7 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
@@ -335,11 +335,12 @@ fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendVerificationCode(navController: NavController) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -352,7 +353,7 @@ fun SendVerificationCode(navController: NavController) {
     var email by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState)) {
+        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
             Text(
                 "Email address is used to identify accounts.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -380,52 +381,50 @@ fun SendVerificationCode(navController: NavController) {
             }
         }
 
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !inProgress,
-                onClick = {
-                    if (inProgress) {
-                        return@Button
-                    }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !inProgress,
+            onClick = {
+                if (inProgress) {
+                    return@Button
+                }
 
-                    val mutableValidationErrors = mutableSetOf<ValidationErrors>()
+                val mutableValidationErrors = mutableSetOf<ValidationErrors>()
 
-                    if (email.isBlank()) {
-                        mutableValidationErrors.add(ValidationErrors.InvalidEmail)
-                    }
+                if (email.isBlank()) {
+                    mutableValidationErrors.add(ValidationErrors.InvalidEmail)
+                }
 
 
-                    if (mutableValidationErrors.size != 0) {
-                        validationErrors = mutableValidationErrors
-                        return@Button
-                    }
+                if (mutableValidationErrors.size != 0) {
+                    validationErrors = mutableValidationErrors
+                    return@Button
+                }
 
-                    validationErrors = setOf()
-                    inProgress = true
+                validationErrors = setOf()
+                inProgress = true
 
-                    coroutineScope.launch {
-                        try {
-                            AccountViewModel.sendVerificationCode(email)
-                            navController.navigate("account-add/verify-code?email=$email")
-                        } catch (e: NoteError) {
-                            when {
-                                e is StorageError.AccountEmailUsed -> {
-                                    error = "An account with this email already exists. You can find it under Accounts page."
-                                }
-                                e is MavinoteError.Message && e.message == "email_already_used" -> {
-                                    error = "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
-                                }
-                                else -> e.handle()
+                coroutineScope.launch {
+                    try {
+                        AccountViewModel.sendVerificationCode(email)
+                        navController.navigate("verify-code?email=$email")
+                    } catch (e: NoteError) {
+                        when {
+                            e is StorageError.AccountEmailUsed -> {
+                                error = "An account with this email already exists. You can find it under Accounts page."
                             }
-                        } finally {
-                            inProgress = false
+                            e is MavinoteError.Message && e.message == "email_already_used" -> {
+                                error = "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
+                            }
+                            else -> e.handle()
                         }
+                    } finally {
+                        inProgress = false
                     }
-                },
-            ) {
-                Text("Send Verification Code")
-            }
+                }
+            },
+        ) {
+            Text("Send Verification Code")
         }
     }
 
@@ -433,11 +432,12 @@ fun SendVerificationCode(navController: NavController) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerifyCode(email: String, onVerify: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -450,7 +450,7 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
     var code by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState)) {
+        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
             Text(
                 "An 8 digit verification code is sent to $email email address.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -478,55 +478,53 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
             }
         }
 
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-            Button(
-                modifier = Modifier.fillMaxWidth(),
-                enabled = !inProgress,
-                onClick = {
-                    if (inProgress) {
-                        return@Button
-                    }
+        Button(
+            modifier = Modifier.fillMaxWidth(),
+            enabled = !inProgress,
+            onClick = {
+                if (inProgress) {
+                    return@Button
+                }
 
-                    val mutableValidationErrors = mutableSetOf<ValidationErrors>()
+                val mutableValidationErrors = mutableSetOf<ValidationErrors>()
 
-                    if (code.isBlank()) {
-                        mutableValidationErrors.add(ValidationErrors.InvalidCode)
-                    }
+                if (code.isBlank()) {
+                    mutableValidationErrors.add(ValidationErrors.InvalidCode)
+                }
 
 
-                    if (mutableValidationErrors.size != 0) {
-                        validationErrors = mutableValidationErrors
-                        return@Button
-                    }
+                if (mutableValidationErrors.size != 0) {
+                    validationErrors = mutableValidationErrors
+                    return@Button
+                }
 
-                    validationErrors = setOf()
-                    inProgress = true
+                validationErrors = setOf()
+                inProgress = true
 
-                    coroutineScope.launch {
-                        try {
-                            AccountViewModel.signUp(email, code)
-                            onVerify()
-                        } catch (e: NoteError) {
-                            when {
-                                e is StorageError.AccountEmailUsed -> {
-                                    error = "An account with this email already exists. You can find it under Accounts page."
-                                }
-                                e is MavinoteError.Message && e.message == "code_expired" -> {
-                                    error = "5 minutes waiting is timed out. Please try again."
-                                }
-                                e is MavinoteError.Message && e.message == "invalid_code" -> {
-                                    error = "You have entered invalid code. Please check the verification code."
-                                }
-                                else -> e.handle()
+                coroutineScope.launch {
+                    try {
+                        AccountViewModel.signUp(email, code)
+                        onVerify()
+                    } catch (e: NoteError) {
+                        when {
+                            e is StorageError.AccountEmailUsed -> {
+                                error = "An account with this email already exists. You can find it under Accounts page."
                             }
-                        } finally {
-                            inProgress = false
+                            e is MavinoteError.Message && e.message == "expired_code" -> {
+                                error = "5 minutes waiting is timed out. Please try again."
+                            }
+                            e is MavinoteError.Message && e.message == "invalid_code" -> {
+                                error = "You have entered invalid code. Please check the verification code."
+                            }
+                            else -> e.handle()
                         }
+                    } finally {
+                        inProgress = false
                     }
-                },
-            ) {
-                Text("Verify Code")
-            }
+                }
+            },
+        ) {
+            Text("Verify Code")
         }
     }
 
@@ -534,7 +532,7 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
         AlertDialog(
             onDismissRequest = { error = null },
             text = { Text(it) },
-            buttons = { }
+            confirmButton = { }
         )
     }
 }

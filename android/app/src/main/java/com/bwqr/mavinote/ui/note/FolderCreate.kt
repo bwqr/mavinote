@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -16,6 +17,7 @@ import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
@@ -31,7 +33,7 @@ fun FolderCreate(navController: NavController) {
     var error by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(key1 = 0) {
-        NoteViewModel
+        AccountViewModel
             .accounts()
             .onEach { accounts = it }
             .catch {
@@ -71,6 +73,7 @@ fun FolderCreate(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun FolderCreateView(
     accounts: List<Account>,
@@ -87,8 +90,7 @@ fun FolderCreateView(
         )
 
         Column(
-            modifier = Modifier
-                .padding(40.dp, 0.dp, 0.dp, 0.dp)
+            modifier = Modifier.padding(40.dp, 0.dp, 0.dp, 0.dp).weight(1f)
         ) {
             Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
                 Text(
@@ -119,19 +121,17 @@ fun FolderCreateView(
             if (error != null) {
                 Text(
                     text = error,
-                    color = MaterialTheme.colors.error,
+                    color = MaterialTheme.colorScheme.error,
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
                 )
             }
         }
 
-        Box(contentAlignment = Alignment.BottomCenter, modifier = Modifier.weight(1f)) {
-            Button(
-                onClick = { onCreateFolder(accountId, folderName) },
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                Text(text = stringResource(id = R.string.create_folder))
-            }
+        Button(
+            onClick = { onCreateFolder(accountId, folderName) },
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            Text(text = stringResource(id = R.string.create_folder))
         }
     }
 }

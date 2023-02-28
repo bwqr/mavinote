@@ -36,6 +36,7 @@ pub enum AccountKind {
     Local
 }
 
+#[derive(Serialize)]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Device {
     pub id: i32,

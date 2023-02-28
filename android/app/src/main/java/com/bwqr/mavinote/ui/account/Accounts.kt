@@ -7,13 +7,13 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material.Divider
-import androidx.compose.material.ExtendedFloatingActionButton
-import androidx.compose.material.Icon
-import androidx.compose.material.Text
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
+import androidx.compose.material3.Divider
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +29,7 @@ import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Screen
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
-import com.bwqr.mavinote.viewmodels.NoteViewModel
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn
 import kotlinx.coroutines.flow.onEach
@@ -39,7 +39,7 @@ fun Accounts(navController: NavController) {
     var accounts by remember { mutableStateOf(listOf<Account>()) }
 
     LaunchedEffect(key1 = 0) {
-        NoteViewModel
+        AccountViewModel
             .accounts()
             .onEach { accounts = it }
             .catch {
