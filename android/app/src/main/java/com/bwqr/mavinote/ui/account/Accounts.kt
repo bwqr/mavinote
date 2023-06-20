@@ -65,7 +65,7 @@ fun AccountsView(navController: NavController, accounts: List<Account>) {
                 )
             }) { (index, account) ->
                 ListItem(
-                    headlineText = { Text(account.name) },
+                    headlineContent = { Text(account.name) },
                     trailingContent = {
                         Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
                     },

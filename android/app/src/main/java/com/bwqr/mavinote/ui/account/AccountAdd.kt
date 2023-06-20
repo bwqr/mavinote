@@ -120,14 +120,14 @@ fun ChooseAccountAddKind(navController: NavController) {
         )
 
         ListItem(
-            headlineText = { Text("Add an Existing Account") },
+            headlineContent = { Text("Add an Existing Account") },
             trailingContent = { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null) },
             modifier = Modifier.clickable { navController.navigate(AccountAddScreen.AddExistingAccount.EnterAccountInfo.route) }
         )
 
         Divider()
         ListItem(
-            headlineText = { Text("Create a New Account") },
+            headlineContent = { Text("Create a New Account") },
             trailingContent = { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null) },
             modifier = Modifier.clickable { navController.navigate(AccountAddScreen.CreateAccount.SendVerificationCode.route) }
         )

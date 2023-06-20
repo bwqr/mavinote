@@ -99,14 +99,14 @@ fun AccountView(
 
         Column {
             ListItem(
-                headlineText = { Text(stringResource(R.string.name)) },
+                headlineContent = { Text(stringResource(R.string.name)) },
                 trailingContent = { Text(account.name, style = Typography.bodyMedium) }
             )
 
             Divider()
 
             ListItem(
-                headlineText = { Text(stringResource(R.string.kind)) },
+                headlineContent = { Text(stringResource(R.string.kind)) },
                 trailingContent = { Text(account.kind.toString(), style = Typography.bodyMedium) },
             )
 
@@ -132,13 +132,13 @@ fun MavinoteAccountView(
 
     Column {
         ListItem(
-            headlineText = { Text("Email") },
+            headlineContent = { Text("Email") },
             trailingContent = { Text(mavinote.email, style = Typography.bodyMedium) },
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 20.dp),
         )
 
         ListItem(
-            headlineText = { Text("Devices") },
+            headlineContent = { Text("Devices") },
             trailingContent = {
                 Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
             },
@@ -148,7 +148,7 @@ fun MavinoteAccountView(
         Divider()
 
         ListItem(
-            headlineText = {
+            headlineContent = {
                 Text(
                     "Remove Account From Device",
                     color = MaterialTheme.colorScheme.error
@@ -160,7 +160,7 @@ fun MavinoteAccountView(
         Divider()
 
         ListItem(
-            headlineText = { Text("Close Account", color = MaterialTheme.colorScheme.error) },
+            headlineContent = { Text("Close Account", color = MaterialTheme.colorScheme.error) },
             trailingContent = {
                 Icon(
                     Icons.Filled.KeyboardArrowRight,

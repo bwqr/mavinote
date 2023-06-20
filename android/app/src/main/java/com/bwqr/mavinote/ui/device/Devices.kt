@@ -102,8 +102,8 @@ fun DevicesView(
                 )
             }) { (index, device) ->
                 ListItem(
-                    headlineText = { Text(device.pubkey) },
-                    supportingText = { Text("Device is added at ${device.createdAt}") },
+                    headlineContent = { Text(device.pubkey) },
+                    supportingContent = { Text("Device is added at ${device.createdAt}") },
                     trailingContent = {
                         Icon(
                             Icons.Filled.Delete,
