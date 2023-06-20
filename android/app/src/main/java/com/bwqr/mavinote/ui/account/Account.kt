@@ -6,10 +6,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
@@ -20,7 +18,6 @@ import com.bwqr.mavinote.models.*
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.AccountViewModel
-import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -82,6 +79,7 @@ fun Account(navController: NavController, accountId: Int) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountView(
     navController: NavController,
@@ -100,41 +98,18 @@ fun AccountView(
         )
 
         Column {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp, 20.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.name),
-                    style = Typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    account.name,
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            ListItem(
+                headlineText = { Text(stringResource(R.string.name)) },
+                trailingContent = { Text(account.name, style = Typography.bodyMedium) }
+            )
 
             Divider()
 
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(8.dp, 20.dp)
-            ) {
-                Text(
-                    text = stringResource(R.string.kind),
-                    style = Typography.labelMedium,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f)
-                )
-                Text(
-                    account.kind.toString(),
-                    modifier = Modifier.weight(1f)
-                )
-            }
+            ListItem(
+                headlineText = { Text(stringResource(R.string.kind)) },
+                trailingContent = { Text(account.kind.toString(), style = Typography.bodyMedium) },
+            )
+
         }
 
         mavinote?.let {
@@ -145,6 +120,7 @@ fun AccountView(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MavinoteAccountView(
     navController: NavController,
@@ -155,76 +131,45 @@ fun MavinoteAccountView(
     var showRemoveWarn by remember { mutableStateOf(false) }
 
     Column {
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(8.dp, 20.dp)
-        ) {
-            Text(
-                text = "Email",
-                style = Typography.labelMedium,
-                fontWeight = FontWeight.Bold,
-                modifier = Modifier.weight(1f)
-            )
+        ListItem(
+            headlineText = { Text("Email") },
+            trailingContent = { Text(mavinote.email, style = Typography.bodyMedium) },
+            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 20.dp),
+        )
 
-            Text(
-                mavinote.email,
-                modifier = Modifier.weight(1f)
-            )
-        }
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .padding(0.dp, 16.dp, 0.dp, 0.dp)
-                .clickable { navController.navigate("devices?accountId=$accountId") }
-                .padding(8.dp, 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Devices",
-                modifier = Modifier
-                    .weight(1f),
-            )
-
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
-        }
+        ListItem(
+            headlineText = { Text("Devices") },
+            trailingContent = {
+                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
+            },
+            modifier = Modifier.clickable { navController.navigate("devices?accountId=$accountId") }
+        )
 
         Divider()
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { showRemoveWarn = true }
-                .padding(8.dp, 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Remove Account From Device",
-                modifier = Modifier
-                    .weight(1f),
-                color = MaterialTheme.colorScheme.error
-            )
-        }
+        ListItem(
+            headlineText = {
+                Text(
+                    "Remove Account From Device",
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            modifier = Modifier.clickable { showRemoveWarn = true }
+        )
 
         Divider()
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { navController.navigate("account-close?accountId=$accountId") }
-                .padding(8.dp, 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Close Account",
-                modifier = Modifier
-                    .weight(1f),
-                color = MaterialTheme.colorScheme.error
-            )
-
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.error)
-        }
+        ListItem(
+            headlineText = { Text("Close Account", color = MaterialTheme.colorScheme.error) },
+            trailingContent = {
+                Icon(
+                    Icons.Filled.KeyboardArrowRight,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error
+                )
+            },
+            modifier = Modifier.clickable { navController.navigate("account-close?accountId=$accountId") }
+        )
     }
 
     if (showRemoveWarn) {

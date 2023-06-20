@@ -43,21 +43,21 @@ pub async fn fetch_account_data<T: DeserializeOwned + Unpin + Send + 'static>(co
 }
 
 pub async fn fetch_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Vec<Device>, Error> {
-    sqlx::query_as("select id, account_id, pubkey from devices where account_id = ?")
+    sqlx::query_as("select id, account_id, pubkey, created_at from devices where account_id = ?")
         .bind(account_id)
         .fetch_all(conn)
         .await
 }
 
 pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, devices: &[crate::accounts::mavinote::Device]) -> Result<(), Error> {
-    let binds: String = itertools::Itertools::intersperse(devices.into_iter().map(|_| "(?, ?, ?)"), ",")
+    let binds: String = itertools::Itertools::intersperse(devices.into_iter().map(|_| "(?, ?, ?, ?)"), ",")
         .collect();
 
-    let query = format!("insert into devices (id, account_id, pubkey) values {}", binds);
+    let query = format!("insert into devices (id, account_id, pubkey, created_at) values {}", binds);
     let mut query = sqlx::query(&query);
 
     for dev in devices {
-        query = query.bind(dev.id).bind(account_id).bind(&dev.pubkey);
+        query = query.bind(dev.id).bind(account_id).bind(&dev.pubkey).bind(&dev.created_at);
     }
 
     query.execute(conn)

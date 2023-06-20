@@ -1,4 +1,6 @@
 use serde::{Deserialize, Serialize};
+use chrono::NaiveDateTime;
+
 #[cfg(feature = "storage")]
 use sqlx::{FromRow, Type};
 
@@ -36,12 +38,13 @@ pub enum AccountKind {
     Local
 }
 
-#[derive(Serialize)]
+#[derive(Debug, Serialize)]
 #[cfg_attr(feature = "storage", derive(FromRow))]
 pub struct Device {
     pub id: i32,
     pub account_id: i32,
     pub pubkey: String,
+    pub created_at: NaiveDateTime,
 }
 
 #[derive(Debug, Deserialize, Serialize)]

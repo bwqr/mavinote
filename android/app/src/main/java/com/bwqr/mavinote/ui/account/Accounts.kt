@@ -2,20 +2,14 @@ package com.bwqr.mavinote.ui.account
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
@@ -53,6 +47,7 @@ fun Accounts(navController: NavController) {
     AccountsView(navController, accounts)
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsView(navController: NavController, accounts: List<Account>) {
     Column(modifier = Modifier.padding(12.dp)) {
@@ -69,21 +64,13 @@ fun AccountsView(navController: NavController, accounts: List<Account>) {
                     account
                 )
             }) { (index, account) ->
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .clickable { navController.navigate("account/${account.id}") }
-                        .padding(8.dp, 20.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        account.name,
-                        modifier = Modifier
-                            .weight(1f)
-                    )
-
-                    Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
-                }
+                ListItem(
+                    headlineText = { Text(account.name) },
+                    trailingContent = {
+                        Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
+                    },
+                    modifier = Modifier.clickable { navController.navigate("account/${account.id}") }
+                )
 
                 if (index != accounts.size - 1) {
                     Divider()

@@ -177,13 +177,11 @@ class Runtime private constructor(filesDir: String) {
     }
 
     private fun abortStream(streamId: Int) {
-        streams[streamId]?.let { stream -> stream.joinHandle()?.let { _abort(it) } }
-        streams.remove(streamId)
+        streams.remove(streamId)?.let { stream -> stream.joinHandle()?.let { _abort(it) } }
     }
 
     private fun abortOnce(onceId: Int) {
-        onces[onceId]?.let { once -> once.joinHandle()?.let { _abort(it) } }
-        onces.remove(onceId)
+        onces.remove(onceId)?.let { once -> once.joinHandle()?.let { _abort(it) } }
     }
 }
 

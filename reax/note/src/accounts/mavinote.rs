@@ -439,6 +439,7 @@ mod requests {
 }
 
 pub mod responses {
+    use chrono::NaiveDateTime;
     use serde::Deserialize;
 
     use crate::models::{RemoteId, State};
@@ -458,6 +459,7 @@ pub mod responses {
     pub struct Device {
         pub id: i32,
         pub pubkey: String,
+        pub created_at: NaiveDateTime,
     }
 
     #[derive(Debug, Deserialize)]
