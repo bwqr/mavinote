@@ -120,3 +120,9 @@ create trigger notes_updated_at
     on notes
     for each row
 execute procedure update_timestamp();
+
+create trigger pending_delete_users_updated_at
+    before update
+    on pending_delete_users
+    for each row
+execute procedure update_timestamp();

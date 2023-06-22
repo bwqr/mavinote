@@ -10,12 +10,12 @@ struct AccountAddView : View {
 
     var body: some View {
         _AccountAddView(
-            onAdd: { name, email, password, createAccount in
+            onAdd: { name, email, code in
                 if (inProgress) {
                     return
                 }
 
-                if name.isEmpty || email.isEmpty || password.isEmpty {
+                if name.isEmpty || email.isEmpty || code.isEmpty {
                     error = "Please fill the fields"
                     return
                 }
@@ -25,9 +25,9 @@ struct AccountAddView : View {
 
                 tasks.append(Task {
                     do {
-                        try await NoteViewModel.addAccount(name, email, password, createAccount)
+                        try await NoteViewModel.signUp(name, email, code)
                         dismiss()
-                    } catch let e as ReaxError {
+                    } catch let e as NoteError {
                         switch e {
                         case .Http(.Unauthorized): error = "Invalid credentials. If you do not have a Mavinote account, you can create a new one by checking the box above"
                         case .Message(let message): error = message

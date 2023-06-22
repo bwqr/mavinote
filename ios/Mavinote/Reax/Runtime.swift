@@ -2,7 +2,7 @@ import Foundation
 import Serde
 
 typealias OnNext = (_ deserializer: Deserializer) throws -> ()
-typealias OnError = (_ error: ReaxError) -> ()
+typealias OnError = (_ error: NoteError) -> ()
 typealias OnComplete = () -> ()
 typealias OnStart = (_ id: Int32) -> UnsafeMutableRawPointer
 
@@ -35,7 +35,7 @@ class Stream {
         do {
             switch try deserializer.deserialize_variant_index() {
             case 0: try self.onNext(deserializer)
-            case 1: self.onError(try ReaxError.deserialize(deserializer))
+            case 1: self.onError(try NoteError.deserialize(deserializer))
             case 2: self.onComplete()
             default: fatalError("Unhandled variant")
             }
@@ -76,7 +76,7 @@ class Once {
         do {
             switch try deserializer.deserialize_variant_index() {
             case 0: try self.onNext(deserializer)
-            case 1: self.onError(try ReaxError.deserialize(deserializer))
+            case 1: self.onError(try NoteError.deserialize(deserializer))
             default: fatalError("Unhandled variant")
             }
         } catch {
@@ -107,7 +107,7 @@ class Runtime {
         _instance!
     }
 
-    static func runStream<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) -> AsyncStream<Result<T, ReaxError>> {
+    static func runStream<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) -> AsyncStream<Result<T, NoteError>> {
         return AsyncStream { continuation in
             let stream = Stream(
                 onNext: { continuation.yield(Result.success(try onNext($0))) },
