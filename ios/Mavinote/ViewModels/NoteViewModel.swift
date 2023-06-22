@@ -3,7 +3,7 @@ class NoteViewModel {
         reax_note_init()
     }
 
-    static func accounts() -> AsyncStream<Result<[Account], ReaxError>> {
+    static func accounts() -> AsyncStream<Result<[Account], NoteError>> {
         return Runtime.runStream {
             try deserializeList($0) { try Account.deserialize($0) }
         } _: {
@@ -27,9 +27,15 @@ class NoteViewModel {
         }
     }
 
-    static func addAccount(_ name: String, _ email: String, _ password: String, _ createAccount: Bool) async throws -> () {
+    static func sendCode(_ email: String) async throws -> () {
         return try await Runtime.runUnitOnce {
-            reax_note_add_account($0, name, email, password, createAccount)
+            reax_note_send_code($0, email)
+        }
+    }
+
+    static func signUp(_ name: String, _ email: String, _ code: String) async throws -> () {
+        return try await Runtime.runUnitOnce {
+            reax_note_sign_up($0, name, email, code)
         }
     }
 
@@ -45,7 +51,7 @@ class NoteViewModel {
         }
     }
 
-    static func folders() -> AsyncStream<Result<[Folder], ReaxError>> {
+    static func folders() -> AsyncStream<Result<[Folder], NoteError>> {
         return Runtime.runStream {
             try deserializeList($0) { try Folder.deserialize($0) }
         } _: {
@@ -73,13 +79,7 @@ class NoteViewModel {
         }
     }
 
-    static func authorizeAccount(_ accountId: Int32, password: String) async throws -> () {
-        return try await Runtime.runUnitOnce {
-            reax_note_authorize_account($0, accountId, password)
-        }
-    }
-
-    static func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], ReaxError>> {
+    static func noteSummaries(_ folderId: Int32) -> AsyncStream<Result<[Note], NoteError>> {
         return Runtime.runStream {
             try deserializeList($0) { try Note.deserialize($0) }
         } _: {

@@ -3,10 +3,20 @@ use std::{
     os::raw::{c_char, c_int},
 };
 
-use base::{State, Error};
+use base::State;
+use note::Error;
+use serde::Serialize;
 use tokio::task::JoinHandle;
 
-use crate::{spawn, send_stream, Message, send_once, block_on};
+use crate::{spawn, Message, block_on};
+
+fn send_once<T: Serialize>(once_id: i32, message: Result<T, Error>) {
+    crate::send_once(once_id, message)
+}
+
+fn send_stream<T: Serialize>(stream_id: i32, message: Message<T, Error>) {
+    crate::send_stream(stream_id, message)
+}
 
 #[no_mangle]
 pub extern "C" fn reax_note_init() {
@@ -63,13 +73,13 @@ pub extern "C" fn reax_note_mavinote_account(once_id: c_int, account_id: c_int) 
 }
 
 #[no_mangle]
-pub extern "C" fn reax_note_add_account(once_id: c_int, name: * const c_char, email: * const c_char, password: * const c_char, create_account: bool) -> * mut JoinHandle<()> {
+pub extern "C" fn reax_note_add_account(once_id: c_int, name: * const c_char, email: * const c_char, code: * const c_char) -> * mut JoinHandle<()> {
     let name = unsafe { CStr::from_ptr(name).to_str().unwrap().to_string() };
     let email = unsafe { CStr::from_ptr(email).to_str().unwrap().to_string() };
-    let password = unsafe { CStr::from_ptr(password).to_str().unwrap().to_string() };
+    let code = unsafe { CStr::from_ptr(code).to_str().unwrap().to_string() };
 
     let handle = spawn(async move {
-        let res = note::storage::add_account(name, email, password, create_account).await;
+        let res = note::storage::sign_up(name, email, code).await;
 
         send_once(once_id, res);
     });
@@ -81,19 +91,6 @@ pub extern "C" fn reax_note_add_account(once_id: c_int, name: * const c_char, em
 pub extern "C" fn reax_note_delete_account(once_id: c_int, account_id: c_int) -> * mut JoinHandle<()> {
     let handle = spawn(async move {
         let res = note::storage::delete_account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle))
-}
-
-#[no_mangle]
-pub extern "C" fn reax_note_authorize_account(once_id: c_int, account_id: c_int, password: * const c_char) -> * mut JoinHandle<()> {
-    let password = unsafe { CStr::from_ptr(password).to_str().unwrap().to_string() };
-
-    let handle = spawn(async move {
-        let res = note::storage::authorize_mavinote_account(account_id, password).await;
 
         send_once(once_id, res);
     });

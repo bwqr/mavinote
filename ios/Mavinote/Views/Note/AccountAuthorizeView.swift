@@ -33,7 +33,7 @@ struct AccountAuthorizeView : View {
                         do {
                             try await NoteViewModel.authorizeAccount(accountId, password: password)
                             dismiss()
-                        } catch let e as ReaxError {
+                        } catch let e as NoteError {
                             switch e {
                             case .Http(.Unauthorized): error = "Wrong password, please try again"
                             case .Message(let message): error = message
@@ -54,7 +54,7 @@ struct AccountAuthorizeView : View {
                     if let a = try await NoteViewModel.account(accountId), let m = try await NoteViewModel.mavinoteAccount(accountId) {
                         account = (a, m)
                     }
-                } catch let e as ReaxError {
+                } catch let e as NoteError {
                     e.handle(appState)
                 }catch {
                     fatalError("\(error)")
