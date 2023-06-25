@@ -1,23 +1,87 @@
 import Foundation
 import Serde
 
-func deserializeOption<T>(_ deserializer: Deserializer, deserialize: (_ deserializer: Deserializer) throws -> T?) throws -> T? {
-    let tag = try deserializer.deserialize_option_tag()
-
-    if tag {
-        return try deserialize(deserializer)
-    }
-
-    return nil
+protocol Deserialize {
+    static func deserialize(_ deserializer: Deserializer) throws -> Self
 }
 
-func deserializeList<T>(_ deserializer: Deserializer, deserialize: (_ deserializer: Deserializer) throws -> T) throws -> [T] {
-    var items: [T] = []
-    let len = try deserializer.deserialize_len()
+protocol IntoInner {
+    associatedtype Inner
+    
+    func into() -> Inner
+}
 
-    for _ in 0..<len {
-        items.append(try deserialize(deserializer))
+protocol DeserializeInner: Deserialize, IntoInner { }
+
+struct DeInt32: DeserializeInner {
+    let val: Int32
+
+    static func deserialize(_ deserializer: Deserializer) throws -> DeInt32 {
+        DeInt32(val: try deserializer.deserialize_i32())
     }
 
-    return items
+    func into() -> Int32 {
+        val
+    }
+}
+
+struct DeString: DeserializeInner {
+    let val: String
+
+    static func deserialize(_ deserializer: Deserializer) throws -> DeString {
+        DeString(val: try deserializer.deserialize_str())
+    }
+
+    func into() -> String {
+        val
+    }
+}
+
+struct DeUnit: DeserializeInner {
+    let val: () = ()
+
+    static func deserialize(_ deserializer: Deserializer) throws -> DeUnit {
+        DeUnit()
+    }
+
+    func into() -> () {
+        val
+    }
+}
+
+struct DeOption<T: Deserialize>: DeserializeInner {
+    let val: T?
+
+    static func deserialize(_ deserializer: Deserializer) throws -> DeOption<T> {
+        let tag = try deserializer.deserialize_option_tag()
+
+        if tag {
+            return DeOption(val: try T.deserialize(deserializer))
+        }
+
+        return DeOption(val: nil)
+    }
+
+    func into() -> T? {
+        val
+    }
+}
+
+struct DeList<T: Deserialize>: DeserializeInner {
+    let val: [T]
+
+    static func deserialize(_ deserializer: Deserializer) throws -> DeList<T> {
+        var items: [T] = []
+        let len = try deserializer.deserialize_len()
+
+        for _ in 0..<len {
+            items.append(try T.deserialize(deserializer))
+        }
+
+        return DeList(val: items)
+    }
+
+    func into() -> [T] {
+        val
+    }
 }

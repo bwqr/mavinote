@@ -34,7 +34,7 @@ struct NoteView : View {
                         }
 
                         dismiss()
-                    } catch let e as ReaxError {
+                    } catch let e as NoteError {
                         e.handle(appState)
                         deleting = false
                     } catch {
@@ -55,7 +55,7 @@ struct NoteView : View {
                         text = note.text
                         modified = false
                     }
-                } catch let e as ReaxError {
+                } catch let e as NoteError {
                     e.handle(appState)
                 } catch {
                     fatalError("\(error)")
@@ -143,7 +143,7 @@ private class TextViewDelegate : NSObject, UITextViewDelegate {
 
 struct NoteView_Preview : PreviewProvider {
     static var previews: some View {
-        let note = Note(id: 1, folderId: 1, remoteId: 1, commit: 1, title: "My Note", text: "Little note in code", state: .Clean)
+        let note = Note(id: 1, folderId: 1, remoteId: 1, commit: 1, name: "My Note", text: "Little note in code", state: .Clean)
 
         NavigationView {
             _NoteView(
@@ -151,7 +151,7 @@ struct NoteView_Preview : PreviewProvider {
                 textViewDelegate: TextViewDelegate(onTextChange: { _ in }),
                 onDelete: { }
             )
-            .navigationTitle(note.title ?? "New Note")
+            .navigationTitle(note.name)
         }
     }
 }

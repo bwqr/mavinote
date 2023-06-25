@@ -4,13 +4,14 @@ import Serde
 typealias OnNext = (_ deserializer: Deserializer) throws -> ()
 typealias OnError = (_ error: NoteError) -> ()
 typealias OnComplete = () -> ()
-typealias OnStart = (_ id: Int32) -> UnsafeMutableRawPointer
+typealias OnStreamStart = (_ id: Int32) -> UnsafeMutableRawPointer
+typealias OnOnceStart = (_ id: Int32) -> ()
 
 class Stream {
     private let onNext: OnNext
     private let onError: OnError
     private let onComplete: OnComplete
-    private let onStart: OnStart
+    private let onStart: OnStreamStart
     private var _joinHandle: UnsafeMutableRawPointer?
     
     var joinHandle: UnsafeMutableRawPointer? {
@@ -21,7 +22,7 @@ class Stream {
         onNext: @escaping OnNext,
         onError: @escaping OnError,
         onComplete: @escaping OnComplete,
-        onStart: @escaping OnStart
+        onStart: @escaping OnStreamStart
     ) {
         self.onNext = onNext
         self.onError = onError
@@ -37,12 +38,11 @@ class Stream {
             case 0: try self.onNext(deserializer)
             case 1: self.onError(try NoteError.deserialize(deserializer))
             case 2: self.onComplete()
-            default: fatalError("Unhandled variant")
+            default: throw DeserializationError.invalidInput(issue: "Unknown variant index for stream Message")
             }
         } catch {
-            print("failed to handle once", error)
+            fatalError("failed to handle stream \(error)")
         }
-
     }
 
     func run(_ streamId: Int32) {
@@ -53,17 +53,12 @@ class Stream {
 class Once {
     private let onNext: OnNext
     private let onError: OnError
-    private let onStart: OnStart
-    private var _joinHandle: UnsafeMutableRawPointer?
-
-    var joinHandle: UnsafeMutableRawPointer? {
-        return _joinHandle
-    }
+    private let onStart: OnOnceStart
 
     init(
         onNext: @escaping OnNext,
         onError: @escaping OnError,
-        onStart: @escaping OnStart
+        onStart: @escaping OnOnceStart
     ) {
         self.onNext = onNext
         self.onError = onError
@@ -77,15 +72,15 @@ class Once {
             switch try deserializer.deserialize_variant_index() {
             case 0: try self.onNext(deserializer)
             case 1: self.onError(try NoteError.deserialize(deserializer))
-            default: fatalError("Unhandled variant")
+            default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Once Message")
             }
         } catch {
-            print("failed to handle once", error)
+            fatalError("failed to handle once \(error)")
         }
     }
 
     func run(_ onceId: Int32) {
-        self._joinHandle = self.onStart(onceId)
+        self.onStart(onceId)
     }
 }
 
@@ -107,10 +102,10 @@ class Runtime {
         _instance!
     }
 
-    static func runStream<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) -> AsyncStream<Result<T, NoteError>> {
+    static func runStream<T: Deserialize>(_ onStart: @escaping OnStreamStart) -> AsyncStream<Result<T, NoteError>> {
         return AsyncStream { continuation in
             let stream = Stream(
-                onNext: { continuation.yield(Result.success(try onNext($0))) },
+                onNext: { continuation.yield(Result.success(try T.deserialize($0))) },
                 onError: { continuation.yield(Result.failure($0))},
                 onComplete: { continuation.finish() },
                 onStart: onStart
@@ -126,14 +121,29 @@ class Runtime {
         }
     }
 
-    static func runUnitOnce(_ onStart: @escaping OnStart) async throws -> () {
-        return try await runOnce({ deserializer in }, onStart)
+    static func runStream<T: DeserializeInner, U>(_ _type: T.Type, _ onStart: @escaping OnStreamStart) -> AsyncStream<Result<U, NoteError>> where T.Inner == U {
+        return AsyncStream { continuation in
+            let stream = Stream(
+                onNext: { continuation.yield(Result.success(try T.deserialize($0).into())) },
+                onError: { continuation.yield(Result.failure($0))},
+                onComplete: { continuation.finish() },
+                onStart: onStart
+            )
+
+            let streamId = Runtime.instance().insertStream(stream)
+
+            stream.run(streamId)
+
+            continuation.onTermination = { @Sendable _ in
+                Runtime.instance().abortStream(streamId)
+            }
+        }
     }
 
-    static func runOnce<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) async throws -> T {
+    static func runOnce<T: Deserialize>(_ onStart: @escaping OnOnceStart) async throws -> T {
         return try await withCheckedThrowingContinuation { continuation in
             let once = Once(
-                onNext: { continuation.resume(returning: try onNext($0))},
+                onNext: { continuation.resume(returning: try T.deserialize($0)) },
                 onError: { continuation.resume(throwing: $0)},
                 onStart: onStart
             )
@@ -143,12 +153,18 @@ class Runtime {
         }
     }
 
+    static func runOnce<T: DeserializeInner, U>(_ _type: T.Type, _ onStart: @escaping OnOnceStart) async throws -> U where T.Inner == U {
+        let res: T = try await runOnce(onStart)
+
+        return res.into()
+    }
+
     private init(_ storageDir: String) {
        Thread
             .init(target: self, selector: #selector(initHandler), object: nil)
             .start()
  
-        reax_init(API_URL, storageDir)
+        reax_init(API_URL, WS_URL, storageDir)
     }
 
     private func insertStream(_ stream: Stream) -> Int32 {
@@ -176,15 +192,15 @@ class Runtime {
     }
 
     private func abortStream(_ streamId: Int32) {
-        if let stream = self.streams[streamId], let joinHandle = stream.joinHandle {
-            reax_abort(joinHandle)
+        guard let stream = self.streams.removeValue(forKey: streamId) else {
+            fatalError("Aborting an unknown stream \(streamId)")
         }
-    }
 
-    private func abortOnce(_ onceId: Int32) {
-         if let once = self.onces[onceId], let joinHandle = once.joinHandle {
-            reax_abort(joinHandle)
+        guard let joinHandle = stream.joinHandle else {
+            fatalError("Aborting an stream without a joinHandle \(streamId)")
         }
+
+        reax_abort(joinHandle)
     }
 
     @objc private func initHandler() {
@@ -201,8 +217,10 @@ class Runtime {
 
             if isStream, let stream = this.streams[id] {
                 stream.handle(bytesArray)
-            } else if let once = this.onces[id] {
+            } else if !isStream, let once = this.onces.removeValue(forKey: id) {
                 once.handle(bytesArray)
+            } else {
+                fatalError("A message with unknown id is received, \(isStream) \(id)")
             }
         }
 

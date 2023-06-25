@@ -1,7 +1,7 @@
 import Foundation
 import Serde
 
-enum NoteError : Error {
+enum NoteError : Error, Deserialize {
     case Mavinote(MavinoteError)
     case Storage(StorageError)
     case Database(String)
@@ -41,7 +41,7 @@ enum MavinoteError {
         switch index {
         case 0: return .NoConnection
         case 1: return .UnexpectedResponse
-        case 2: return .Unauthorized(try deserializeOption(deserializer) { try $0.deserialize_i32() })
+        case 2: return .Unauthorized(try DeOption<DeInt32>.deserialize(deserializer).into().map { $0.into() })
         case 3: return .Unknown
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
         }

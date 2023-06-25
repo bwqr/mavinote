@@ -1,6 +1,6 @@
 import Serde
 
-struct Account : Identifiable {
+struct Account : Identifiable, Deserialize {
     let id: Int32
     let name: String
     let kind: AccountKind
@@ -21,7 +21,7 @@ struct Account : Identifiable {
 
 }
 
-enum AccountKind : String, CaseIterable {
+enum AccountKind : String, CaseIterable, Deserialize {
     case Mavinote
     case Local
 
@@ -36,7 +36,7 @@ enum AccountKind : String, CaseIterable {
     }
 }
 
-struct Mavinote {
+struct Mavinote: Deserialize {
     let email: String
     let token: String
 

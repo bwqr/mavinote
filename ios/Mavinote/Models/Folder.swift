@@ -1,6 +1,6 @@
 import Serde
 
-struct Folder : Identifiable {
+struct Folder : Identifiable, Deserialize {
     let id: Int32
     let accountId: Int32
     let remoteId: Int32?
@@ -13,7 +13,7 @@ struct Folder : Identifiable {
         let folder = Folder(
             id: try deserializer.deserialize_i32(),
             accountId: try deserializer.deserialize_i32(),
-            remoteId: try deserializeOption(deserializer) { try $0.deserialize_i32() },
+            remoteId: try DeOption<DeInt32>.deserialize(deserializer).into().map { $0.into() },
             name: try deserializer.deserialize_str(),
             state: try ModelState.deserialize(deserializer)
         )

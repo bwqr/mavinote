@@ -40,7 +40,7 @@ struct NotesView: View {
         .navigationTitle(folderName)
         .onAppear {
             tasks.append(Task {
-                let stream = NoteViewModel.noteSummaries(self.folderId)
+                let stream = NoteViewModel.notes(self.folderId)
 
                 for await result in stream {
                     switch result {
@@ -53,7 +53,7 @@ struct NotesView: View {
             tasks.append(Task {
                 do {
                     folder = try await NoteViewModel.folder(folderId)
-                } catch let e as ReaxError {
+                } catch let e as NoteError {
                     e.handle(appState)
                 } catch {
                     fatalError("\(error)")
@@ -80,9 +80,9 @@ private struct _NotesView : View {
                 Text("There is no note in this folder")
                 Spacer()
             } else {
-                List(notes) { note in
-                    NavigationLink(destination: NoteView(folderId: folder.id, noteName: note.title ?? "New Note", noteId: note.id)) {
-                        Text(note.title ?? "New Note")
+                List(notes, id: \.self.id) { note in
+                    NavigationLink(destination: NoteView(folderId: folder.id, noteName: note.name, noteId: note.id)) {
+                        Text(note.name)
                     }
                 }
                     }
@@ -117,9 +117,9 @@ struct NotesView_Preview : PreviewProvider {
     static var previews : some View {
         let folder = Folder(id: 1, accountId: 1, remoteId: nil, name: "My Folder", state: .Clean)
         let notes = [
-            Note(id: 1, folderId: 1, remoteId: nil, commit: 1, title: "Little Note", text: "Empty text", state: .Clean),
-            Note(id: 2, folderId: 1, remoteId: nil, commit: 1, title: "Hacky Solutions", text: "Empty text", state: .Clean),
-            Note(id: 3, folderId: 1, remoteId: nil, commit: 1, title: "No Surprise", text: "Empty text", state: .Clean)
+            Note(id: 1, folderId: 1, remoteId: nil, commit: 1, name: "Little Note", text: "Empty text", state: .Clean),
+            Note(id: 2, folderId: 1, remoteId: nil, commit: 1, name: "Hacky Solutions", text: "Empty text", state: .Clean),
+            Note(id: 3, folderId: 1, remoteId: nil, commit: 1, name: "No Surprise", text: "Empty text", state: .Clean)
         ]
 
         NavigationView {
