@@ -3,70 +3,20 @@
 use std::{
     str::FromStr,
     ffi::CString,
-    sync::{mpsc::Sender, Mutex, Arc}, future::Future,
+    sync::Arc,
 };
 
-use base::Config;
 use jni::{
     objects::{JObject, JString, JValue, JClass},
     signature::{JavaType, Primitive},
     JNIEnv, sys::jlong,
 };
 use libc::c_char;
-use once_cell::sync::OnceCell;
-use serde::Serialize;
-use tokio::task::JoinHandle;
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
 mod account;
 mod log;
 mod note;
-
-static ASYNC_RUNTIME: OnceCell<tokio::runtime::Runtime> = OnceCell::new();
-static HANDLER: OnceCell<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceCell::new();
-
-#[derive(Serialize)]
-enum Message<T: Serialize, E: Serialize> {
-    Ok(T),
-    Err(E),
-    Complete,
-}
-
-pub(crate) fn send_stream<T: Serialize, E: Serialize>(stream_id: i32, message: Message<T, E>) {
-    let bytes = bincode::serialize(&message).expect("failed to searialize message");
-
-    HANDLER
-        .get()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .send((stream_id, true, bytes))
-        .unwrap();
-}
-
-pub(crate) fn send_once<T: Serialize, E: Serialize>(once_id: i32, message: Result<T, E>) {
-    let bytes = bincode::serialize(&message).expect("failed to searialize message");
-
-    HANDLER
-        .get()
-        .unwrap()
-        .lock()
-        .unwrap()
-        .send((once_id, false, bytes))
-        .unwrap();
-}
-
-pub fn spawn<F>(future: F) -> JoinHandle<F::Output>
-where
-    F: Future + Send + 'static,
-    F::Output: Send + 'static,
-{
-    ASYNC_RUNTIME.get().unwrap().spawn(future)
-}
-
-pub fn block_on<F: Future>(future: F) -> F::Output {
-    ASYNC_RUNTIME.get().unwrap().block_on(future)
-}
 
 fn capture_stderr() {
     std::thread::spawn(|| unsafe {
@@ -120,19 +70,10 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
 
     log::init();
 
-    ASYNC_RUNTIME
-        .set(
-            tokio::runtime::Builder::new_multi_thread()
-                .enable_all()
-                .build()
-                .expect("failed to initialize tokio runtime"),
-        )
-        .expect("failed to set tokio runtime");
-
-    runtime::init();
+    universal::init(api_url, ws_url, storage_dir.clone());
 
     let db_path = format!("sqlite:{}/app.db", storage_dir);
-    let pool = block_on(async move {
+    let pool = universal::block_on(async move {
         let options = SqliteConnectOptions::from_str(db_path.as_str())
             .unwrap()
             .create_if_missing(true);
@@ -150,12 +91,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
 
     runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
 
-    runtime::put::<Arc<Config>>(Arc::new(Config {
-        api_url,
-        ws_url,
-        storage_dir,
-    }));
-
     ::log::info!("reax is built with {} profile", if cfg!(debug_assertions) { "debug" } else { "release" });
     ::log::info!("reax runtime is initialized");
 }
@@ -167,10 +102,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
     callback: JObject,
 ) {
     let (send, recv) = std::sync::mpsc::channel();
-    HANDLER
-        .set(Mutex::new(send))
-        .map_err(|_| "HandlerError")
-        .expect("failed to set handler");
+    universal::init_handler(send);
 
     let callback_class = env.get_object_class(callback).unwrap();
     let callback_method_id = env

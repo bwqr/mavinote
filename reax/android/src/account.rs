@@ -1,21 +1,8 @@
-use base::State;
 use jni::{
-    objects::{JString, JClass},
+    objects::{JClass, JString},
     sys::{jint, jlong},
-    JNIEnv
+    JNIEnv,
 };
-use note::Error;
-use serde::Serialize;
-
-use crate::{spawn, Message};
-
-fn send_once<T: Serialize>(once_id: i32, message: Result<T, Error>) {
-    crate::send_once(once_id, message)
-}
-
-fn send_stream<T: Serialize>(stream_id: i32, message: Message<T, Error>) {
-    crate::send_stream(stream_id, message)
-}
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1accounts(
@@ -23,27 +10,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1account
     _: JClass,
     stream_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let mut rx = note::storage::accounts().await;
-
-        match &*rx.borrow() {
-            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
-            _ => {},
-        };
-
-        while rx.changed().await.is_ok() {
-            match &*rx.borrow() {
-                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
-                _ => {},
-            };
-        }
-
-        send_stream::<()>(stream_id, Message::Complete);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::accounts(stream_id) as jlong
 }
 
 #[no_mangle]
@@ -53,13 +20,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1account
     once_id: jint,
     account_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::account(once_id, account_id) as jlong
 }
 
 #[no_mangle]
@@ -69,13 +30,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1mavinot
     once_id: jint,
     account_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::mavinote_account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::mavinote_account(once_id, account_id) as jlong
 }
 
 #[no_mangle]
@@ -83,15 +38,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1devices
     _: JNIEnv,
     _: JClass,
     once_id: jint,
-    account_id: jint
+    account_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::devices(account_id).await;
+    universal::account::devices(once_id, account_id) as jlong
+}
 
-        send_once(once_id, res);
-    });
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1addDevice(
+    env: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    account_id: jint,
+    fingerprint: JString,
+) -> jlong {
+    let fingerprint = env.get_string(fingerprint).unwrap().to_str().unwrap().to_owned();
 
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::add_device(once_id, account_id, fingerprint) as jlong
 }
 
 #[no_mangle]
@@ -99,15 +61,9 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1removeD
     _: JNIEnv,
     _: JClass,
     once_id: jint,
-    device_id: jint
+    device_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::remove_device(device_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::remove_device(once_id, device_id) as jlong
 }
 
 #[no_mangle]
@@ -119,13 +75,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1request
 ) -> jlong {
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::request_verification(email).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::request_verification(once_id, email) as jlong
 }
 
 #[no_mangle]
@@ -137,13 +87,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1waitVer
 ) -> jlong {
     let token = env.get_string(token).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::wait_verification(token).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::wait_verification(once_id, token) as jlong
 }
 
 #[no_mangle]
@@ -155,13 +99,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1addAcco
 ) -> jlong {
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::add_account(email).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::add_account(once_id, email) as jlong
 }
 
 #[no_mangle]
@@ -170,13 +108,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1publicK
     _: JClass,
     once_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::public_key().await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::public_key(once_id) as jlong
 }
 
 #[no_mangle]
@@ -188,13 +120,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendVer
 ) -> jlong {
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::send_verification_code(email).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::send_verification_code(once_id, email) as jlong
 }
 
 #[no_mangle]
@@ -208,13 +134,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1signUp(
     let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
     let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::sign_up(email, code).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::sign_up(once_id, email, code) as jlong
 }
 
 #[no_mangle]
@@ -224,13 +144,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1removeA
     once_id: jint,
     account_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::remove_account(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::remove_account(once_id, account_id) as jlong
 }
 
 #[no_mangle]
@@ -240,13 +154,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendAcc
     once_id: jint,
     account_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::send_account_close_code(account_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::send_account_close_code(once_id, account_id) as jlong
 }
 
 #[no_mangle]
@@ -259,11 +167,5 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1closeAc
 ) -> jlong {
     let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::close_account(account_id, code).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::account::close_account(once_id, account_id, code) as jlong
 }
