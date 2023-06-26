@@ -136,6 +136,17 @@
 			path = Reax;
 			sourceTree = "<group>";
 		};
+		84803BB82A49A2BD00508F58 /* Account */ = {
+			isa = PBXGroup;
+			children = (
+				84A3B13728B268820044A5D4 /* AccountsView.swift */,
+				84A3B13928B269B30044A5D4 /* AccountView.swift */,
+				84A3B13B28B294690044A5D4 /* AccountAddView.swift */,
+				841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */,
+			);
+			path = Account;
+			sourceTree = "<group>";
+		};
 		AC6CAA5028AD1C17005F2A15 /* Models */ = {
 			isa = PBXGroup;
 			children = (
@@ -179,6 +190,7 @@
 		ACA8F73528AEAB4C0015F71E /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				84803BB82A49A2BD00508F58 /* Account */,
 				ACA8F73628AEAB4C0015F71E /* Note */,
 				84FF86E628B3A16D00CDC922 /* Input.swift */,
 			);
@@ -188,14 +200,10 @@
 		ACA8F73628AEAB4C0015F71E /* Note */ = {
 			isa = PBXGroup;
 			children = (
-				84A3B13728B268820044A5D4 /* AccountsView.swift */,
 				ACA8F73728AEAB4C0015F71E /* NoteView.swift */,
 				ACA8F73828AEAB4C0015F71E /* FolderCreateView.swift */,
 				ACA8F73928AEAB4C0015F71E /* FoldersView.swift */,
 				ACA8F73A28AEAB4C0015F71E /* NotesView.swift */,
-				84A3B13928B269B30044A5D4 /* AccountView.swift */,
-				84A3B13B28B294690044A5D4 /* AccountAddView.swift */,
-				841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */,
 			);
 			path = Note;
 			sourceTree = "<group>";

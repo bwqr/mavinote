@@ -19,10 +19,7 @@ enum NoteError : Error, Deserialize {
 
     func handle(_ appState: AppState) {
         switch self {
-        case .Mavinote(.Unauthorized(let accountId)): if let accountId = accountId {
-            appState.emit(BusEvent.DisplayNotAuthorized(BusEvent.AccountId(id: accountId)))
-        }
-        case .Mavinote(.NoConnection): appState.emit(BusEvent.DisplayNoInternetWarning)
+        case .Mavinote(.NoConnection): appState.emit(BusEvent.ShowMessage("No Internet Connection"))
         default: debugPrint("Unhandled ReaxError \(self)")
         }
     }
@@ -52,7 +49,7 @@ enum StorageError {
     case InvalidState(String)
     case NotMavinoteAccount
     case AccountNotFound
-    case AccountNameUsed
+    case AccountEmailUsed
     case FolderNotFound
 
     static func deserialize(_ deserializer: Deserializer) throws -> StorageError {
@@ -62,7 +59,7 @@ enum StorageError {
         case 0: return .InvalidState(try deserializer.deserialize_str())
         case 1: return .NotMavinoteAccount
         case 2: return .AccountNotFound
-        case 3: return .AccountNameUsed
+        case 3: return .AccountEmailUsed
         case 4: return .FolderNotFound
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for StorageError")
         }

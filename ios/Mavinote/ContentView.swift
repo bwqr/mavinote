@@ -15,12 +15,7 @@ struct SafeContainer<T, Content: View> : View {
 }
 
 enum BusEvent {
-    case DisplayNoInternetWarning
-    case DisplayNotAuthorized(AccountId)
-
-    struct AccountId : Identifiable {
-        let id: Int32
-    }
+    case ShowMessage(String)
 }
 
 class AppState : ObservableObject {
@@ -37,34 +32,38 @@ class AppState : ObservableObject {
     }
 }
 
+private struct Toast: Identifiable {
+    var id: String { get { message } }
+
+    let message: String
+}
+
 struct ContentView: View {
     @StateObject private var appState = AppState()
-    @State var tasks: [Task<(), Never>] = []
-    @State var accountToAuthorize: BusEvent.AccountId?
+    @State private var tasks: [Task<(), Never>] = []
+    @State private var toast: Toast?
 
     var body: some View {
         FoldersView()
-            .sheet(item: $accountToAuthorize) { accountId in
-                AccountAuthorizeView(accountId: accountId.id)
+            .sheet(item: $toast) { toast in
+                Text(toast.message)
             }
             .environmentObject(appState)
             .onAppear {
                 tasks.append(Task {
                     while (true) {
                         switch await appState.listenEvent() {
-                        case BusEvent.DisplayNoInternetWarning: print("No connection")
-                        case BusEvent.DisplayNotAuthorized(let accountId): accountToAuthorize = accountId
+                        case BusEvent.ShowMessage(let message): toast = Toast(message: message)
                         }
                     }
+
+                    fatalError("Bus listening is stopped")
                 })
 
                 tasks.append(Task {
-                    do {
-                        try await NoteViewModel.sync()
-                    } catch let error as NoteError {
-                        error.handle(appState)
-                    } catch {
-                        fatalError("\(error)")
+                    switch await NoteViewModel.sync() {
+                    case .failure(let e): e.handle(appState)
+                    default: break
                     }
                 })
             }

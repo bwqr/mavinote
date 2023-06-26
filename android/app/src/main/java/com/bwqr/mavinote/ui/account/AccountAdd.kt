@@ -105,7 +105,6 @@ fun AccountAdd(navController: NavController) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChooseAccountAddKind(navController: NavController) {
     Column {
@@ -139,7 +138,6 @@ private enum class ValidationErrors {
     InvalidCode,
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -325,7 +323,6 @@ fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SendVerificationCode(navController: NavController) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -428,7 +425,6 @@ fun SendVerificationCode(navController: NavController) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun VerifyCode(email: String, onVerify: () -> Unit) {
     var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
@@ -546,7 +542,7 @@ fun ChooseAccountAddKindPreview() {
 
 @Preview(showBackground = true)
 @Composable
-fun EnterEmailPreview() {
+fun EnterAccountInfoPreview() {
     val navController = rememberNavController()
 
     MavinoteTheme {

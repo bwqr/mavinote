@@ -1,49 +1,97 @@
 import SwiftUI
 
+private class AccountAddController: ObservableObject {
+    let onRequestVerification: () -> ()
+
+    init(onRequestVerification: @escaping () -> Void) {
+        self.onRequestVerification = onRequestVerification
+    }
+}
+
 struct AccountAddView : View {
     @EnvironmentObject var appState: AppState
     @Environment(\.dismiss) var dismiss: DismissAction
+    @StateObject private var controller = AccountAddController(onRequestVerification: { print("Requesting Verification") })
 
     @State var tasks: [Task<(), Never>] = []
     @State var inProgress = false
     @State var error: String?
 
     var body: some View {
-        _AccountAddView(
-            onAdd: { name, email, code, _ in
-                if (inProgress) {
-                    return
+        ChooseAccountAddKindView()
+            .environmentObject(controller)
+     }
+}
+
+private struct ChooseAccountAddKindView: View {
+    @EnvironmentObject var controller: AccountAddController
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 32.0) {
+            Text("You can create a new account or add an already existing account")
+
+            Text("If you have already created an account from another device, you can also access it from this device")
+
+            List {
+                NavigationLink(destination: EnterAccountInfoView().environmentObject(controller)) {
+                    Text("Add an Existing Account")
+                        .padding(.vertical)
                 }
 
-                if name.isEmpty || email.isEmpty || code.isEmpty {
-                    error = "Please fill the fields"
-                    return
+                NavigationLink(destination: { Text("Hello") }) {
+                    Text("Create a New Account")
+                        .padding(.vertical)
                 }
+            }
+            .listStyle(.plain)
 
-                error = nil
-                inProgress = true
-
-                tasks.append(Task {
-                    do {
-                        try await AccountViewModel.signUp(email, code)
-                        dismiss()
-                    } catch let e as NoteError {
-                        switch e {
-                        default: e.handle(appState)
-                        }
-                    } catch {
-                        fatalError("\(error)")
-                    }
-
-                    inProgress = false
-                })
-            },
-            error: $error
-        )
+            Spacer()
+        }
+        .padding([.horizontal, .bottom], 12)
+        .navigationTitle("Add Account")
     }
 }
 
-private struct _AccountAddView : View {
+private struct EnterAccountInfoView: View {
+    @EnvironmentObject var controller: AccountAddController
+    @State var email: String = ""
+
+    var body: some View {
+        VStack {
+            ScrollView {
+                VStack(alignment: .leading, spacing: 32.0) {
+                    Text("Email address is used to identify accounts.")
+
+                    Text("Please enter the email address of the account you want to add.")
+
+                    VStack(alignment: .leading) {
+                        Text("Email")
+                            .font(.callout)
+
+                        TextField("Email", text: $email)
+                            .padding(12)
+                            .background(InputBackground)
+                            .cornerRadius(8)
+                    }
+                }
+                .padding([.horizontal, .bottom], 12)
+            }
+
+            Button(action: { controller.onRequestVerification() }) {
+                Text("Request Verification")
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(12)
+            .background(.blue)
+            .cornerRadius(8)
+            .padding([.horizontal, .bottom], 12)
+        }
+    }
+}
+
+private struct AddExistingAccountView : View {
     let onAdd: (_ name: String, _ email: String, _ password: String, _ createAccount: Bool) -> ()
     @Binding var error: String?
 
@@ -124,19 +172,22 @@ private struct _AccountAddView : View {
             }
             .padding([.leading, .trailing], 18)
         }
-        .navigationTitle("Add Account")
     }
 }
 
-struct AccountAddView_Preview : PreviewProvider {
+struct ChooseAccountAddKind_Preview: PreviewProvider {
     static var previews: some View {
-        let error: String? = nil
-
         NavigationView {
-            _AccountAddView(
-                onAdd: { _, _, _, _ in },
-                error: .constant(error)
-            )
+            ChooseAccountAddKindView()
+        }
+    }
+}
+
+struct EnterAccountInfo_Preview: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            EnterAccountInfoView()
+                .environmentObject(AccountAddController(onRequestVerification: { }))
         }
     }
 }

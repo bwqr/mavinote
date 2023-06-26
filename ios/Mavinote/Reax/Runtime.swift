@@ -1,6 +1,9 @@
 import Foundation
 import Serde
 
+typealias StreamStart = (_ id: Int32) -> UnsafeMutableRawPointer
+typealias OnceStart = (_ id: Int32) -> ()
+
 protocol Future {
     // Return value indicates whether the future is completed or not
     func handle(_ bytes: [UInt8]) -> Bool
@@ -83,16 +86,40 @@ class Runtime {
         _instance = Runtime(storageDir)
     }
 
-    static func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
+    static func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: StreamStart) -> AsyncStream<Result<T.Target, NoteError>> {
         Self.instance().runStream(T.self, onStart)
     }
 
-    static func runStream<T: Deserialize>(_ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T, NoteError>> {
+    static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<[T], NoteError>> {
+        return Self.instance().runStream(De.List<T>.self, onStart)
+    }
+
+    static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<T?, NoteError>> {
+        return Self.instance().runStream(De.Option<T>.self, onStart)
+    }
+
+    static func runStream(_ onStart: StreamStart) -> AsyncStream<Result<(), NoteError>> {
+        return Self.instance().runStream(De.Unit.self, onStart)
+    }
+
+    static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<T, NoteError>> {
         return Self.instance().runStream(T.self, onStart)
     }
 
-    static func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
+    static func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: OnceStart) async -> Result<T.Target, NoteError> {
         return await Self.instance().runOnce(T.self, onStart)
+    }
+
+    static func runOnce<T: Deserialize>(_ onStart: OnceStart) async -> Result<[T], NoteError> {
+        return await Self.instance().runOnce(De.List<T>.self, onStart)
+    }
+
+    static func runOnce<T: Deserialize>(_ onStart: OnceStart) async -> Result<T?, NoteError> {
+        return await Self.instance().runOnce(De.Option<T>.self, onStart)
+    }
+
+    static func runOnce(_ onStart: OnceStart) async -> Result<(), NoteError> {
+        return await Self.instance().runOnce(De.Unit.self, onStart)
     }
 
     static func runOnce<T: Deserialize>(_ onStart: (_ id: Int32) -> ()) async -> Result<T, NoteError> {
