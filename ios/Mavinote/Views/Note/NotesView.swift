@@ -51,12 +51,9 @@ struct NotesView: View {
             })
 
             tasks.append(Task {
-                do {
-                    folder = try await NoteViewModel.folder(folderId)
-                } catch let e as NoteError {
-                    e.handle(appState)
-                } catch {
-                    fatalError("\(error)")
+                switch await NoteViewModel.folder(folderId) {
+                case .success(let f): folder = f
+                case .failure(let e): e.handle(appState)
                 }
             })
         }

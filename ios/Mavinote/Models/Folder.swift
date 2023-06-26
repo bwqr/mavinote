@@ -13,7 +13,7 @@ struct Folder : Identifiable, Deserialize {
         let folder = Folder(
             id: try deserializer.deserialize_i32(),
             accountId: try deserializer.deserialize_i32(),
-            remoteId: try DeOption<DeInt32>.deserialize(deserializer).into().map { $0.into() },
+            remoteId: try De.Option<De.I32>.deserialize(deserializer),
             name: try deserializer.deserialize_str(),
             state: try ModelState.deserialize(deserializer)
         )

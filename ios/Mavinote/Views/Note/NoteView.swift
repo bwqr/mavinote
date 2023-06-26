@@ -50,15 +50,15 @@ struct NoteView : View {
             }
 
             tasks.append(Task {
-                do {
-                    if let note = try await NoteViewModel.note(noteId) {
+                switch await NoteViewModel.note(noteId) {
+                case .success(let note):
+                    if let note = note {
                         text = note.text
                         modified = false
+                    } else {
+                        print("WARNING: Note is not found")
                     }
-                } catch let e as NoteError {
-                    e.handle(appState)
-                } catch {
-                    fatalError("\(error)")
+                case .failure(let e): e.handle(appState)
                 }
             })
         }.onDisappear {

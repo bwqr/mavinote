@@ -487,7 +487,7 @@
 		847F5CE22A44668E005E94EF /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CARGO_TARGET_DIR = /Users/eerie/projects/tmp/mavinote;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUGGING_SYMBOLS = YES;
@@ -503,7 +503,7 @@
 		847F5CE32A44668E005E94EF /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CARGO_TARGET_DIR = /Users/eerie/projects/tmp/mavinote;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
 				CODE_SIGN_STYLE = Automatic;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
@@ -632,7 +632,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CARGO_TARGET_DIR = /User/eerie/projects/tmp/mavinote;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
@@ -665,7 +665,7 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
-				CARGO_TARGET_DIR = /User/eerie/projects/tmp/mavinote;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";

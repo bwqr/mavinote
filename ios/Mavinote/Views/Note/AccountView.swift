@@ -43,16 +43,9 @@ struct AccountView : View {
         .navigationTitle(accountName)
         .onAppear {
             tasks.append(Task {
-                do {
-                    account = try await AccountViewModel.account(accountId)
-
-                    if let acc = account, acc.kind == AccountKind.Mavinote {
-                        mavinote = try await AccountViewModel.mavinoteAccount(acc.id)
-                    }
-                } catch let e as NoteError {
-                    e.handle(appState)
-                } catch {
-                    fatalError("\(error)")
+                switch await AccountViewModel.account(accountId) {
+                case .success(let a): account = a
+                case .failure(let e): e.handle(appState)
                 }
             })
         }
