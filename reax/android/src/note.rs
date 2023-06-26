@@ -1,31 +1,15 @@
-use base::State;
-use note::Error;
-
 use jni::{
     objects::{JString, JClass},
     sys::{jint, jlong},
     JNIEnv
 };
-use serde::Serialize;
-
-use crate::{spawn, Message, block_on};
-
-fn send_once<T: Serialize>(once_id: i32, message: Result<T, Error>) {
-    crate::send_once(once_id, message)
-}
-
-fn send_stream<T: Serialize>(stream_id: i32, message: Message<T, Error>) {
-    crate::send_stream(stream_id, message)
-}
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1init(
     _: JNIEnv,
     _: JClass,
 ) {
-    block_on(::note::storage::init()).unwrap();
-
-    log::info!("reax note is initialized");
+    universal::note::init();
 }
 
 #[no_mangle]
@@ -34,32 +18,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1sync(
     _: JClass,
     once_id: jint
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::sync::sync().await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
-}
-
-#[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1addDevice(
-    env: JNIEnv,
-    _: JClass,
-    once_id: jint,
-    account_id: jint,
-    fingerprint: JString,
-) -> jlong {
-    let fingerprint = env.get_string(fingerprint).unwrap().to_str().unwrap().to_owned();
-
-    let handle = spawn(async move {
-        let res = note::storage::add_device(account_id, fingerprint).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::sync(once_id) as jlong
 }
 
 #[no_mangle]
@@ -68,27 +27,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1folders(
     _: JClass,
     stream_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let mut rx = note::storage::folders().await;
-
-        match &*rx.borrow() {
-            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
-            _ => {},
-        };
-
-        while rx.changed().await.is_ok() {
-            match &*rx.borrow() {
-                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
-                _ => {},
-            };
-        }
-
-        send_stream::<Vec<note::models::Folder>>(stream_id, Message::Complete);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::folders(stream_id) as jlong
 }
 
 #[no_mangle]
@@ -98,13 +37,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1folder(
     once_id: jint,
     folder_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::folder(folder_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::folder(once_id, folder_id) as jlong
 }
 
 #[no_mangle]
@@ -112,18 +45,12 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1createFold
     env: JNIEnv,
     _: JClass,
     once_id: jint,
-    account_id: i32,
+    account_id: jint,
     name: JString,
 ) -> jlong {
     let name = env.get_string(name).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::create_folder(account_id, name).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::create_folder(once_id, account_id, name) as jlong
 }
 
 #[no_mangle]
@@ -133,13 +60,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteFold
     once_id: jint,
     folder_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::delete_folder(folder_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::delete_folder(once_id, folder_id) as jlong
 }
 
 #[no_mangle]
@@ -149,25 +70,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1noteSummar
     stream_id: jint,
     folder_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let mut rx = note::storage::notes(folder_id).await;
-
-        match &*rx.inner().borrow() {
-            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<Error>(stream_id, Message::Err(e.clone())),
-            _ => {},
-        };
-
-        while rx.inner().changed().await.is_ok() {
-            if let State::Ok(ok) = &*rx.inner().borrow() {
-                send_stream(stream_id, Message::Ok(ok.clone()));
-            }
-        }
-
-        send_stream::<Vec<note::models::Note>>(stream_id, Message::Complete);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::note_summaries(stream_id, folder_id) as jlong
 }
 
 #[no_mangle]
@@ -177,13 +80,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1note(
     once_id: jint,
     note_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::note(note_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::note(once_id, note_id) as jlong
 }
 
 #[no_mangle]
@@ -196,13 +93,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1createNote
 ) -> jlong {
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::create_note(folder_id, text).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::create_note(once_id, folder_id, text) as jlong
 }
 
 #[no_mangle]
@@ -215,13 +106,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1updateNote
 ) -> jlong {
     let text = env.get_string(text).unwrap().to_str().unwrap().to_owned();
 
-    let handle = spawn(async move {
-        let res = note::storage::update_note(note_id, text).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::update_note(once_id, note_id, text) as jlong
 }
 
 #[no_mangle]
@@ -231,11 +116,5 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_NoteViewModelKt__1deleteNote
     once_id: jint,
     note_id: jint,
 ) -> jlong {
-    let handle = spawn(async move {
-        let res = note::storage::delete_note(note_id).await;
-
-        send_once(once_id, res);
-    });
-
-    Box::into_raw(Box::new(handle)) as jlong
+    universal::note::delete_note(once_id, note_id) as jlong
 }

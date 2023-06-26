@@ -8,13 +8,15 @@
 
 /* Begin PBXBuildFile section */
 		841C3D0728B536D5009021E8 /* AccountAuthorizeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */; };
+		844B32DF2A471C6500BF16E9 /* AccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844B32DE2A471C6500BF16E9 /* AccountViewModel.swift */; };
+		844B32E12A4730BD00BF16E9 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844B32E02A4730BD00BF16E9 /* Device.swift */; };
+		844B32E62A4784F800BF16E9 /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 844B32E52A4784E200BF16E9 /* libreax.a */; };
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
 		84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13728B268820044A5D4 /* AccountsView.swift */; };
 		84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13928B269B30044A5D4 /* AccountView.swift */; };
 		84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13B28B294690044A5D4 /* AccountAddView.swift */; };
 		84A71E2328B613A20044B763 /* BuildConfs.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A71E2228B613A20044B763 /* BuildConfs.swift */; };
 		84FF86E728B3A16D00CDC922 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FF86E628B3A16D00CDC922 /* Input.swift */; };
-		AC46C86828B1299F00387A72 /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = AC7A67A828AD23F900D7FAEC /* libreax.a */; };
 		AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = AC46C86A28B1325200387A72 /* AsyncAlgorithms */; };
 		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
 		AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5228AD1C17005F2A15 /* Folder.swift */; };
@@ -37,6 +39,13 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
+		847F5CE52A4467EA005E94EF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = ACC07B9228AD197700305FC6 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 847F5CE12A44668E005E94EF;
+			remoteInfo = cargo_reax;
+		};
 		ACC07BAB28AD197900305FC6 /* PBXContainerItemProxy */ = {
 			isa = PBXContainerItemProxy;
 			containerPortal = ACC07B9228AD197700305FC6 /* Project object */;
@@ -55,6 +64,10 @@
 
 /* Begin PBXFileReference section */
 		841C3D0628B536D5009021E8 /* AccountAuthorizeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAuthorizeView.swift; sourceTree = "<group>"; };
+		844B32DE2A471C6500BF16E9 /* AccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountViewModel.swift; sourceTree = "<group>"; };
+		844B32E02A4730BD00BF16E9 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
+		844B32E22A4781C800BF16E9 /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../../../Users/eerie/projects/tmp/mavinote/x86_64-apple-ios/release/libreax.a"; sourceTree = "<group>"; };
+		844B32E52A4784E200BF16E9 /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../../../Users/eerie/projects/tmp/mavinote/x86_64-apple-ios/debug/libreax.a"; sourceTree = "<group>"; };
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		84A3B13728B268820044A5D4 /* AccountsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		84A3B13928B269B30044A5D4 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
@@ -92,8 +105,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				AC7A67A728AD21C000D7FAEC /* Serde in Frameworks */,
-				AC46C86828B1299F00387A72 /* libreax.a in Frameworks */,
 				AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */,
+				844B32E62A4784F800BF16E9 /* libreax.a in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -130,6 +143,7 @@
 				AC6CAA5228AD1C17005F2A15 /* Folder.swift */,
 				AC6CAA5328AD1C17005F2A15 /* Note.swift */,
 				84858B0628AF9FDD001D7F4B /* Account.swift */,
+				844B32E02A4730BD00BF16E9 /* Device.swift */,
 			);
 			path = Models;
 			sourceTree = "<group>";
@@ -138,6 +152,7 @@
 			isa = PBXGroup;
 			children = (
 				AC6CAA5B28AD1C1F005F2A15 /* NoteViewModel.swift */,
+				844B32DE2A471C6500BF16E9 /* AccountViewModel.swift */,
 			);
 			path = ViewModels;
 			sourceTree = "<group>";
@@ -153,6 +168,8 @@
 		AC7A67A528AD21C000D7FAEC /* Frameworks */ = {
 			isa = PBXGroup;
 			children = (
+				844B32E52A4784E200BF16E9 /* libreax.a */,
+				844B32E22A4781C800BF16E9 /* libreax.a */,
 				AC46C86428B1230500387A72 /* libreax.a */,
 				AC7A67A828AD23F900D7FAEC /* libreax.a */,
 			);
@@ -248,6 +265,23 @@
 		};
 /* End PBXGroup section */
 
+/* Begin PBXLegacyTarget section */
+		847F5CE12A44668E005E94EF /* cargo_reax */ = {
+			isa = PBXLegacyTarget;
+			buildArgumentsString = ../ios/build_rust_deps.sh;
+			buildConfigurationList = 847F5CE42A44668E005E94EF /* Build configuration list for PBXLegacyTarget "cargo_reax" */;
+			buildPhases = (
+			);
+			buildToolPath = /bin/sh;
+			buildWorkingDirectory = ../reax;
+			dependencies = (
+			);
+			name = cargo_reax;
+			passBuildSettingsInEnvironment = 1;
+			productName = cargo_reax;
+		};
+/* End PBXLegacyTarget section */
+
 /* Begin PBXNativeTarget section */
 		ACC07B9928AD197700305FC6 /* Mavinote */ = {
 			isa = PBXNativeTarget;
@@ -260,6 +294,7 @@
 			buildRules = (
 			);
 			dependencies = (
+				847F5CE62A4467EA005E94EF /* PBXTargetDependency */,
 			);
 			name = Mavinote;
 			packageProductDependencies = (
@@ -316,6 +351,9 @@
 				LastSwiftUpdateCheck = 1340;
 				LastUpgradeCheck = 1340;
 				TargetAttributes = {
+					847F5CE12A44668E005E94EF = {
+						CreatedOnToolsVersion = 14.3.1;
+					};
 					ACC07B9928AD197700305FC6 = {
 						CreatedOnToolsVersion = 13.4.1;
 					};
@@ -348,6 +386,7 @@
 				ACC07B9928AD197700305FC6 /* Mavinote */,
 				ACC07BA928AD197900305FC6 /* MavinoteTests */,
 				ACC07BB328AD197900305FC6 /* MavinoteUITests */,
+				847F5CE12A44668E005E94EF /* cargo_reax */,
 			);
 		};
 /* End PBXProject section */
@@ -389,11 +428,13 @@
 				84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */,
 				ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */,
 				84FF86E728B3A16D00CDC922 /* Input.swift in Sources */,
+				844B32DF2A471C6500BF16E9 /* AccountViewModel.swift in Sources */,
 				84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */,
 				841C3D0728B536D5009021E8 /* AccountAuthorizeView.swift in Sources */,
 				84A71E2328B613A20044B763 /* BuildConfs.swift in Sources */,
 				AC6CAA5C28AD1C1F005F2A15 /* Runtime.swift in Sources */,
 				AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */,
+				844B32E12A4730BD00BF16E9 /* Device.swift in Sources */,
 				84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */,
 				ACC07B9E28AD197700305FC6 /* MavinoteApp.swift in Sources */,
 				AC6CAA5828AD1C17005F2A15 /* TraitHelpers.swift in Sources */,
@@ -425,6 +466,11 @@
 /* End PBXSourcesBuildPhase section */
 
 /* Begin PBXTargetDependency section */
+		847F5CE62A4467EA005E94EF /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 847F5CE12A44668E005E94EF /* cargo_reax */;
+			targetProxy = 847F5CE52A4467EA005E94EF /* PBXContainerItemProxy */;
+		};
 		ACC07BAC28AD197900305FC6 /* PBXTargetDependency */ = {
 			isa = PBXTargetDependency;
 			target = ACC07B9928AD197700305FC6 /* Mavinote */;
@@ -438,6 +484,35 @@
 /* End PBXTargetDependency section */
 
 /* Begin XCBuildConfiguration section */
+		847F5CE22A44668E005E94EF /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUGGING_SYMBOLS = YES;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		847F5CE32A44668E005E94EF /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CODE_SIGN_STYLE = Automatic;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = "";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
 		ACC07BBC28AD197900305FC6 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
@@ -557,10 +632,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
+				DEVELOPMENT_TEAM = 2FQV425TS4;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -571,7 +649,7 @@
 					"$(inherited)",
 					"@executable_path/Frameworks",
 				);
-				LIBRARY_SEARCH_PATHS = "../reax/target/x86_64-apple-ios/debug";
+				LIBRARY_SEARCH_PATHS = "/Users/eerie/projects/tmp/mavinote/x86_64-apple-ios/debug";
 				MARKETING_VERSION = 0.1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -587,10 +665,13 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
+				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
+				DEVELOPMENT_TEAM = 2FQV425TS4;
 				ENABLE_PREVIEWS = YES;
+				FRAMEWORK_SEARCH_PATHS = "";
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_KEY_UIApplicationSceneManifest_Generation = YES;
 				INFOPLIST_KEY_UIApplicationSupportsIndirectInputEvents = YES;
@@ -621,6 +702,22 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*][arch=arm64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/aarch64-apple-ios/debug",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*][arch=arm64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/aarch64-apple-ios-sim/debug",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*][arch=x86_64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/x86_64-apple-ios/debug",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -640,6 +737,22 @@
 				CURRENT_PROJECT_VERSION = 1;
 				GENERATE_INFOPLIST_FILE = YES;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.5;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphoneos*][arch=arm64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/aarch64-apple-ios/release",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*][arch=arm64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/aarch64-apple-ios-sim/release",
+				);
+				"LIBRARY_SEARCH_PATHS[sdk=iphonesimulator*][arch=x86_64]" = (
+					"$(inherited)",
+					"$(CARGO_TARGET_DIR)/x86_64-apple-ios/release",
+				);
 				MARKETING_VERSION = 1.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.MavinoteTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
@@ -687,6 +800,15 @@
 /* End XCBuildConfiguration section */
 
 /* Begin XCConfigurationList section */
+		847F5CE42A44668E005E94EF /* Build configuration list for PBXLegacyTarget "cargo_reax" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				847F5CE22A44668E005E94EF /* Debug */,
+				847F5CE32A44668E005E94EF /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
 		ACC07B9528AD197700305FC6 /* Build configuration list for PBXProject "Mavinote" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (

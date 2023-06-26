@@ -1,100 +1,80 @@
 import Foundation
 import Serde
 
-typealias OnNext = (_ deserializer: Deserializer) throws -> ()
-typealias OnError = (_ error: ReaxError) -> ()
-typealias OnComplete = () -> ()
-typealias OnStart = (_ id: Int32) -> UnsafeMutableRawPointer
+protocol Future {
+    // Return value indicates whether the future is completed or not
+    func handle(_ bytes: [UInt8]) -> Bool
 
-class Stream {
-    private let onNext: OnNext
-    private let onError: OnError
-    private let onComplete: OnComplete
-    private let onStart: OnStart
-    private var _joinHandle: UnsafeMutableRawPointer?
-    
-    var joinHandle: UnsafeMutableRawPointer? {
-        return _joinHandle
+    func abort()
+}
+
+class Stream<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
+    private let joinHandle: UnsafeMutableRawPointer
+    private let continuation: AsyncStream<Result<T.Target, E>>.Continuation
+
+    init(continuation: AsyncStream<Result<T.Target, E>>.Continuation, joinHandle: UnsafeMutableRawPointer) {
+        self.continuation = continuation
+        self.joinHandle = joinHandle
     }
 
-    init(
-        onNext: @escaping OnNext,
-        onError: @escaping OnError,
-        onComplete: @escaping OnComplete,
-        onStart: @escaping OnStart
-    ) {
-        self.onNext = onNext
-        self.onError = onError
-        self.onComplete = onComplete
-        self.onStart = onStart
-    }
-    
-    func handle(_ bytes: [UInt8]) {
+    func handle(_ bytes: [UInt8]) -> Bool {
         let deserializer = BincodeDeserializer(input: bytes)
 
         do {
             switch try deserializer.deserialize_variant_index() {
-            case 0: try self.onNext(deserializer)
-            case 1: self.onError(try ReaxError.deserialize(deserializer))
-            case 2: self.onComplete()
-            default: fatalError("Unhandled variant")
+            case 0:
+                continuation.yield(Result.success(try T.deserialize(deserializer)))
+                return false
+            case 1:
+                continuation.yield(Result.failure(try E.deserialize(deserializer)))
+                return false
+            case 2:
+                continuation.finish()
+                return true
+            default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Stream Message")
             }
         } catch {
-            print("failed to handle once", error)
+            fatalError("failed to handle stream \(error)")
         }
-
     }
 
-    func run(_ streamId: Int32) {
-        self._joinHandle = self.onStart(streamId)
+    func abort() {
+        reax_abort(joinHandle)
     }
 }
 
-class Once {
-    private let onNext: OnNext
-    private let onError: OnError
-    private let onStart: OnStart
-    private var _joinHandle: UnsafeMutableRawPointer?
+class Once<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
+    let continuation: CheckedContinuation<Result<T.Target, E>, Never>
 
-    var joinHandle: UnsafeMutableRawPointer? {
-        return _joinHandle
+    init(continuation: CheckedContinuation<Result<T.Target, E>, Never>) {
+        self.continuation = continuation
     }
 
-    init(
-        onNext: @escaping OnNext,
-        onError: @escaping OnError,
-        onStart: @escaping OnStart
-    ) {
-        self.onNext = onNext
-        self.onError = onError
-        self.onStart = onStart
-    }
-
-    func handle(_ bytes: [UInt8]) {
+    func handle(_ bytes: [UInt8]) -> Bool {
         let deserializer = BincodeDeserializer(input: bytes)
 
         do {
             switch try deserializer.deserialize_variant_index() {
-            case 0: try self.onNext(deserializer)
-            case 1: self.onError(try ReaxError.deserialize(deserializer))
-            default: fatalError("Unhandled variant")
+            case 0: continuation.resume(returning: .success(try T.deserialize(deserializer)))
+            case 1: continuation.resume(returning: .failure(try E.deserialize(deserializer)))
+            default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Once Message")
             }
         } catch {
-            print("failed to handle once", error)
+            fatalError("failed to handle once \(error)")
         }
+
+        return true
     }
 
-    func run(_ onceId: Int32) {
-        self._joinHandle = self.onStart(onceId)
-    }
+    // Once is not abortable
+    func abort() { }
 }
 
 class Runtime {
     private static var _instance: Runtime?
-    
-    private var streams: [Int32 : Stream] = [:]
-    private var onces: [Int32 : Once] = [:]
-    
+
+    private var futures: [Int32: any Future] = [:]
+
     static func initialize(storageDir: String) {
         if (_instance != nil) {
             return
@@ -102,89 +82,75 @@ class Runtime {
 
         _instance = Runtime(storageDir)
     }
-    
-    static func instance() -> Runtime {
+
+    static func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
+        Self.instance().runStream(T.self, onStart)
+    }
+
+    static func runStream<T: Deserialize>(_ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T, NoteError>> {
+        return Self.instance().runStream(T.self, onStart)
+    }
+
+    static func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
+        return await Self.instance().runOnce(T.self, onStart)
+    }
+
+    static func runOnce<T: Deserialize>(_ onStart: (_ id: Int32) -> ()) async -> Result<T, NoteError> {
+        return await Self.instance().runOnce(T.self, onStart)
+    }
+
+    private static func instance() -> Runtime {
         _instance!
-    }
-
-    static func runStream<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) -> AsyncStream<Result<T, ReaxError>> {
-        return AsyncStream { continuation in
-            let stream = Stream(
-                onNext: { continuation.yield(Result.success(try onNext($0))) },
-                onError: { continuation.yield(Result.failure($0))},
-                onComplete: { continuation.finish() },
-                onStart: onStart
-            )
-
-            let streamId = Runtime.instance().insertStream(stream)
-
-            stream.run(streamId)
-
-            continuation.onTermination = { @Sendable _ in
-                Runtime.instance().abortStream(streamId)
-            }
-        }
-    }
-
-    static func runUnitOnce(_ onStart: @escaping OnStart) async throws -> () {
-        return try await runOnce({ deserializer in }, onStart)
-    }
-
-    static func runOnce<T>(_ onNext: @escaping (_ deserializer: Deserializer) throws -> T, _ onStart: @escaping OnStart) async throws -> T {
-        return try await withCheckedThrowingContinuation { continuation in
-            let once = Once(
-                onNext: { continuation.resume(returning: try onNext($0))},
-                onError: { continuation.resume(throwing: $0)},
-                onStart: onStart
-            )
-            let onceId = Runtime.instance().insertOnce(once)
-
-            once.run(onceId)
-        }
     }
 
     private init(_ storageDir: String) {
        Thread
             .init(target: self, selector: #selector(initHandler), object: nil)
             .start()
- 
-        reax_init(API_URL, storageDir)
+
+        reax_init(API_URL, WS_URL, storageDir)
     }
 
-    private func insertStream(_ stream: Stream) -> Int32 {
-        var streamId = Int32.random(in: 0...Int32.max)
+    private func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
+        return AsyncStream { continuation in
+            let id = generateId()
 
-        while streams[streamId] != nil {
-            streamId = Int32.random(in: 0...Int32.max)
-        }
+            let joinHandle = onStart(id)
 
-        streams[streamId] = stream
+            futures[id] = Stream<T, NoteError>(continuation: continuation, joinHandle: joinHandle)
 
-        return streamId
-    }
-
-    private func insertOnce(_ once: Once) -> Int32 {
-        var onceId = Int32.random(in: 0...Int32.max)
-
-        while onces[onceId] != nil {
-            onceId = Int32.random(in: 0...Int32.max)
-        }
-
-        onces[onceId] = once
-
-        return onceId
-    }
-
-    private func abortStream(_ streamId: Int32) {
-        if let stream = self.streams[streamId], let joinHandle = stream.joinHandle {
-            reax_abort(joinHandle)
+            continuation.onTermination = { @Sendable _ in
+                self.abort(id)
+            }
         }
     }
 
-    private func abortOnce(_ onceId: Int32) {
-         if let once = self.onces[onceId], let joinHandle = once.joinHandle {
-            reax_abort(joinHandle)
+    private func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
+        return await withCheckedContinuation { continuation in
+            let id = generateId()
+
+            onStart(id)
+
+            futures[id] = Once<T, NoteError>(continuation: continuation)
         }
+    }
+
+    private func generateId() -> Int32 {
+        var id = Int32.random(in: 0...Int32.max)
+
+        while futures[id] != nil {
+            id = Int32.random(in: 0...Int32.max)
+        }
+
+        return id
+    }
+
+    private func abort(_ id: Int32) {
+        guard let future = self.futures.removeValue(forKey: id) else {
+            fatalError("Aborting an unknown future \(id)")
+        }
+
+        future.abort()
     }
 
     @objc private func initHandler() {
@@ -199,10 +165,12 @@ class Runtime {
                 bytesArray[i] = bytes!.advanced(by: i).pointee
             }
 
-            if isStream, let stream = this.streams[id] {
-                stream.handle(bytesArray)
-            } else if let once = this.onces[id] {
-                once.handle(bytesArray)
+            guard let future = this.futures[id] else {
+                fatalError("A message with unknown id is received, \(id)")
+            }
+
+            if future.handle(bytesArray) {
+                this.abort(id)
             }
         }
 

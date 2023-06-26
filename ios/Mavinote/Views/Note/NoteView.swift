@@ -34,7 +34,7 @@ struct NoteView : View {
                         }
 
                         dismiss()
-                    } catch let e as ReaxError {
+                    } catch let e as NoteError {
                         e.handle(appState)
                         deleting = false
                     } catch {
@@ -50,15 +50,15 @@ struct NoteView : View {
             }
 
             tasks.append(Task {
-                do {
-                    if let note = try await NoteViewModel.note(noteId) {
+                switch await NoteViewModel.note(noteId) {
+                case .success(let note):
+                    if let note = note {
                         text = note.text
                         modified = false
+                    } else {
+                        print("WARNING: Note is not found")
                     }
-                } catch let e as ReaxError {
-                    e.handle(appState)
-                } catch {
-                    fatalError("\(error)")
+                case .failure(let e): e.handle(appState)
                 }
             })
         }.onDisappear {
@@ -143,7 +143,7 @@ private class TextViewDelegate : NSObject, UITextViewDelegate {
 
 struct NoteView_Preview : PreviewProvider {
     static var previews: some View {
-        let note = Note(id: 1, folderId: 1, remoteId: 1, commit: 1, title: "My Note", text: "Little note in code", state: .Clean)
+        let note = Note(id: 1, folderId: 1, remoteId: 1, commit: 1, name: "My Note", text: "Little note in code", state: .Clean)
 
         NavigationView {
             _NoteView(
@@ -151,7 +151,7 @@ struct NoteView_Preview : PreviewProvider {
                 textViewDelegate: TextViewDelegate(onTextChange: { _ in }),
                 onDelete: { }
             )
-            .navigationTitle(note.title ?? "New Note")
+            .navigationTitle(note.name)
         }
     }
 }

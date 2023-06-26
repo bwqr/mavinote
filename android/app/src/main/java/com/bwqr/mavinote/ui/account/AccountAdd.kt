@@ -9,7 +9,6 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -106,6 +105,7 @@ fun AccountAdd(navController: NavController) {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChooseAccountAddKind(navController: NavController) {
     Column {
@@ -119,39 +119,18 @@ fun ChooseAccountAddKind(navController: NavController) {
             modifier = Modifier.padding(0.dp, 16.dp)
         )
 
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { navController.navigate(AccountAddScreen.AddExistingAccount.EnterAccountInfo.route) }
-                .padding(8.dp, 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Add an Existing Account",
-                modifier = Modifier
-                    .weight(1f)
-            )
-
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
-        }
+        ListItem(
+            headlineContent = { Text("Add an Existing Account") },
+            trailingContent = { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null) },
+            modifier = Modifier.clickable { navController.navigate(AccountAddScreen.AddExistingAccount.EnterAccountInfo.route) }
+        )
 
         Divider()
-
-        Row(
-            modifier = Modifier
-                .fillMaxWidth()
-                .clickable { navController.navigate(AccountAddScreen.CreateAccount.SendVerificationCode.route) }
-                .padding(8.dp, 20.dp),
-            verticalAlignment = Alignment.CenterVertically
-        ) {
-            Text(
-                "Create a New Account",
-                modifier = Modifier
-                    .weight(1f)
-            )
-
-            Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
-        }
+        ListItem(
+            headlineContent = { Text("Create a New Account") },
+            trailingContent = { Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null) },
+            modifier = Modifier.clickable { navController.navigate(AccountAddScreen.CreateAccount.SendVerificationCode.route) }
+        )
     }
 }
 
@@ -173,7 +152,11 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
     var email by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .weight(1f)
+        ) {
             Text(
                 "Email address is used to identify accounts.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -242,12 +225,14 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
                                 }
                             }
                             e is MavinoteError.Message && e.message == "device_exists_but_passwords_mismatch" -> {
-                                error = "An unexpected state is occurred. A device with our public key is already added. " +
-                                        "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
-                                        "you can remove the device with our public key and try to add account again."
+                                error =
+                                    "An unexpected state is occurred. A device with our public key is already added. " +
+                                            "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
+                                            "you can remove the device with our public key and try to add account again."
                             }
                             e is StorageError.AccountEmailUsed -> {
-                                error = "An account with this email already exists. You can find it under Accounts page."
+                                error =
+                                    "An account with this email already exists. You can find it under Accounts page."
                             }
                             else -> e.handle()
                         }
@@ -353,7 +338,11 @@ fun SendVerificationCode(navController: NavController) {
     var email by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .weight(1f)
+        ) {
             Text(
                 "Email address is used to identify accounts.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -411,10 +400,12 @@ fun SendVerificationCode(navController: NavController) {
                     } catch (e: NoteError) {
                         when {
                             e is StorageError.AccountEmailUsed -> {
-                                error = "An account with this email already exists. You can find it under Accounts page."
+                                error =
+                                    "An account with this email already exists. You can find it under Accounts page."
                             }
                             e is MavinoteError.Message && e.message == "email_already_used" -> {
-                                error = "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
+                                error =
+                                    "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
                             }
                             else -> e.handle()
                         }
@@ -450,7 +441,11 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
     var code by remember { mutableStateOf("") }
 
     Column {
-        Column(modifier = Modifier.verticalScroll(scrollState).weight(1f)) {
+        Column(
+            modifier = Modifier
+                .verticalScroll(scrollState)
+                .weight(1f)
+        ) {
             Text(
                 "An 8 digit verification code is sent to $email email address.",
                 modifier = Modifier.padding(0.dp, 8.dp)
@@ -508,13 +503,15 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
                     } catch (e: NoteError) {
                         when {
                             e is StorageError.AccountEmailUsed -> {
-                                error = "An account with this email already exists. You can find it under Accounts page."
+                                error =
+                                    "An account with this email already exists. You can find it under Accounts page."
                             }
                             e is MavinoteError.Message && e.message == "expired_code" -> {
                                 error = "5 minutes waiting is timed out. Please try again."
                             }
                             e is MavinoteError.Message && e.message == "invalid_code" -> {
-                                error = "You have entered invalid code. Please check the verification code."
+                                error =
+                                    "You have entered invalid code. Please check the verification code."
                             }
                             else -> e.handle()
                         }

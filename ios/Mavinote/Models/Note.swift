@@ -1,11 +1,11 @@
 import Serde
 
-struct Note : Identifiable {
+struct Note : Identifiable, Deserialize {
     let id: Int32
     let folderId: Int32
     let remoteId: Int32?
     let commit: Int32
-    let title: String?
+    let name: String
     let text: String
     let state: ModelState
 
@@ -15,9 +15,9 @@ struct Note : Identifiable {
         let note = Note(
             id: try deserializer.deserialize_i32(),
             folderId: try deserializer.deserialize_i32(),
-            remoteId: try deserializeOption(deserializer) { try $0.deserialize_i32() },
+            remoteId: try De.Option<De.I32>.deserialize(deserializer),
             commit: try deserializer.deserialize_i32(),
-            title: try deserializeOption(deserializer) { try $0.deserialize_str() },
+            name: try deserializer.deserialize_str(),
             text: try deserializer.deserialize_str(),
             state: try ModelState.deserialize(deserializer)
         )
@@ -28,7 +28,7 @@ struct Note : Identifiable {
     }
 }
 
-enum ModelState {
+enum ModelState: Deserialize {
     case Clean
     case Modified
     case Deleted

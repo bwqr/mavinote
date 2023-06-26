@@ -26,6 +26,10 @@ class AccountViewModel {
             onStart = { _devices(it, accountId) }
         )
 
+        suspend fun removeDevice(deviceId: Int) = Runtime.runUnitOnce {
+            _removeDevice(it, deviceId)
+        }
+
         suspend fun requestVerification(email: String): String = Runtime.runOnce(
             onNext = { it.deserialize_str() },
             onStart = { _requestVerification(it, email) }
@@ -76,6 +80,7 @@ private external fun _accounts(streamId: Int): Long
 private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _devices(onceId: Int, accountId: Int): Long
+private external fun _removeDevice(onceId: Int, deviceId: Int): Long
 private external fun _requestVerification(onceId: Int, email: String): Long
 private external fun _waitVerification(onceId: Int, token: String): Long
 private external fun _sendVerificationCode(onceId: Int, email: String): Long

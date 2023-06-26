@@ -12,6 +12,7 @@ create table devices(
     id  integer,
     account_id  integer     not null,
     pubkey      varchar(64) not null,
+    created_at  text        not null,
     foreign key(account_id) references accounts(id) on delete cascade on update no action,
     unique(id, account_id)
 );

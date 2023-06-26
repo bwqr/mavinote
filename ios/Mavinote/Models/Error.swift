@@ -1,48 +1,70 @@
 import Foundation
 import Serde
 
-enum ReaxError : Error {
-    case Http(HttpError)
-    case Message(String)
+enum NoteError : Error, Deserialize {
+    case Mavinote(MavinoteError)
+    case Storage(StorageError)
     case Database(String)
 
-    static func deserialize(_ deserializer: Deserializer) throws -> ReaxError {
+    static func deserialize(_ deserializer: Deserializer) throws -> NoteError {
         let index = try deserializer.deserialize_variant_index()
 
         switch index {
-        case 0: return .Http(try HttpError.deserialize(deserializer))
-        case 1: return .Message(try deserializer.deserialize_str())
+        case 0: return .Mavinote(try MavinoteError.deserialize(deserializer))
+        case 1: return .Storage(try StorageError.deserialize(deserializer))
         case 2: return .Database(try deserializer.deserialize_str())
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for ReaxError")
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for NoteError")
         }
     }
 
     func handle(_ appState: AppState) {
         switch self {
-        case .Http(.Unauthorized(let accountId)): if let accountId = accountId {
-            appState.emit(BusEvent.RequireAuthorization(BusEvent.AccountId(id: accountId)))
+        case .Mavinote(.Unauthorized(let accountId)): if let accountId = accountId {
+            appState.emit(BusEvent.DisplayNotAuthorized(BusEvent.AccountId(id: accountId)))
         }
-        case .Http(.NoConnection): appState.emit(BusEvent.NoConnection)
+        case .Mavinote(.NoConnection): appState.emit(BusEvent.DisplayNoInternetWarning)
         default: debugPrint("Unhandled ReaxError \(self)")
         }
     }
 }
 
-enum HttpError {
+enum MavinoteError {
+    case Unauthorized(Int32?)
+    case Message(String)
     case NoConnection
     case UnexpectedResponse
-    case Unauthorized(Int32?)
     case Unknown
 
-    static func deserialize(_ deserializer: Deserializer) throws -> HttpError {
+    static func deserialize(_ deserializer: Deserializer) throws -> MavinoteError {
         let index = try deserializer.deserialize_variant_index()
 
         switch index {
         case 0: return .NoConnection
         case 1: return .UnexpectedResponse
-        case 2: return .Unauthorized(try deserializeOption(deserializer) { try $0.deserialize_i32() })
+        case 2: return .Unauthorized(try De.Option<De.I32>.deserialize(deserializer))
         case 3: return .Unknown
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for HttpError")
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
+        }
+    }
+}
+
+enum StorageError {
+    case InvalidState(String)
+    case NotMavinoteAccount
+    case AccountNotFound
+    case AccountNameUsed
+    case FolderNotFound
+
+    static func deserialize(_ deserializer: Deserializer) throws -> StorageError {
+        let index = try deserializer.deserialize_variant_index()
+
+        switch index {
+        case 0: return .InvalidState(try deserializer.deserialize_str())
+        case 1: return .NotMavinoteAccount
+        case 2: return .AccountNotFound
+        case 3: return .AccountNameUsed
+        case 4: return .FolderNotFound
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for StorageError")
         }
     }
 }

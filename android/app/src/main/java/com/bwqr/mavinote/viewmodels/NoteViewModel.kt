@@ -1,13 +1,11 @@
 package com.bwqr.mavinote.viewmodels
 
 import com.bwqr.mavinote.models.Folder
-import com.bwqr.mavinote.models.Mavinote
 import com.bwqr.mavinote.models.Note
 import com.bwqr.mavinote.reax.Runtime
 import com.bwqr.mavinote.reax.deserializeList
 import com.bwqr.mavinote.reax.deserializeOption
 import kotlinx.coroutines.flow.Flow
-
 
 class NoteViewModel {
     companion object {

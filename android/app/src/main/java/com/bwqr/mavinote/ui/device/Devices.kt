@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.ui.device
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -7,11 +8,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material3.Divider
-import androidx.compose.material3.ExtendedFloatingActionButton
-import androidx.compose.material3.Icon
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.filled.*
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
@@ -27,6 +25,9 @@ import kotlinx.coroutines.launch
 
 @Composable
 fun Devices(accountId: Int) {
+    val coroutine = rememberCoroutineScope()
+
+    var inProgress by remember { mutableStateOf(false) }
     var account by remember { mutableStateOf<Account?>(null) }
     var devices by remember { mutableStateOf(listOf<Device>()) }
 
@@ -48,13 +49,37 @@ fun Devices(accountId: Int) {
 
     }
 
+
     account?.let {
-        DevicesView(it, devices)
+        DevicesView(it, devices) { deviceId ->
+            if (inProgress) {
+                return@DevicesView
+            }
+
+            inProgress = true
+
+            coroutine.launch {
+                try {
+                    AccountViewModel.removeDevice(deviceId)
+                } catch (e: NoteError) {
+                    e.handle()
+                } finally {
+                    inProgress = false
+                }
+            }
+        }
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun DevicesView(account: Account, devices: List<Device>) {
+fun DevicesView(
+    account: Account,
+    devices: List<Device>,
+    onRemoveDevice: (deviceId: Int) -> Unit,
+) {
+    var deviceToRemove by remember { mutableStateOf<Device?>(null) }
+
     Column(modifier = Modifier.padding(12.dp)) {
         Row {
             Title(account.name, modifier = Modifier.weight(1f))
@@ -65,6 +90,9 @@ fun DevicesView(account: Account, devices: List<Device>) {
             modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
         )
 
+        if (devices.isEmpty()) {
+            Text("There is no other device for this account. You can add new devices.")
+        }
 
         LazyColumn {
             items(devices.mapIndexed { index, device ->
@@ -73,11 +101,17 @@ fun DevicesView(account: Account, devices: List<Device>) {
                     device
                 )
             }) { (index, device) ->
-                Text(
-                    device.pubkey,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(8.dp, 20.dp)
+                ListItem(
+                    headlineContent = { Text(device.pubkey) },
+                    supportingContent = { Text("Device is added at ${device.createdAt}") },
+                    trailingContent = {
+                        Icon(
+                            Icons.Filled.Delete,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error,
+                            modifier = Modifier.clickable { deviceToRemove = device }
+                        )
+                    }
                 )
 
                 if (index != devices.size - 1) {
@@ -85,6 +119,33 @@ fun DevicesView(account: Account, devices: List<Device>) {
                 }
             }
         }
+    }
+
+    deviceToRemove?.let {
+        AlertDialog(
+            onDismissRequest = { deviceToRemove = null },
+            text = {
+                Column {
+                    Text("Are you sure about removing device?", modifier = Modifier.padding(0.dp, 8.dp))
+
+                    Text("Removed device will not be able to access the account's notes and folders anymore.", modifier = Modifier.padding(0.dp, 8.dp))
+
+                    Text("Removing a device will also cause any non synced notes and folders on the device to be lost.", modifier = Modifier.padding(0.dp, 8.dp))
+                }
+            },
+            confirmButton = {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        onRemoveDevice(it.id)
+                        deviceToRemove = null
+                    },
+                ) {
+                    Text("Remove Device")
+                }
+            }
+        )
     }
 }
 
@@ -102,10 +163,10 @@ fun DevicesFab(navController: NavController, accountId: Int) {
 fun DevicesPreview() {
     val account = Account(1, "My Account", AccountKind.Mavinote)
     val devices = listOf(
-        Device(1, 1, "Device pubkey"),
-        Device(1, 1, "Device pubkey"),
-        Device(1, 1, "Device pubkey")
+        Device(1, 1, "Device pubkey", "2022 12 12"),
+        Device(1, 1, "Device pubkey", "2022 12 12"),
+        Device(1, 1, "Device pubkey", "2022 12 12")
     )
 
-    DevicesView(account, devices)
+    DevicesView(account, devices) { }
 }

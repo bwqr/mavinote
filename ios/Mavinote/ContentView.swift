@@ -15,8 +15,8 @@ struct SafeContainer<T, Content: View> : View {
 }
 
 enum BusEvent {
-    case RequireAuthorization(AccountId)
-    case NoConnection
+    case DisplayNoInternetWarning
+    case DisplayNotAuthorized(AccountId)
 
     struct AccountId : Identifiable {
         let id: Int32
@@ -52,8 +52,8 @@ struct ContentView: View {
                 tasks.append(Task {
                     while (true) {
                         switch await appState.listenEvent() {
-                        case BusEvent.NoConnection: print("No connection")
-                        case BusEvent.RequireAuthorization(let accountId): accountToAuthorize = accountId
+                        case BusEvent.DisplayNoInternetWarning: print("No connection")
+                        case BusEvent.DisplayNotAuthorized(let accountId): accountToAuthorize = accountId
                         }
                     }
                 })
@@ -61,7 +61,7 @@ struct ContentView: View {
                 tasks.append(Task {
                     do {
                         try await NoteViewModel.sync()
-                    } catch let error as ReaxError {
+                    } catch let error as NoteError {
                         error.handle(appState)
                     } catch {
                         fatalError("\(error)")

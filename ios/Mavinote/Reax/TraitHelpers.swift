@@ -1,23 +1,55 @@
 import Foundation
 import Serde
 
-func deserializeOption<T>(_ deserializer: Deserializer, deserialize: (_ deserializer: Deserializer) throws -> T?) throws -> T? {
-    let tag = try deserializer.deserialize_option_tag()
+protocol DeserializeInto<Target> {
+    associatedtype Target
 
-    if tag {
-        return try deserialize(deserializer)
-    }
-
-    return nil
+    static func deserialize(_ deserializer: Deserializer) throws -> Target
 }
 
-func deserializeList<T>(_ deserializer: Deserializer, deserialize: (_ deserializer: Deserializer) throws -> T) throws -> [T] {
-    var items: [T] = []
-    let len = try deserializer.deserialize_len()
+protocol Deserialize: DeserializeInto<Self> {
+    static func deserialize(_ deserializer: Deserializer) throws -> Self
+}
 
-    for _ in 0..<len {
-        items.append(try deserialize(deserializer))
+struct De {
+    struct I32: DeserializeInto {
+        static func deserialize(_ deserializer: Deserializer) throws -> Int32 {
+            try deserializer.deserialize_i32()
+        }
     }
 
-    return items
+    struct Str: DeserializeInto {
+        static func deserialize(_ deserializer: Deserializer) throws -> String {
+            try deserializer.deserialize_str()
+        }
+    }
+
+    struct Option<T: DeserializeInto>: DeserializeInto {
+        static func deserialize(_ deserializer: Deserializer) throws -> T.Target? {
+            let tag = try deserializer.deserialize_option_tag()
+
+            if tag {
+                return try T.deserialize(deserializer)
+            }
+
+            return nil
+        }
+    }
+
+    struct Unit: DeserializeInto {
+        static func deserialize(_ deserializer: Deserializer) throws -> () { }
+    }
+
+    struct List<T: DeserializeInto>: DeserializeInto {
+        static func deserialize(_ deserializer: Deserializer) throws -> [T.Target] {
+            var items: [T.Target] = []
+            let len = try deserializer.deserialize_len()
+
+            for _ in 0..<len {
+                items.append(try T.deserialize(deserializer))
+            }
+
+            return items
+        }
+    }
 }

@@ -19,6 +19,7 @@ serde.workspace = true
 sqlx = { workspace = true, optional = true }
 tokio.workspace = true
 
+chrono = { version = "0.4.19", features = ["serde"] }
 aes-gcm-siv = "0.11.1"
 x25519-dalek = "1.2.0"
 rand = { version = "0.7.3", features = ["getrandom"] }

@@ -6,6 +6,7 @@ data class Device(
     val id: Int,
     val accountId: Int,
     val pubkey: String,
+    val createdAt: String,
 ) {
     companion object {
         fun deserialize(deserializer: Deserializer): Device {
@@ -14,6 +15,7 @@ data class Device(
             val device = Device(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
+                deserializer.deserialize_str(),
                 deserializer.deserialize_str(),
             )
 
