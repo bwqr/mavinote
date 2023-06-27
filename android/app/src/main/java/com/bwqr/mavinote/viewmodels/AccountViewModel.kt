@@ -3,76 +3,56 @@ package com.bwqr.mavinote.viewmodels
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.Device
 import com.bwqr.mavinote.models.Mavinote
+import com.bwqr.mavinote.reax.DeList
+import com.bwqr.mavinote.reax.DeOption
+import com.bwqr.mavinote.reax.DeString
 import com.bwqr.mavinote.reax.Runtime
-import com.bwqr.mavinote.reax.deserializeList
-import com.bwqr.mavinote.reax.deserializeOption
 import kotlinx.coroutines.flow.Flow
 
 class AccountViewModel {
     companion object {
-        fun accounts(): Flow<List<Account>> = Runtime.runStream({
-            deserializeList(it) { deserializer ->
-                Account.deserialize(deserializer)
-            }
-        }, { _accounts(it) })
+        fun accounts(): Flow<List<Account>> =
+            Runtime.runStream(DeList(Account.Companion)) { _accounts(it) }
 
-        suspend fun account(accountId: Int): Account? = Runtime.runOnce(
-            onNext = { deserializeOption(it) { deserializer -> Account.deserialize(deserializer) } },
-            onStart = { _account(it, accountId) }
-        )
+        suspend fun account(accountId: Int): Account? =
+            Runtime.runOnce(DeOption(Account.Companion)) { _account(it, accountId) }
 
-        suspend fun devices(accountId: Int): List<Device> = Runtime.runOnce(
-            onNext = { deserializeList(it) { deserializer -> Device.deserialize(deserializer) } },
-            onStart = { _devices(it, accountId) }
-        )
+        suspend fun devices(accountId: Int): List<Device> =
+            Runtime.runOnce(DeList(Device.Companion)) { _devices(it, accountId) }
 
-        suspend fun removeDevice(deviceId: Int) = Runtime.runUnitOnce {
-            _removeDevice(it, deviceId)
-        }
+        suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
+            Runtime.runOnceUnit { _addDevice(it, accountId, fingerprint) }
 
-        suspend fun requestVerification(email: String): String = Runtime.runOnce(
-            onNext = { it.deserialize_str() },
-            onStart = { _requestVerification(it, email) }
-        )
+        suspend fun removeDevice(deviceId: Int) =
+            Runtime.runOnceUnit { _removeDevice(it, deviceId) }
 
-        suspend fun waitVerification(token: String) = Runtime.runUnitOnce {
-            _waitVerification(it, token)
-        }
+        suspend fun requestVerification(email: String): String =
+            Runtime.runOnce(DeString) { _requestVerification(it, email) }
 
-        suspend fun sendVerificationCode(email: String) = Runtime.runUnitOnce {
-            _sendVerificationCode(it, email)
-        }
+        suspend fun waitVerification(token: String) =
+            Runtime.runOnceUnit { _waitVerification(it, token) }
 
-        suspend fun signUp(email: String, code: String) = Runtime.runUnitOnce {
-            _signUp(it, email, code)
-        }
+        suspend fun sendVerificationCode(email: String) =
+            Runtime.runOnceUnit { _sendVerificationCode(it, email) }
 
-        suspend fun mavinoteAccount(accountId: Int): Mavinote? = Runtime.runOnce({
-            deserializeOption(it) { deserializer ->
-                Mavinote.deserialize(deserializer)
-            }
-        }, { _mavinoteAccount(it, accountId) })
+        suspend fun signUp(email: String, code: String) =
+            Runtime.runOnceUnit { _signUp(it, email, code) }
 
-        suspend fun addAccount(email: String) = Runtime.runUnitOnce {
-            _addAccount(it, email)
-        }
+        suspend fun mavinoteAccount(accountId: Int): Mavinote? =
+            Runtime.runOnce(DeOption(Mavinote.Companion)) { _mavinoteAccount(it, accountId) }
 
-        suspend fun removeAccount(accountId: Int) = Runtime.runUnitOnce {
-            _removeAccount(it, accountId)
-        }
+        suspend fun addAccount(email: String) = Runtime.runOnceUnit { _addAccount(it, email) }
 
-        suspend fun sendAccountCloseCode(accountId: Int) = Runtime.runUnitOnce {
-            _sendAccountCloseCode(it, accountId)
-        }
+        suspend fun removeAccount(accountId: Int) =
+            Runtime.runOnceUnit { _removeAccount(it, accountId) }
 
-        suspend fun closeAccount(accountId: Int, code: String) = Runtime.runUnitOnce {
-            _closeAccount(it, accountId, code)
-        }
+        suspend fun sendAccountCloseCode(accountId: Int) =
+            Runtime.runOnceUnit { _sendAccountCloseCode(it, accountId) }
 
-        suspend fun publicKey(): String = Runtime.runOnce(
-            onNext = { it.deserialize_str() },
-            onStart = { _publicKey(it) }
-        )
+        suspend fun closeAccount(accountId: Int, code: String) =
+            Runtime.runOnceUnit { _closeAccount(it, accountId, code) }
+
+        suspend fun publicKey(): String = Runtime.runOnce(DeString) { _publicKey(it) }
     }
 }
 
@@ -80,6 +60,7 @@ private external fun _accounts(streamId: Int): Long
 private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _devices(onceId: Int, accountId: Int): Long
+private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
 private external fun _removeDevice(onceId: Int, deviceId: Int): Long
 private external fun _requestVerification(onceId: Int, email: String): Long
 private external fun _waitVerification(onceId: Int, token: String): Long

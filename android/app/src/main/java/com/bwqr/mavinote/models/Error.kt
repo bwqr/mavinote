@@ -2,14 +2,15 @@ package com.bwqr.mavinote.models
 
 import android.util.Log
 import com.bwqr.mavinote.Bus
-import com.bwqr.mavinote.reax.deserializeOption
+import com.bwqr.mavinote.reax.DeInt
+import com.bwqr.mavinote.reax.Deserialize
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
 
 open class NoteError : Error() {
-    companion object {
-        fun deserialize(deserializer: Deserializer): NoteError {
+    companion object: Deserialize<NoteError> {
+        override fun deserialize(deserializer: Deserializer): NoteError {
             return when (val index = deserializer.deserialize_variant_index()) {
                 0 -> MavinoteError.deserialize(deserializer)
                 1 -> StorageError.deserialize(deserializer)
@@ -40,9 +41,7 @@ sealed class MavinoteError : NoteError() {
     companion object {
         fun deserialize(deserializer: Deserializer): MavinoteError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> Unauthorized(deserializeOption(deserializer) {
-                    it.deserialize_i32()
-                })
+                0 -> Unauthorized(DeInt.deserialize(deserializer))
                 1 -> Message(deserializer.deserialize_str())
                 2 -> NoConnection
                 3 -> UnexpectedResponse

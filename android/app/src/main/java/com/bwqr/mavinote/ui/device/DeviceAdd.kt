@@ -5,7 +5,6 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -14,7 +13,7 @@ import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.ErrorText
 import com.bwqr.mavinote.ui.Title
-import com.bwqr.mavinote.viewmodels.NoteViewModel
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
 @Composable
@@ -50,7 +49,7 @@ fun DeviceAdd(navController: NavController, accountId: Int) {
 
         scope.launch {
             try {
-                NoteViewModel.addDevice(accountId, pubkey)
+                AccountViewModel.addDevice(accountId, pubkey)
                 navController.navigateUp()
             } catch (e: NoteError) {
                 when {
