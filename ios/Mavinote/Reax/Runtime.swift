@@ -11,13 +11,12 @@ protocol Future {
     func abort()
 }
 
-class Stream<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
-    private let joinHandle: UnsafeMutableRawPointer
-    private let continuation: AsyncStream<Result<T.Target, E>>.Continuation
+class Stream<T: Deserialize, E: Deserialize>: Future where E: Error {
+    private let continuation: AsyncStream<Result<T, E>>.Continuation
+    private var joinHandle: UnsafeMutableRawPointer?
 
-    init(continuation: AsyncStream<Result<T.Target, E>>.Continuation, joinHandle: UnsafeMutableRawPointer) {
+    init(continuation: AsyncStream<Result<T, E>>.Continuation) {
         self.continuation = continuation
-        self.joinHandle = joinHandle
     }
 
     func handle(_ bytes: [UInt8]) -> Bool {
@@ -42,14 +41,22 @@ class Stream<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
     }
 
     func abort() {
+        guard let joinHandle = joinHandle else {
+            fatalError("A Stream without a joinHandle is being aborted")
+        }
+
         reax_abort(joinHandle)
+    }
+
+    func setJoinHandle(handle: UnsafeMutableRawPointer) {
+        joinHandle = handle
     }
 }
 
-class Once<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
-    let continuation: CheckedContinuation<Result<T.Target, E>, Never>
+class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
+    let continuation: CheckedContinuation<Result<T, E>, Never>
 
-    init(continuation: CheckedContinuation<Result<T.Target, E>, Never>) {
+    init(continuation: CheckedContinuation<Result<T, E>, Never>) {
         self.continuation = continuation
     }
 
@@ -69,7 +76,7 @@ class Once<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
         return true
     }
 
-    // Once is not abortable
+    // Once does not support abort
     func abort() { }
 }
 
@@ -86,44 +93,18 @@ class Runtime {
         _instance = Runtime(storageDir)
     }
 
-    static func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: StreamStart) -> AsyncStream<Result<T.Target, NoteError>> {
-        Self.instance().runStream(T.self, onStart)
-    }
-
-    static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<[T], NoteError>> {
-        return Self.instance().runStream(De.List<T>.self, onStart)
-    }
-
-    static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<T?, NoteError>> {
-        return Self.instance().runStream(De.Option<T>.self, onStart)
-    }
-
-    static func runStream(_ onStart: StreamStart) -> AsyncStream<Result<(), NoteError>> {
-        return Self.instance().runStream(De.Unit.self, onStart)
-    }
-
     static func runStream<T: Deserialize>(_ onStart: StreamStart) -> AsyncStream<Result<T, NoteError>> {
-        return Self.instance().runStream(T.self, onStart)
+        return Self.instance().runStream(onStart)
     }
 
-    static func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: OnceStart) async -> Result<T.Target, NoteError> {
-        return await Self.instance().runOnce(T.self, onStart)
+    static func runOnceUnit(_ onStart: OnceStart) async -> Result<(), NoteError> {
+        let res: Result<UnitDeserialize, NoteError> = await Self.runOnce(onStart)
+
+        return res.map { _ in }
     }
 
-    static func runOnce<T: Deserialize>(_ onStart: OnceStart) async -> Result<[T], NoteError> {
-        return await Self.instance().runOnce(De.List<T>.self, onStart)
-    }
-
-    static func runOnce<T: Deserialize>(_ onStart: OnceStart) async -> Result<T?, NoteError> {
-        return await Self.instance().runOnce(De.Option<T>.self, onStart)
-    }
-
-    static func runOnce(_ onStart: OnceStart) async -> Result<(), NoteError> {
-        return await Self.instance().runOnce(De.Unit.self, onStart)
-    }
-
-    static func runOnce<T: Deserialize>(_ onStart: (_ id: Int32) -> ()) async -> Result<T, NoteError> {
-        return await Self.instance().runOnce(T.self, onStart)
+    static func runOnce<T: Deserialize>(_ onStart: OnceStart) async -> Result<T, NoteError> {
+        return await Self.instance().runOnce(onStart)
     }
 
     private static func instance() -> Runtime {
@@ -138,13 +119,14 @@ class Runtime {
         reax_init(API_URL, WS_URL, storageDir)
     }
 
-    private func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
+    private func runStream<T: Deserialize>(_ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T, NoteError>> {
         return AsyncStream { continuation in
             let id = generateId()
+            let stream = Stream<T, NoteError>(continuation: continuation)
+            futures[id] = stream
 
-            let joinHandle = onStart(id)
+            stream.setJoinHandle(handle: onStart(id))
 
-            futures[id] = Stream<T, NoteError>(continuation: continuation, joinHandle: joinHandle)
 
             continuation.onTermination = { @Sendable _ in
                 self.abort(id)
@@ -152,7 +134,7 @@ class Runtime {
         }
     }
 
-    private func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
+    private func runOnce<T: Deserialize>(_ onStart: (_ id: Int32) -> ()) async -> Result<T, NoteError> {
         return await withCheckedContinuation { continuation in
             let id = generateId()
 

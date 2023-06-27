@@ -15,7 +15,7 @@ struct Note : Identifiable, Deserialize {
         let note = Note(
             id: try deserializer.deserialize_i32(),
             folderId: try deserializer.deserialize_i32(),
-            remoteId: try De.Option<De.I32>.deserialize(deserializer),
+            remoteId: try Optional<Int32>.deserialize(deserializer),
             commit: try deserializer.deserialize_i32(),
             name: try deserializer.deserialize_str(),
             text: try deserializer.deserialize_str(),

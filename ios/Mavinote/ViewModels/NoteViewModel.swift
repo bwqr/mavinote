@@ -6,7 +6,7 @@ class NoteViewModel {
     }
 
     static func sync() async -> NoteResult<()> {
-        return await Runtime.runOnce(De.Unit.self) { reax_note_sync($0) }
+        return await Runtime.runOnceUnit { reax_note_sync($0) }
     }
 
     static func folders() -> AsyncStream<NoteResult<[Folder]>> {
@@ -18,11 +18,11 @@ class NoteViewModel {
     }
 
     static func createFolder(_ accountId: Int32, _ name: String) async -> NoteResult<()> {
-        return await Runtime.runOnce { reax_note_create_folder($0, accountId, name) }
+        return await Runtime.runOnceUnit { reax_note_create_folder($0, accountId, name) }
     }
 
     static func deleteFolder(_ folderId: Int32) async -> NoteResult<()> {
-        return await Runtime.runOnce { reax_note_delete_folder($0, folderId) }
+        return await Runtime.runOnceUnit { reax_note_delete_folder($0, folderId) }
     }
 
     static func notes(_ folderId: Int32) -> AsyncStream<NoteResult<[Note]>> {
@@ -34,14 +34,14 @@ class NoteViewModel {
     }
 
     static func createNote(_ folderId: Int32, _ text: String) async -> NoteResult<()> {
-        return await Runtime.runOnce { reax_note_create_note($0, folderId, text) }
+        return await Runtime.runOnceUnit { reax_note_create_note($0, folderId, text) }
     }
 
     static func updateNote(_ noteId: Int32, _ text: String) async -> NoteResult<()> {
-        return await Runtime.runOnce { reax_note_update_note($0, noteId, text) }
+        return await Runtime.runOnceUnit { reax_note_update_note($0, noteId, text) }
     }
 
     static func deleteNote(_ noteId: Int32) async -> NoteResult<()> {
-        return await Runtime.runOnce { reax_note_delete_note($0, noteId) }
+        return await Runtime.runOnceUnit { reax_note_delete_note($0, noteId) }
     }
 }

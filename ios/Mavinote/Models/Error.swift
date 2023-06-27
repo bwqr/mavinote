@@ -38,7 +38,7 @@ enum MavinoteError {
         switch index {
         case 0: return .NoConnection
         case 1: return .UnexpectedResponse
-        case 2: return .Unauthorized(try De.Option<De.I32>.deserialize(deserializer))
+        case 2: return .Unauthorized(try Optional<Int32>.deserialize(deserializer))
         case 3: return .Unknown
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
         }
