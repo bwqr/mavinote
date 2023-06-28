@@ -2,7 +2,7 @@
 #include <stdbool.h>
 
 void reax_init(const char * api_url, const char * ws_url, const char * storage_dir);
-void reax_init_handler(void * ptr, void (*callback)(int32_t id, bool is_stream, const uint8_t *bytes, uintptr_t bytes_len, void * ptr));
+void reax_init_handler(void * ptr, void (*callback)(int32_t id, const uint8_t *bytes, uintptr_t bytes_len, void * ptr));
 void reax_abort(void * handle);
 
 void * reax_account_accounts(int32_t stream_id);

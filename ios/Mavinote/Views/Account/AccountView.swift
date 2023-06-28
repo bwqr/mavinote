@@ -26,13 +26,11 @@ struct AccountView : View {
                     inProgress = true
 
                     tasks.append(Task {
-                        do {
-                            try await AccountViewModel.removeAccount(accountId)
+                        switch await AccountViewModel.removeAccount(accountId) {
+                        case .success(_):
                             dismiss()
-                        } catch let e as NoteError {
-                            e.handle(appState)
-                        } catch {
-                            fatalError("\(error)")
+                            appState.emit(.ShowMessage("Account is deleted successfully"))
+                        case .failure(let e): appState.handleError(e)
                         }
 
                         inProgress = false

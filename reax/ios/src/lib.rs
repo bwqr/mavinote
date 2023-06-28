@@ -1,4 +1,4 @@
-use std::{os::raw::{c_char, c_int, c_uchar}, ffi::{CStr, c_void}, sync::Arc, str::FromStr};
+use std::{os::raw::c_char, ffi::{CStr, c_void}, sync::Arc, str::FromStr};
 
 use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
@@ -43,13 +43,13 @@ pub extern fn reax_init(
 }
 
 #[no_mangle]
-pub extern fn reax_init_handler(ptr: *const c_void, f: unsafe extern fn(c_int, c_uchar, *const c_uchar, c_int, *const c_void)) {
+pub extern fn reax_init_handler(ptr: * mut c_void, f: unsafe extern fn(i32, *const u8, usize, * mut c_void)) {
     let (send, recv) = std::sync::mpsc::channel();
 
     universal::init_handler(send);
 
-    while let Ok((wait_id, ok, bytes)) = recv.recv() {
-        unsafe { f(wait_id, ok as c_uchar, bytes.as_ptr() as *const c_uchar, bytes.len() as c_int, ptr) }
+    while let Ok((wait_id, bytes)) = recv.recv() {
+        unsafe { f(wait_id, bytes.as_ptr(), bytes.len(), ptr) }
     }
 }
 

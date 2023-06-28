@@ -5,6 +5,8 @@ enum NoteError : Error, Deserialize {
     case Mavinote(MavinoteError)
     case Storage(StorageError)
     case Database(String)
+    // This is used by Swift and not returned from Rust
+    case TaskCancellation
 
     static func deserialize(_ deserializer: Deserializer) throws -> NoteError {
         let index = try deserializer.deserialize_variant_index()
@@ -36,10 +38,11 @@ enum MavinoteError {
         let index = try deserializer.deserialize_variant_index()
 
         switch index {
-        case 0: return .NoConnection
-        case 1: return .UnexpectedResponse
-        case 2: return .Unauthorized(try Optional<Int32>.deserialize(deserializer))
-        case 3: return .Unknown
+        case 0: return .Unauthorized(try Optional<Int32>.deserialize(deserializer))
+        case 1: return .Message(try String.deserialize(deserializer))
+        case 2: return .NoConnection
+        case 3: return .UnexpectedResponse
+        case 4: return .Unknown
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
         }
     }

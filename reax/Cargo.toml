@@ -36,9 +36,8 @@ note = { path = "./note", features = ["storage"] }
 
 
 [profile.dev]
-opt-level = "z"
+opt-level = "s"
 debug = false
 
 [profile.release]
-opt-level = "z"
 lto = true

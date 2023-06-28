@@ -47,3 +47,10 @@ extension Optional: Deserialize where Wrapped: Deserialize {
         return nil
     }
 }
+
+extension String: Identifiable {
+    public typealias ID = Int
+    public var id: Int {
+        return hash
+    }
+}

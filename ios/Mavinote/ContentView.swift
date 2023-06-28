@@ -1,4 +1,5 @@
 import SwiftUI
+import AlertToast
 
 struct SafeContainer<T, Content: View> : View {
     @Binding var value: T?
@@ -14,24 +15,6 @@ struct SafeContainer<T, Content: View> : View {
     }
 }
 
-enum BusEvent {
-    case ShowMessage(String)
-}
-
-class AppState : ObservableObject {
-    private var eventContinuation: CheckedContinuation<BusEvent, Never>?
-
-    func emit(_ event: BusEvent) {
-        eventContinuation?.resume(returning: event)
-    }
-
-    func listenEvent() async -> BusEvent {
-        return await withCheckedContinuation { continuation in
-            self.eventContinuation = continuation
-        }
-    }
-}
-
 private struct Toast: Identifiable {
     var id: String { get { message } }
 
@@ -41,19 +24,22 @@ private struct Toast: Identifiable {
 struct ContentView: View {
     @StateObject private var appState = AppState()
     @State private var tasks: [Task<(), Never>] = []
-    @State private var toast: Toast?
+    @State private var showToast = false
+    @State private var toast: String = ""
 
     var body: some View {
         FoldersView()
-            .sheet(item: $toast) { toast in
-                Text(toast.message)
+            .toast(isPresenting: $showToast, duration: 2.0) {
+                AlertToast(displayMode: .hud, type: .regular, title: toast)
             }
             .environmentObject(appState)
             .onAppear {
                 tasks.append(Task {
                     while (true) {
                         switch await appState.listenEvent() {
-                        case BusEvent.ShowMessage(let message): toast = Toast(message: message)
+                        case BusEvent.ShowMessage(let message):
+                            showToast = true
+                            toast = message
                         }
                     }
 

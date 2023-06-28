@@ -40,6 +40,7 @@ struct FoldersView: View {
 }
 
 private struct _FoldersView : View {
+    @EnvironmentObject var appState: AppState
     @Binding var accounts: [AccountWithFolders]
 
     var body: some View {
@@ -74,7 +75,11 @@ private struct _FoldersView : View {
             }
             .navigationTitle("Folders")
             .toolbar {
-                NavigationLink(destination: AccountsView()) {
+                NavigationLink(
+                    destination: AccountsView(),
+                    tag: Route.Accounts,
+                    selection: $appState.activeRoute
+                ) {
                     Text("Accounts")
                 }
             }
