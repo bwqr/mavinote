@@ -4,8 +4,10 @@ import android.util.Log
 import com.bwqr.mavinote.BuildConfig
 import com.bwqr.mavinote.models.NoteError
 import com.novi.bincode.BincodeDeserializer
-import com.novi.serde.Deserializer
+import com.novi.serde.DeserializationError
+import kotlinx.coroutines.CancellableContinuation
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.channels.ProducerScope
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -16,71 +18,80 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
 
-class Stream constructor(
-    val onNext: (deserializer: Deserializer) -> Unit,
-    val onError: (error: Error) -> Unit,
-    val onComplete: () -> Unit,
-    val onStart: (Int) -> Long,
-) {
+typealias OnceStart = (Int) -> Unit
+typealias StreamStart = (Int) -> Long
+
+interface Future {
+    // Return value indicates whether the future is completed or not
+    fun handle(bytes: ByteArray): Boolean
+
+    fun abort()
+}
+
+class Stream<T, E : Error> constructor(
+    private val scope: ProducerScope<T>,
+    private val ok: Deserialize<T>,
+    private val err: Deserialize<E>
+) : Future {
     private var joinHandle: Long? = null
 
-    fun handle(bytes: ByteArray) {
+    override fun handle(bytes: ByteArray): Boolean {
         val deserializer = BincodeDeserializer(bytes)
 
-        when (deserializer.deserialize_variant_index()) {
-            0 -> onNext(deserializer)
-            1 -> onError(NoteError.deserialize(deserializer))
-            2 -> onComplete()
+        return when (deserializer.deserialize_variant_index()) {
+            0 -> {
+                scope.trySend(ok.deserialize(deserializer))
+                false
+            }
+
+            1 -> {
+                scope.cancel("", err.deserialize(deserializer))
+                false
+            }
+
+            2 -> {
+                scope.close()
+                true
+            }
+
+            else -> throw DeserializationError("Unknown variant index for Stream")
         }
     }
 
-    fun run(streamId: Int) {
-        if (joinHandle != null) {
-            Log.e("Stream", "Stream started more than once")
-            return
-        }
+    override fun abort() {
+        val joinHandle = joinHandle ?: throw Error("A Stream without a joinHandle is being aborted")
 
-        joinHandle = onStart(streamId)
+        _abort(joinHandle)
     }
 
-    fun joinHandle(): Long? {
-        return joinHandle
+    fun setJoinHandle(handle: Long) {
+        joinHandle = handle
     }
 }
 
-class Once constructor(
-    val onNext: (deserializer: Deserializer) -> Unit,
-    val onError: (error: Error) -> Unit,
-    val onStart: (onceId: Int) -> Long,
-) {
-    private var joinHandle: Long? = null
-
-    fun handle(bytes: ByteArray) {
+class Once<T, E : Error> constructor(
+    private val continuation: CancellableContinuation<T>,
+    private val ok: Deserialize<T>,
+    private val err: Deserialize<E>
+) : Future {
+    override fun handle(bytes: ByteArray): Boolean {
         val deserializer = BincodeDeserializer(bytes)
 
         when (deserializer.deserialize_variant_index()) {
-            0 -> onNext(deserializer)
-            1 -> onError(NoteError.deserialize(deserializer))
-        }
-    }
-
-    fun run(onceId: Int) {
-        if (joinHandle != null) {
-            Log.e("Once", "Once started more than once")
-            return
+            0 -> continuation.resume(ok.deserialize(deserializer))
+            1 -> continuation.resumeWithException(err.deserialize(deserializer))
+            else -> throw DeserializationError("Unknown variant index for Once")
         }
 
-        joinHandle = onStart(onceId)
+        return true
     }
 
-    fun joinHandle(): Long? {
-        return joinHandle
-    }
+    // Once does not support abort
+    override fun abort() {}
 }
 
 class Runtime private constructor(filesDir: String) {
-    private var streams: ConcurrentHashMap<Int, Stream> = ConcurrentHashMap()
-    private var onces: ConcurrentHashMap<Int, Once> = ConcurrentHashMap()
+    private var futures: ConcurrentHashMap<Int, Future> = ConcurrentHashMap()
 
     companion object {
         private lateinit var instance: Runtime
@@ -91,100 +102,76 @@ class Runtime private constructor(filesDir: String) {
             }
         }
 
-        suspend fun runUnitOnce(onStart: (onceId: Int) -> Long): Unit = runOnce({ }, onStart)
+        fun <T> runStream(deserialize: Deserialize<T>, onStart: StreamStart): Flow<T> =
+            instance.runStream(deserialize, onStart)
 
-        suspend fun <T> runOnce(
-            onNext: (deserializer: Deserializer) -> T,
-            onStart: (onceId: Int) -> Long
-        ): T = suspendCancellableCoroutine { cont ->
-            val once = Once(
-                onNext = { cont.resume(onNext(it)) },
-                onError = { cont.resumeWithException(it) },
-                onStart
-            )
+        suspend fun runOnceUnit(onStart: OnceStart) = instance.runOnce(DeUnit, onStart)
 
-            val onceId = instance.insertOnce(once)
-
-            once.run(onceId)
-
-            cont.invokeOnCancellation {
-                instance.abortOnce(onceId)
-            }
-        }
-
-        fun <T> runStream(
-            onNext: (deserializer: Deserializer) -> T,
-            onStart: (streamId: Int) -> Long
-        ): Flow<T> = callbackFlow {
-            val stream = Stream(
-                onNext = { deserializer -> trySend(onNext(deserializer)) },
-                onError = { cancel("", it) },
-                onStart = onStart,
-                onComplete = { channel.close() }
-            )
-
-            val streamId = instance.insertStream(stream)
-
-            stream.run(streamId)
-
-            awaitClose {
-                instance.abortStream(streamId)
-            }
-        }
+        suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnceStart): T =
+            instance.runOnce(deserialize, onStart)
     }
 
     init {
         _init(BuildConfig.API_URL, BuildConfig.WS_URL, filesDir)
 
         thread {
-            _initHandler { id, isStream, bytes ->
+            _initHandler { id, bytes ->
                 Log.d(
                     "Runtime",
-                    "received message with id:$id isStream:$isStream byteLength:${bytes.size}"
+                    "received message with id:$id byteLength:${bytes.size}"
                 )
 
-                if (isStream) {
-                    streams[id]?.handle(bytes)
-                } else {
-                    onces[id]?.handle(bytes)
+                val future = futures[id] ?: throw Error("A message with unknown id is received $id")
+
+                if (future.handle(bytes)) {
+                    abort(id)
                 }
             }
         }
     }
 
-    private fun insertOnce(once: Once): Int {
-        var onceId = Random.nextInt()
+    /**
+     * The order of statements in callbackFlow is important. This order enforces
+     * the presence of stream in the futures if a call made to onStart directly
+     * triggers the handler thread.
+     */
+    private fun <T> runStream(deserialize: Deserialize<T>, onStart: StreamStart): Flow<T> =
+        callbackFlow {
+            val id = generateId()
+            val stream = Stream(this, deserialize, NoteError.Companion)
+            futures[id] = stream
 
-        while (onces.contains(onceId)) {
-            onceId = Random.nextInt()
+            stream.setJoinHandle(onStart(id))
+
+            awaitClose {
+                instance.abort(id)
+            }
         }
 
-        onces[onceId] = once
+    private suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnceStart): T =
+        suspendCancellableCoroutine { cont ->
+            val id = generateId()
 
-        return onceId
-    }
+            futures[id] = Once(cont, deserialize, NoteError.Companion)
 
-    private fun insertStream(stream: Stream): Int {
-        var streamId = Random.nextInt()
-
-        while (streams.contains(streamId)) {
-            streamId = Random.nextInt()
+            onStart(id)
         }
 
-        streams[streamId] = stream
+    private fun generateId(): Int {
+        var id = Random.nextInt()
 
-        return streamId
+        while (futures.contains(id)) {
+            id = Random.nextInt()
+        }
+
+        return id
     }
 
-    private fun abortStream(streamId: Int) {
-        streams.remove(streamId)?.let { stream -> stream.joinHandle()?.let { _abort(it) } }
-    }
-
-    private fun abortOnce(onceId: Int) {
-        onces.remove(onceId)?.let { once -> once.joinHandle()?.let { _abort(it) } }
+    private fun abort(id: Int) {
+        futures.remove(id)?.abort()
     }
 }
 
 private external fun _init(apiUrl: String, wsUrl: String, storageDir: String)
-private external fun _initHandler(callback: (streamId: Int, isStream: Boolean, bytes: ByteArray) -> Unit)
+private external fun _initHandler(callback: (streamId: Int, bytes: ByteArray) -> Unit)
 private external fun _abort(joinHandle: Long)

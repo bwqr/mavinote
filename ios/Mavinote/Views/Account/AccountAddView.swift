@@ -1,0 +1,246 @@
+import SwiftUI
+
+private func onAccountAdd(appState: AppState) {
+    appState.navigate(route: .Accounts)
+    appState.emit(.ShowMessage("Account is successfully added"))
+}
+
+struct AccountAddView : View {
+    @EnvironmentObject var appState: AppState
+
+    @State var tasks: [Task<(), Never>] = []
+    @State var inProgress = false
+    @State var error: String?
+
+    var body: some View {
+        ChooseAccountAddKindView()
+     }
+}
+
+private struct ChooseAccountAddKindView: View {
+    @EnvironmentObject var appState: AppState
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 32.0) {
+            Text("You can create a new account or add an already existing account")
+
+            Text("If you have already created an account from another device, you can also access it from this device")
+
+            List {
+                NavigationLink(destination: EnterAccountInfoView()) {
+                    Text("Add an Existing Account")
+                        .padding(.vertical)
+                }
+
+                NavigationLink(destination: { Text("Hello") }) {
+                    Text("Create a New Account")
+                        .padding(.vertical)
+                }
+            }
+            .listStyle(.plain)
+
+            Spacer()
+        }
+        .padding(.all, 12)
+        .navigationTitle("Add Account")
+    }
+}
+
+private struct EnterAccountInfoView: View {
+    enum ValidationErrors {
+        case InvalidEmail
+    }
+
+    @EnvironmentObject var appState: AppState
+
+    @State var email: String = ""
+    @State var token: String = ""
+    @State var showPublicKey = false
+    @State var validationErrors = Set<ValidationErrors>()
+    @State var error: String?
+    @State var inProgress = false
+
+    var body: some View {
+        VStack {
+            NavigationLink(
+                isActive: $showPublicKey,
+                destination: { ShowPublicKeyView(email: email, token: token) }
+            ) {
+                EmptyView()
+            }
+
+            ScrollView {
+                VStack(alignment: .leading, spacing: 32.0) {
+                    Text("Email address is used to identify accounts.")
+
+                    Text("Please enter the email address of the account you want to add.")
+
+                    VStack(alignment: .leading) {
+                        Text("Email")
+                            .font(.callout)
+
+                        TextField("Email", text: $email)
+                            .textInputAutocapitalization(.never)
+                            .textContentType(.emailAddress)
+                            .keyboardType(.emailAddress)
+                            .padding(12)
+                            .background(InputBackground)
+                            .cornerRadius(8)
+
+                        if validationErrors.contains(.InvalidEmail) {
+                            Text("Please specify a valid email")
+                                .foregroundColor(.red)
+                        }
+                    }
+                }
+                .padding(.all, 12)
+            }
+
+            Button(action: {
+                if inProgress {
+                    return
+                }
+
+                validationErrors = Set()
+
+                if email.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    validationErrors.insert(.InvalidEmail)
+                }
+
+                if !validationErrors.isEmpty {
+                    return
+                }
+
+                inProgress = true
+
+                Task {
+                    switch await AccountViewModel.requestVerification(email) {
+                    case .success(let t):
+                        token = t
+                        showPublicKey = true
+                    case .failure(let e):
+                        switch e {
+                        case .Mavinote(.Message("email_not_found")):
+                            error = "Email could not be found. Please check your input."
+                        case .Mavinote(.Message("device_exists_but_passwords_mismatch")):
+                            error =
+                                "An unexpected state is occurred. A device with our public key is already added. " +
+                                "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
+                                "you can remove the device with our public key and try to add account again."
+                        case .Mavinote(.Message("device_already_exists")):
+                            switch await AccountViewModel.addAccount(email) {
+                            case .success(_):
+                                onAccountAdd(appState: appState)
+                            case .failure(let e): e.handle(appState)
+                            }
+                        case .Storage(.AccountEmailUsed):
+                            error = "An account with this email already exists. You can find it under Accounts page."
+                        default: e.handle(appState)
+                        }
+                    }
+
+                    inProgress = false
+                }
+            }) {
+                Text("Request Verification")
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(12)
+            .background(inProgress ? .gray : .blue)
+            .disabled(inProgress)
+            .cornerRadius(8)
+            .padding(.all, 12)
+        }
+        .alert(item: $error) { error in
+            Alert(
+                title: Text(""),
+                message: Text(error),
+                dismissButton: .default(Text("Ok"))
+            )
+        }
+    }
+}
+
+private struct ShowPublicKeyView: View {
+    let email: String
+    let token: String
+    @State var verificationTask: Task<(), Never>?
+
+    @EnvironmentObject var appState: AppState
+    @State var publicKey: String?
+
+    var body: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 32.0) {
+                Text("A verification request is sent to server for $email email address.")
+
+                Text(
+                    "In order to complete the progress, on the other device that has already account added, " +
+                    "you need to choose Add Device and enter the Public Key displayed below. Please note that Public Key does not contain any line break."
+                )
+
+                Text("You have 5 min to complete progress")
+
+                if let publicKey = publicKey {
+                    VStack(alignment: .leading, spacing: 12.0) {
+                        Text("Public Key:")
+
+                        Text(publicKey)
+                            .bold()
+                    }
+                }
+            }
+            .padding(.all, 12.0)
+        }
+        .onAppear {
+            Task {
+                switch await AccountViewModel.publicKey() {
+                case .success(let p): publicKey = p
+                case .failure(let e): e.handle(appState)
+                }
+            }
+
+            verificationTask = Task {
+                switch await AccountViewModel.waitVerification(token) {
+                case .success(_):
+                    switch await AccountViewModel.addAccount(email) {
+                    case .success(_):
+                        onAccountAdd(appState: appState)
+                    case .failure(let e): e.handle(appState)
+                    }
+                    case .failure(let e):
+                        e.handle(appState)
+                }
+            }
+        }
+        .onDisappear {
+            verificationTask?.cancel()
+        }
+    }
+}
+
+struct ChooseAccountAddKind_Preview: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            ChooseAccountAddKindView()
+        }
+    }
+}
+
+struct EnterAccountInfo_Preview: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            EnterAccountInfoView()
+        }
+    }
+}
+
+struct ShowPublicKey_Preview: PreviewProvider {
+    static var previews: some View {
+        NavigationView {
+            ShowPublicKeyView(email: "email@email.com", token: "TOKEN")
+        }
+    }
+}

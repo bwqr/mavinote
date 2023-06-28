@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.models
 
+import com.bwqr.mavinote.reax.Deserialize
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
@@ -8,8 +9,8 @@ data class Account(
     val name: String,
     val kind: AccountKind,
 ) {
-    companion object {
-        fun deserialize(deserializer: Deserializer): Account {
+    companion object : Deserialize<Account> {
+        override fun deserialize(deserializer: Deserializer): Account {
             deserializer.increase_container_depth()
 
             val account = Account(
@@ -43,8 +44,8 @@ enum class AccountKind {
 }
 
 data class Mavinote(val email: String, val token: String) {
-    companion object {
-        fun deserialize(deserializer: Deserializer): Mavinote {
+    companion object : Deserialize<Mavinote> {
+        override fun deserialize(deserializer: Deserializer): Mavinote {
             deserializer.increase_container_depth()
 
             val account = Mavinote(

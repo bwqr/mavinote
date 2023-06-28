@@ -1,6 +1,7 @@
 package com.bwqr.mavinote.models
 
-import com.bwqr.mavinote.reax.deserializeOption
+import com.bwqr.mavinote.reax.DeInt
+import com.bwqr.mavinote.reax.Deserialize
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
 
@@ -13,14 +14,14 @@ data class Note constructor(
     val text: String,
     val state: State
 ) {
-    companion object {
-        fun deserialize(deserializer: Deserializer): Note {
+    companion object : Deserialize<Note> {
+        override fun deserialize(deserializer: Deserializer): Note {
             deserializer.increase_container_depth()
 
             val note = Note(
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_i32(),
-                deserializeOption(deserializer) { it.deserialize_i32() },
+                DeInt.deserialize(deserializer),
                 deserializer.deserialize_i32(),
                 deserializer.deserialize_str(),
                 deserializer.deserialize_str(),

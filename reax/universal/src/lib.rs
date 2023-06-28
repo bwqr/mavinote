@@ -9,7 +9,7 @@ pub mod account;
 pub mod note;
 
 static ASYNC_RUNTIME: OnceLock<tokio::runtime::Runtime> = OnceLock::new();
-static HANDLER: OnceLock<Mutex<Sender<(i32, bool, Vec<u8>)>>> = OnceLock::new();
+static HANDLER: OnceLock<Mutex<Sender<(i32, Vec<u8>)>>> = OnceLock::new();
 
 #[derive(Serialize)]
 enum Message<T: Serialize, E: Serialize> {
@@ -41,7 +41,7 @@ pub fn init(
     }));
 }
 
-pub fn init_handler(handler: Sender<(i32, bool, Vec<u8>)>) {
+pub fn init_handler(handler: Sender<(i32, Vec<u8>)>) {
     HANDLER
         .set(Mutex::new(handler))
         .map_err(|_| "HandlerError")
@@ -56,7 +56,7 @@ pub(crate) fn send_stream<T: Serialize, E: Serialize>(stream_id: i32, message: M
         .unwrap()
         .lock()
         .unwrap()
-        .send((stream_id, true, bytes))
+        .send((stream_id, bytes))
         .unwrap();
 }
 
@@ -68,7 +68,7 @@ pub(crate) fn send_once<T: Serialize, E: Serialize>(once_id: i32, message: Resul
         .unwrap()
         .lock()
         .unwrap()
-        .send((once_id, false, bytes))
+        .send((once_id, bytes))
         .unwrap();
 }
 

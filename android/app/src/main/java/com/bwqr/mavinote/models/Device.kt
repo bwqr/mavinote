@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.models
 
+import com.bwqr.mavinote.reax.Deserialize
 import com.novi.serde.Deserializer
 
 data class Device(
@@ -8,8 +9,8 @@ data class Device(
     val pubkey: String,
     val createdAt: String,
 ) {
-    companion object {
-        fun deserialize(deserializer: Deserializer): Device {
+    companion object : Deserialize<Device> {
+        override fun deserialize(deserializer: Deserializer): Device {
             deserializer.increase_container_depth()
 
             val device = Device(

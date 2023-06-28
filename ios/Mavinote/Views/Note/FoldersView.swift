@@ -5,9 +5,7 @@ private struct AccountWithFolders: Identifiable {
     let account: Account
     let folders: [Folder]
 
-    var id: Int32 {
-        get { self.account.id }
-    }
+    var id: Int32 { get { account.id } }
 }
 
 struct FoldersView: View {
@@ -24,7 +22,10 @@ struct FoldersView: View {
                         switch result {
                         case (.success(let a), .success(let f)):
                             accounts = a.map { account in
-                                AccountWithFolders(account: account, folders: f.filter{ folder in folder.accountId == account.id })
+                                AccountWithFolders(
+                                    account: account,
+                                    folders: f.filter{ folder in folder.accountId == account.id }
+                                )
                             }
                         case (.failure(let e), _): e.handle(appState)
                         case (_, .failure(let e)): e.handle(appState)
@@ -33,12 +34,13 @@ struct FoldersView: View {
                 })
             }
             .onDisappear {
-                tasks.forEach { task in task.cancel() }
+                tasks.forEach { $0.cancel() }
             }
     }
 }
 
 private struct _FoldersView : View {
+    @EnvironmentObject var appState: AppState
     @Binding var accounts: [AccountWithFolders]
 
     var body: some View {
@@ -73,7 +75,11 @@ private struct _FoldersView : View {
             }
             .navigationTitle("Folders")
             .toolbar {
-                NavigationLink(destination: AccountsView()) {
+                NavigationLink(
+                    destination: AccountsView(),
+                    tag: Route.Accounts,
+                    selection: $appState.activeRoute
+                ) {
                     Text("Accounts")
                 }
             }

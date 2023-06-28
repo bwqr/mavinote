@@ -1,4 +1,5 @@
 import SwiftUI
+import AlertToast
 
 struct SafeContainer<T, Content: View> : View {
     @Binding var value: T?
@@ -14,57 +15,41 @@ struct SafeContainer<T, Content: View> : View {
     }
 }
 
-enum BusEvent {
-    case DisplayNoInternetWarning
-    case DisplayNotAuthorized(AccountId)
+private struct Toast: Identifiable {
+    var id: String { get { message } }
 
-    struct AccountId : Identifiable {
-        let id: Int32
-    }
-}
-
-class AppState : ObservableObject {
-    private var eventContinuation: CheckedContinuation<BusEvent, Never>?
-
-    func emit(_ event: BusEvent) {
-        eventContinuation?.resume(returning: event)
-    }
-
-    func listenEvent() async -> BusEvent {
-        return await withCheckedContinuation { continuation in
-            self.eventContinuation = continuation
-        }
-    }
+    let message: String
 }
 
 struct ContentView: View {
     @StateObject private var appState = AppState()
-    @State var tasks: [Task<(), Never>] = []
-    @State var accountToAuthorize: BusEvent.AccountId?
+    @State private var tasks: [Task<(), Never>] = []
+    @State private var showToast = false
+    @State private var toast: String = ""
 
     var body: some View {
         FoldersView()
-            .sheet(item: $accountToAuthorize) { accountId in
-                AccountAuthorizeView(accountId: accountId.id)
+            .toast(isPresenting: $showToast, duration: 2.0) {
+                AlertToast(displayMode: .hud, type: .regular, title: toast)
             }
             .environmentObject(appState)
             .onAppear {
                 tasks.append(Task {
                     while (true) {
                         switch await appState.listenEvent() {
-                        case BusEvent.DisplayNoInternetWarning: print("No connection")
-                        case BusEvent.DisplayNotAuthorized(let accountId): accountToAuthorize = accountId
+                        case BusEvent.ShowMessage(let message):
+                            showToast = true
+                            toast = message
                         }
                     }
+
+                    fatalError("Bus listening is stopped")
                 })
 
                 tasks.append(Task {
-                    do {
-                        try await NoteViewModel.sync()
-                    } catch let error as NoteError {
-                        error.handle(appState)
-                    } catch {
-                        fatalError("\(error)")
+                    switch await NoteViewModel.sync() {
+                    case .failure(let e): e.handle(appState)
+                    default: break
                     }
                 })
             }

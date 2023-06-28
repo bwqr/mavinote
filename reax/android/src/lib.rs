@@ -106,10 +106,10 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
 
     let callback_class = env.get_object_class(callback).unwrap();
     let callback_method_id = env
-        .get_method_id(callback_class, "invoke", "(IZ[B)V")
+        .get_method_id(callback_class, "invoke", "(I[B)V")
         .unwrap();
 
-    while let Ok((wait_id, is_stream, bytes)) = recv.recv() {
+    while let Ok((wait_id, bytes)) = recv.recv() {
         let bytes_array = env.new_byte_array(bytes.len().try_into().unwrap()).unwrap();
         env.set_byte_array_region(
             bytes_array,
@@ -128,7 +128,6 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
             JavaType::Primitive(Primitive::Void),
             &[
                 JValue::Int(wait_id),
-                JValue::Bool(is_stream as u8),
                 JValue::Object(bytes_array.into()),
             ],
         ) {

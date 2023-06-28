@@ -49,7 +49,6 @@ open class Screen(val route: String) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun BackgroundFeatures() {
     val snackbarHostState = remember { SnackbarHostState() }

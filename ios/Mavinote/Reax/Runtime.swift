@@ -1,6 +1,8 @@
 import Foundation
 import Serde
 
+typealias OnStart = (_ id: Int32) -> UnsafeMutableRawPointer
+
 protocol Future {
     // Return value indicates whether the future is completed or not
     func handle(_ bytes: [UInt8]) -> Bool
@@ -8,13 +10,12 @@ protocol Future {
     func abort()
 }
 
-class Stream<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
-    private let joinHandle: UnsafeMutableRawPointer
-    private let continuation: AsyncStream<Result<T.Target, E>>.Continuation
+class Stream<T: Deserialize, E: Deserialize>: Future where E: Error {
+    private let continuation: AsyncStream<Result<T, E>>.Continuation
+    private var joinHandle: UnsafeMutableRawPointer?
 
-    init(continuation: AsyncStream<Result<T.Target, E>>.Continuation, joinHandle: UnsafeMutableRawPointer) {
+    init(continuation: AsyncStream<Result<T, E>>.Continuation) {
         self.continuation = continuation
-        self.joinHandle = joinHandle
     }
 
     func handle(_ bytes: [UInt8]) -> Bool {
@@ -39,18 +40,27 @@ class Stream<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
     }
 
     func abort() {
+        guard let joinHandle = joinHandle else {
+            fatalError("A Stream without a joinHandle is being aborted")
+        }
+
         reax_abort(joinHandle)
+    }
+
+    func setJoinHandle(handle: UnsafeMutableRawPointer) {
+        joinHandle = handle
     }
 }
 
-class Once<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
-    let continuation: CheckedContinuation<Result<T.Target, E>, Never>
-
-    init(continuation: CheckedContinuation<Result<T.Target, E>, Never>) {
-        self.continuation = continuation
-    }
+class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
+    private var continuation: CheckedContinuation<Result<T, E>, Never>?
+    private var joinHandle: UnsafeMutableRawPointer?
 
     func handle(_ bytes: [UInt8]) -> Bool {
+        guard let continuation = continuation else {
+            fatalError("A Once without a continuation is being handled")
+        }
+
         let deserializer = BincodeDeserializer(input: bytes)
 
         do {
@@ -66,8 +76,22 @@ class Once<T: DeserializeInto, E>: Future where E: Error, E: Deserialize {
         return true
     }
 
-    // Once is not abortable
-    func abort() { }
+
+    func abort() {
+        guard let joinHandle = joinHandle else {
+            fatalError("A Once without a joinHandle is being aborted")
+        }
+
+        reax_abort(joinHandle)
+    }
+
+    func setJoinHandle(handle: UnsafeMutableRawPointer) {
+        joinHandle = handle
+    }
+
+    func setContinuation(cont: CheckedContinuation<Result<T, E>, Never>) {
+        continuation = cont
+    }
 }
 
 class Runtime {
@@ -83,20 +107,18 @@ class Runtime {
         _instance = Runtime(storageDir)
     }
 
-    static func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
-        Self.instance().runStream(T.self, onStart)
+    static func runStream<T: Deserialize>(_ onStart: OnStart) -> AsyncStream<Result<T, NoteError>> {
+        return Self.instance().runStream(onStart)
     }
 
-    static func runStream<T: Deserialize>(_ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T, NoteError>> {
-        return Self.instance().runStream(T.self, onStart)
+    static func runOnceUnit(_ onStart: OnStart) async -> Result<(), NoteError> {
+        let res: Result<UnitDeserialize, NoteError> = await Self.runOnce(onStart)
+
+        return res.map { _ in }
     }
 
-    static func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
-        return await Self.instance().runOnce(T.self, onStart)
-    }
-
-    static func runOnce<T: Deserialize>(_ onStart: (_ id: Int32) -> ()) async -> Result<T, NoteError> {
-        return await Self.instance().runOnce(T.self, onStart)
+    static func runOnce<T: Deserialize>(_ onStart: OnStart) async -> Result<T, NoteError> {
+        return await Self.instance().runOnce(onStart)
     }
 
     private static func instance() -> Runtime {
@@ -111,13 +133,14 @@ class Runtime {
         reax_init(API_URL, WS_URL, storageDir)
     }
 
-    private func runStream<T: DeserializeInto>(_ type: T.Type, _ onStart: (_ id: Int32) -> UnsafeMutableRawPointer) -> AsyncStream<Result<T.Target, NoteError>> {
+    private func runStream<T: Deserialize>(_ onStart: OnStart) -> AsyncStream<Result<T, NoteError>> {
         return AsyncStream { continuation in
             let id = generateId()
+            let stream = Stream<T, NoteError>(continuation: continuation)
+            futures[id] = stream
 
-            let joinHandle = onStart(id)
+            stream.setJoinHandle(handle: onStart(id))
 
-            futures[id] = Stream<T, NoteError>(continuation: continuation, joinHandle: joinHandle)
 
             continuation.onTermination = { @Sendable _ in
                 self.abort(id)
@@ -125,14 +148,26 @@ class Runtime {
         }
     }
 
-    private func runOnce<T: DeserializeInto>(_ _type: T.Type, _ onStart: (_ id: Int32) -> ()) async -> Result<T.Target, NoteError> {
-        return await withCheckedContinuation { continuation in
-            let id = generateId()
+    private func runOnce<T: Deserialize>(_ onStart: OnStart) async -> Result<T, NoteError> {
+        let id = generateId()
+        let once = Once<T, NoteError>()
+        futures[id] = once
 
-            onStart(id)
+        return await withTaskCancellationHandler(
+            operation: {
+                do {
+                    try Task.checkCancellation()
+                } catch {
+                    return .failure(.TaskCancellation)
+                }
 
-            futures[id] = Once<T, NoteError>(continuation: continuation)
-        }
+                return await withCheckedContinuation { cont in
+                    once.setContinuation(cont: cont)
+                    once.setJoinHandle(handle: onStart(id))
+                }
+            },
+            onCancel: { abort(id) }
+        )
     }
 
     private func generateId() -> Int32 {
@@ -156,7 +191,7 @@ class Runtime {
     @objc private func initHandler() {
         let this = UnsafeMutableRawPointer(Unmanaged.passRetained(self).toOpaque())
 
-        reax_init_handler(this) { id, isStream, bytes, bytesLen, ptr in
+        reax_init_handler(this) { id, bytes, bytesLen, ptr in
             let this = Unmanaged<AnyObject>.fromOpaque(ptr!).takeUnretainedValue() as! Runtime
 
             var bytesArray: [UInt8] = Array(repeating: 0, count: Int(bytesLen))
