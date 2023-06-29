@@ -1,3 +1,5 @@
+use std::collections::HashSet;
+
 use actix_web::{
     delete, get, post, put,
     web::{block, Data, Json, Path, Query},
@@ -55,7 +57,7 @@ pub async fn create_folder(
     device: Device,
 ) -> Result<Json<CreatedFolder>, HttpError> {
     let created_folder = block(move || {
-        let folders_to_create = request.0 .0;
+        let device_folders_to_create = request.0 .0;
 
         let mut conn = pool.get().unwrap();
 
@@ -65,17 +67,17 @@ pub async fn create_folder(
             .select(DEVICE_COLUMNS)
             .load::<Device>(&mut conn)?;
 
-        let device_not_exist_in_request = folders_to_create
+        let device_not_exist_in_request = device_folders_to_create
             .iter()
-            .find(|folder_to_create| {
+            .find(|device_folder| {
                 devices
                     .iter()
-                    .find(|d| d.id == folder_to_create.device_id)
+                    .find(|d| d.id == device_folder.device_id)
                     .is_none()
             })
             .is_some();
 
-        if devices.len() != folders_to_create.len() || device_not_exist_in_request {
+        if devices.len() != device_folders_to_create.iter().map(|d| d.device_id).collect::<HashSet<i32>>().len() || device_not_exist_in_request {
             return Err(HttpError::unprocessable_entity("devices_mismatch"));
         }
 
@@ -85,7 +87,7 @@ pub async fn create_folder(
 
         diesel::insert_into(device_folders::table)
             .values(
-                folders_to_create
+                device_folders_to_create
                     .into_iter()
                     .map(|folder_to_create| {
                         (
