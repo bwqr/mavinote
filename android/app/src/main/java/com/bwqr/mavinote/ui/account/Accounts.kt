@@ -47,7 +47,6 @@ fun Accounts(navController: NavController) {
     AccountsView(navController, accounts)
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountsView(navController: NavController, accounts: List<Account>) {
     Column(modifier = Modifier.padding(12.dp)) {

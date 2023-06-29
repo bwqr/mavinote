@@ -70,7 +70,7 @@ fun Account(navController: NavController, accountId: Int) {
         }
     }
 
-    account?.let { it ->
+    account?.let {
         AccountView(
             navController,
             it,

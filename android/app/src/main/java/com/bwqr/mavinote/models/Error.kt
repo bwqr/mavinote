@@ -62,11 +62,11 @@ sealed class StorageError : NoteError() {
     companion object {
         fun deserialize(deserializer: Deserializer): StorageError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> StorageError.InvalidState(deserializer.deserialize_str())
-                1 -> StorageError.NotMavinoteAccount
-                2 -> StorageError.AccountNotFound
-                3 -> StorageError.AccountEmailUsed
-                4 -> StorageError.FolderNotFound
+                0 -> InvalidState(deserializer.deserialize_str())
+                1 -> NotMavinoteAccount
+                2 -> AccountNotFound
+                3 -> AccountEmailUsed
+                4 -> FolderNotFound
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }
         }

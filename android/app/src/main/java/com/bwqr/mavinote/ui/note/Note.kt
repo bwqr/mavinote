@@ -2,7 +2,6 @@ package com.bwqr.mavinote.ui.note
 
 import android.util.Log
 import androidx.compose.foundation.layout.*
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.*
@@ -115,7 +114,6 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
         })
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun NoteView(
     title: String?,

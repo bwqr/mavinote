@@ -2,7 +2,6 @@ package com.bwqr.mavinote.ui
 
 import android.util.Log
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
@@ -44,8 +43,8 @@ open class Screen(val route: String) {
     }
 
     sealed class Device(route: String) : Screen(route) {
-        object Devices : Screen.Device("devices?accountId={accountId}")
-        object DeviceAdd : Screen.Device("device-add?accountId={accountId}")
+        object Devices : Device("devices?accountId={accountId}")
+        object DeviceAdd : Device("device-add?accountId={accountId}")
     }
 }
 
