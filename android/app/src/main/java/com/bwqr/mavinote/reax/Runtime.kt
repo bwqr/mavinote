@@ -12,14 +12,13 @@ import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.suspendCancellableCoroutine
-import java.util.concurrent.ConcurrentHashMap
+import java.util.concurrent.Semaphore
 import kotlin.concurrent.thread
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
 
-typealias OnceStart = (Int) -> Unit
-typealias StreamStart = (Int) -> Long
+typealias OnStart = (Int) -> Long
 
 interface Future {
     // Return value indicates whether the future is completed or not
@@ -74,6 +73,8 @@ class Once<T, E : Error> constructor(
     private val ok: Deserialize<T>,
     private val err: Deserialize<E>
 ) : Future {
+    private var joinHandle: Long? = null
+
     override fun handle(bytes: ByteArray): Boolean {
         val deserializer = BincodeDeserializer(bytes)
 
@@ -86,12 +87,32 @@ class Once<T, E : Error> constructor(
         return true
     }
 
-    // Once does not support abort
-    override fun abort() {}
+
+    override fun abort() {
+        val joinHandle = joinHandle ?: throw Error("A Once without a joinHandle is being aborted")
+
+        _abort(joinHandle)
+    }
+
+    fun setJoinHandle(handle: Long) {
+        joinHandle = handle
+    }
+}
+
+private class CriticalSection<T> constructor(private val instance: T) {
+    private val semaphore: Semaphore = Semaphore(1)
+
+    fun<R> enter(callback: (T) -> R): R {
+        semaphore.acquire()
+        val res = callback(instance)
+        semaphore.release()
+
+        return res
+    }
 }
 
 class Runtime private constructor(filesDir: String) {
-    private var futures: ConcurrentHashMap<Int, Future> = ConcurrentHashMap()
+    private var futures: CriticalSection<HashMap<Int, Future>> = CriticalSection(HashMap())
 
     companion object {
         private lateinit var instance: Runtime
@@ -102,12 +123,12 @@ class Runtime private constructor(filesDir: String) {
             }
         }
 
-        fun <T> runStream(deserialize: Deserialize<T>, onStart: StreamStart): Flow<T> =
+        fun <T> runStream(deserialize: Deserialize<T>, onStart: OnStart): Flow<T> =
             instance.runStream(deserialize, onStart)
 
-        suspend fun runOnceUnit(onStart: OnceStart) = instance.runOnce(DeUnit, onStart)
+        suspend fun runOnceUnit(onStart: OnStart) = instance.runOnce(DeUnit, onStart)
 
-        suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnceStart): T =
+        suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnStart): T =
             instance.runOnce(deserialize, onStart)
     }
 
@@ -121,7 +142,9 @@ class Runtime private constructor(filesDir: String) {
                     "received message with id:$id byteLength:${bytes.size}"
                 )
 
-                val future = futures[id] ?: throw Error("A message with unknown id is received $id")
+                val future = futures.enter { futures ->
+                    futures[id] ?: throw Error("A message with unknown id is received $id")
+                }
 
                 if (future.handle(bytes)) {
                     abort(id)
@@ -130,16 +153,11 @@ class Runtime private constructor(filesDir: String) {
         }
     }
 
-    /**
-     * The order of statements in callbackFlow is important. This order enforces
-     * the presence of stream in the futures if a call made to onStart directly
-     * triggers the handler thread.
-     */
-    private fun <T> runStream(deserialize: Deserialize<T>, onStart: StreamStart): Flow<T> =
+    private fun <T> runStream(deserialize: Deserialize<T>, onStart: OnStart): Flow<T> =
         callbackFlow {
-            val id = generateId()
             val stream = Stream(this, deserialize, NoteError.Companion)
-            futures[id] = stream
+
+            val id = insertFuture(stream)
 
             stream.setJoinHandle(onStart(id))
 
@@ -148,27 +166,39 @@ class Runtime private constructor(filesDir: String) {
             }
         }
 
-    private suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnceStart): T =
+    private suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnStart): T =
         suspendCancellableCoroutine { cont ->
-            val id = generateId()
+            val once = Once(cont, deserialize, NoteError.Companion)
 
-            futures[id] = Once(cont, deserialize, NoteError.Companion)
+            val id = insertFuture(once)
 
-            onStart(id)
+            once.setJoinHandle(onStart(id))
+
+            cont.invokeOnCancellation {
+                abort(id)
+            }
         }
 
-    private fun generateId(): Int {
-        var id = Random.nextInt()
+    private fun insertFuture(future: Future): Int {
+        return futures.enter { futures ->
+            var id = Random.nextInt()
 
-        while (futures.contains(id)) {
-            id = Random.nextInt()
+            while (futures.contains(id)) {
+                id = Random.nextInt()
+            }
+
+            futures[id] = future
+
+            id
         }
-
-        return id
     }
 
     private fun abort(id: Int) {
-        futures.remove(id)?.abort()
+        val future = futures.enter { futures ->
+            futures.remove(id) ?: throw Error("Aborting an unknown future $id")
+        }
+
+        future.abort()
     }
 }
 
