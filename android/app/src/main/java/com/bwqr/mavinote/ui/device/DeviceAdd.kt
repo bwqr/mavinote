@@ -75,7 +75,6 @@ private enum class ValidationErrors {
     InvalidPubkey,
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun DeviceAddView(
     inProgress: Boolean,

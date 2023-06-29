@@ -4,7 +4,6 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material3.*
@@ -286,31 +285,29 @@ fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
         }
     }
 
-    Column {
-        Column(modifier = Modifier.verticalScroll(scrollState)) {
-            Text(
-                "A verification request is sent to server for $email email address.",
-                modifier = Modifier.padding(0.dp, 8.dp)
-            )
+    Column(modifier = Modifier.verticalScroll(scrollState)) {
+        Text(
+            "A verification request is sent to server for $email email address.",
+            modifier = Modifier.padding(0.dp, 8.dp)
+        )
 
-            Text(
-                "In order to complete the progress, on the other device that has already account added, " +
-                        "you need to choose Add Device and enter the Public Key displayed below. Please note that Public Key does not contain any line break.",
-                modifier = Modifier.padding(0.dp, 8.dp)
-            )
+        Text(
+            "In order to complete the progress, on the other device that has already account added, " +
+                    "you need to choose Add Device and enter the Public Key displayed below. Please note that Public Key does not contain any line break.",
+            modifier = Modifier.padding(0.dp, 8.dp)
+        )
 
-            Text(
-                "You have 5 min to complete progress",
-                modifier = Modifier.padding(0.dp, 16.dp)
-            )
+        Text(
+            "You have 5 min to complete progress",
+            modifier = Modifier.padding(0.dp, 16.dp)
+        )
 
-            publicKey?.let {
-                Text(
-                    text = "Public Key:",
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp),
-                )
-                Text(it, fontWeight = FontWeight.Bold)
-            }
+        publicKey?.let {
+            Text(
+                text = "Public Key:",
+                modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp),
+            )
+            Text(it, fontWeight = FontWeight.Bold)
         }
     }
 
@@ -555,5 +552,21 @@ fun EnterAccountInfoPreview() {
 fun ShowPublicKeyPreview() {
     MavinoteTheme {
         ShowPublicKey("hello@email.com", "Token") { }
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun SendVerificationCodePreview() {
+    MavinoteTheme {
+        SendVerificationCode(rememberNavController())
+    }
+}
+
+@Preview(showBackground = true)
+@Composable
+private fun VerifyCodePreview() {
+    MavinoteTheme {
+        VerifyCode("hello@email.com") { }
     }
 }

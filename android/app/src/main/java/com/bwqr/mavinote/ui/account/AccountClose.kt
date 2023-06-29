@@ -176,7 +176,6 @@ private enum class AccountCloseValidationErrors {
     InvalidCode,
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun VerifyCodeView(
     email: String,
@@ -248,6 +247,6 @@ fun SendCodePreview() {
 
 @Preview(showBackground = true)
 @Composable
-fun VerifyCodePreview() {
+private fun VerifyCodePreview() {
     VerifyCodeView("email@email.com", false, null,  setOf(), { }) { }
 }

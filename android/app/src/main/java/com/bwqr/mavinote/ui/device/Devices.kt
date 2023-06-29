@@ -71,7 +71,6 @@ fun Devices(accountId: Int) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DevicesView(
     account: Account,
