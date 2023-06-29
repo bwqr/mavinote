@@ -79,7 +79,6 @@ fun Account(navController: NavController, accountId: Int) {
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AccountView(
     navController: NavController,
@@ -120,7 +119,6 @@ fun AccountView(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MavinoteAccountView(
     navController: NavController,
