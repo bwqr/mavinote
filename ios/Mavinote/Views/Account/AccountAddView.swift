@@ -325,7 +325,7 @@ private struct SendVerificationCodeView: View {
     }
 }
 
-struct VerifyCodeView: View {
+private struct VerifyCodeView: View {
     enum ValidationErrors {
         case InvalidCode
     }
@@ -458,7 +458,7 @@ struct SendVerificationCode_Preview: PreviewProvider {
     }
 }
 
-struct VerifyCode_Preview: PreviewProvider {
+struct AccountAddVerifyCode_Preview: PreviewProvider {
     static var previews: some View {
         NavigationView {
             VerifyCodeView(email: "email@email.com")

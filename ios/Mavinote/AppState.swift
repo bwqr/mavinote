@@ -25,7 +25,9 @@ class AppState : ObservableObject {
     func handleError(_ e: NoteError) {
         switch e {
         case .Mavinote(.NoConnection): emit(BusEvent.ShowMessage("No Internet Connection"))
-        default: emit(BusEvent.ShowMessage("\(e)"))
+        default:
+            emit(BusEvent.ShowMessage("\(e)"))
+            debugPrint("Unhandled Error", e)
         }
     }
 
