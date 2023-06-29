@@ -5,61 +5,46 @@ struct AccountView : View {
     let accountId: Int32
 
     @EnvironmentObject var appState: AppState
-    @Environment(\.dismiss) var dismiss: DismissAction
 
-    @State var tasks: [Task<(), Never>] = []
     @State var account: Account?
     @State var mavinote: Mavinote?
 
-    @State var inProgress = false
-
     var body: some View {
-        SafeContainer(value: $account) { account in
-            _AccountView(
-                account: account,
-                mavinote: $mavinote,
-                onDelete: {
-                    if (inProgress) {
-                        return
-                    }
-
-                    inProgress = true
-
-                    tasks.append(Task {
-                        switch await AccountViewModel.removeAccount(accountId) {
-                        case .success(_):
-                            dismiss()
-                            appState.emit(.ShowMessage("Account is deleted successfully"))
-                        case .failure(let e): appState.handleError(e)
-                        }
-
-                        inProgress = false
-                    })
-                }
-            )
+        ZStack {
+            if let account = account, let mavinote = mavinote {
+                _AccountView(
+                    account: account,
+                    mavinote: mavinote
+                )
+            }
         }
         .navigationTitle(accountName)
         .onAppear {
-            tasks.append(Task {
+            Task {
                 switch await AccountViewModel.account(accountId) {
-                case .success(let a): account = a
-                case .failure(let e): e.handle(appState)
+                case .success(let a):
+                    account = a
+                    if a?.kind == .Mavinote {
+                        switch await AccountViewModel.mavinoteAccount(accountId) {
+                        case .success(let m): mavinote = m
+                        case .failure(let e): appState.handleError(e)
+                        }
+                    }
+                case .failure(let e): appState.handleError(e)
                 }
-            })
-        }
-        .onDisappear {
-            tasks.forEach { $0.cancel() }
+            }
         }
     }
 }
 
 private struct _AccountView : View {
-    @Binding var account: Account
-    @Binding var mavinote: Mavinote?
+    let account: Account
+    let mavinote: Mavinote?
 
-    let onDelete: () -> ()
-
-    @State var showEdit = false
+    @EnvironmentObject var appState: AppState
+    @State var error: String?
+    @State var showRemoveAccount = false
+    @State var inProgress = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -70,6 +55,7 @@ private struct _AccountView : View {
                     Text(account.name)
                         .foregroundColor(.gray)
                 }
+                .padding(.vertical)
 
                 HStack {
                     Text("Kind")
@@ -77,6 +63,7 @@ private struct _AccountView : View {
                     Text(account.kind.rawValue.capitalized)
                         .foregroundColor(.gray)
                 }
+                .padding(.vertical)
 
                 if let mavinote = mavinote {
                     HStack {
@@ -85,18 +72,72 @@ private struct _AccountView : View {
                         Text(mavinote.email)
                             .foregroundColor(.gray)
                     }
+                    .padding(.vertical)
                 }
+            }
+            .listStyle(.plain)
+
+            if mavinote != nil {
+                List {
+                    NavigationLink(destination: DevicesView(accountId: account.id)) {
+                        Text("Devices")
+                            .padding(.vertical)
+                    }
+                    
+                    Button("Remove Account From Device") {
+                        showRemoveAccount = true
+                    }
+                    .disabled(inProgress)
+                    .foregroundColor(inProgress ? .gray : .red)
+                    .padding(.vertical)
+                    
+                    NavigationLink(destination: AccountCloseView(accountId: account.id)) {
+                        Text("Close Account")
+                            .padding(.vertical)
+                    }
+                    .foregroundColor(.red)
+                }
+                .listStyle(.plain)
             }
         }
-        .toolbar {
-            Button("Edit") {
-                showEdit = true
-            }
-            .confirmationDialog("Edit Account", isPresented: $showEdit)  {
-                Button("Delete", role: .destructive) {
-                    onDelete()
+        .alert(
+            "Are you sure about removing the account?",
+            isPresented: $showRemoveAccount,
+            actions: {
+                Button("Remove", role: .destructive) {
+                    if inProgress {
+                        return
+                    }
+
+                    inProgress = true
+
+                    Task {
+                        switch await AccountViewModel.removeAccount(account.id) {
+                        case .success(_):
+                            appState.emit(.ShowMessage("Account is removed"))
+                            appState.navigate(route: .Accounts)
+                        case .failure(.Mavinote(.Message("cannot_delete_only_remaining_device"))):
+                            error = "This device is the only remaining device for this account. If you want to close the account, choose Close Account option."
+                        case .failure(let e): appState.handleError(e)
+                        }
+
+                        showRemoveAccount = false
+                        inProgress = false
+                    }
                 }
+                .disabled(inProgress)
+                .foregroundColor(inProgress ? .gray : .red)
+            },
+            message: {
+                Text("Removing account will only remove it from this device. Are you sure about removing the account from this device?")
             }
+        )
+        .alert(item: $error) { error in
+            Alert(
+                title: Text(""),
+                message: Text(error),
+                dismissButton: .default(Text("Ok"))
+            )
         }
     }
 }
@@ -108,9 +149,8 @@ struct AccountView_Preview : PreviewProvider {
 
         NavigationView {
             _AccountView(
-                account: .constant(account),
-                mavinote: .constant(mavinote),
-                onDelete: { }
+                account: account,
+                mavinote: mavinote
             )
             .navigationTitle(account.name)
         }

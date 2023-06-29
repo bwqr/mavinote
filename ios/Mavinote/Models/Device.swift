@@ -1,6 +1,6 @@
 import Serde
 
-struct Device: Deserialize {
+struct Device: Deserialize, Identifiable {
     let id: Int32
     let accountId: Int32
     let pubkey: String

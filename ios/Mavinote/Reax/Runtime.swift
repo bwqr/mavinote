@@ -94,10 +94,26 @@ class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
     }
 }
 
+private class CriticalSection<T> {
+    private var instance: T
+    private let semaphore = DispatchSemaphore(value: 1)
+
+    init(instance: T) {
+        self.instance = instance
+    }
+
+    func enter<R>(_ callback: (inout T) -> R) -> R {
+        semaphore.wait()
+        let res = callback(&instance)
+        semaphore.signal()
+        return res
+    }
+}
+
 class Runtime {
     private static var _instance: Runtime?
 
-    private var futures: [Int32: any Future] = [:]
+    private var futures: CriticalSection<[Int32: any Future]> = CriticalSection(instance: [:])
 
     static func initialize(storageDir: String) {
         if (_instance != nil) {
@@ -135,12 +151,10 @@ class Runtime {
 
     private func runStream<T: Deserialize>(_ onStart: OnStart) -> AsyncStream<Result<T, NoteError>> {
         return AsyncStream { continuation in
-            let id = generateId()
             let stream = Stream<T, NoteError>(continuation: continuation)
-            futures[id] = stream
+            let id = insertFuture(future: stream)
 
             stream.setJoinHandle(handle: onStart(id))
-
 
             continuation.onTermination = { @Sendable _ in
                 self.abort(id)
@@ -149,15 +163,12 @@ class Runtime {
     }
 
     private func runOnce<T: Deserialize>(_ onStart: OnStart) async -> Result<T, NoteError> {
-        let id = generateId()
         let once = Once<T, NoteError>()
-        futures[id] = once
+        let id = insertFuture(future: once)
 
         return await withTaskCancellationHandler(
             operation: {
-                do {
-                    try Task.checkCancellation()
-                } catch {
+                if case .failure(_) = Result(catching: { try Task.checkCancellation() }) {
                     return .failure(.TaskCancellation)
                 }
 
@@ -170,19 +181,27 @@ class Runtime {
         )
     }
 
-    private func generateId() -> Int32 {
-        var id = Int32.random(in: 0...Int32.max)
+    private func insertFuture(future: any Future) -> Int32 {
+        return futures.enter { futures in
+            var id = Int32.random(in: 0...Int32.max)
 
-        while futures[id] != nil {
-            id = Int32.random(in: 0...Int32.max)
+            while futures[id] != nil {
+                id = Int32.random(in: 0...Int32.max)
+            }
+
+            futures[id] = future
+
+            return id
         }
-
-        return id
     }
 
     private func abort(_ id: Int32) {
-        guard let future = self.futures.removeValue(forKey: id) else {
-            fatalError("Aborting an unknown future \(id)")
+        let future = futures.enter { futures in
+            guard let future = futures.removeValue(forKey: id) else {
+                fatalError("Aborting an unknown future \(id)")
+            }
+
+            return future
         }
 
         future.abort()
@@ -200,8 +219,12 @@ class Runtime {
                 bytesArray[i] = bytes!.advanced(by: i).pointee
             }
 
-            guard let future = this.futures[id] else {
-                fatalError("A message with unknown id is received, \(id)")
+            let future = this.futures.enter { futures in
+                guard let future = futures[id] else {
+                    fatalError("A message with unknown id is received, \(id)")
+                }
+
+                return future
             }
 
             if future.handle(bytesArray) {

@@ -108,7 +108,12 @@ pub async fn add_account(email: String) -> Result<(), Error> {
 }
 
 pub async fn send_verification_code(email: String) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
     let config = runtime::get::<Arc<Config>>().unwrap();
+
+    if db::account_with_email_exists(&mut conn, &email).await? {
+        return Err(Error::Storage(StorageError::AccountEmailUsed));
+    }
 
     MavinoteClient::new(None, config.api_url.clone(), None)
         .send_verification_code(&email).await

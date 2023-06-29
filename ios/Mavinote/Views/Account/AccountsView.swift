@@ -3,20 +3,19 @@ import SwiftUI
 struct AccountsView : View {
     @EnvironmentObject var appState: AppState
 
-    @State var tasks: [Task<(), Never>] = []
     @State var accounts: [Account] = []
 
     var body: some View {
         _AccountsView(accounts: $accounts)
             .onAppear {
-                tasks.append(Task {
+                Task {
                     for await result in AccountViewModel.accounts() {
                         switch result {
                         case .success(let a): accounts = a
                         case .failure(let e): e.handle(appState)
                         }
                     }
-                })
+                }
             }
     }
 }
