@@ -23,8 +23,8 @@ class AccountViewModel {
         suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
             Runtime.runOnceUnit { _addDevice(it, accountId, fingerprint) }
 
-        suspend fun removeDevice(deviceId: Int) =
-            Runtime.runOnceUnit { _removeDevice(it, deviceId) }
+        suspend fun deleteDevice(accountId: Int, deviceId: Int) =
+            Runtime.runOnceUnit { _deleteDevice(it, accountId, deviceId) }
 
         suspend fun requestVerification(email: String): String =
             Runtime.runOnce(DeString) { _requestVerification(it, email) }
@@ -61,7 +61,7 @@ private external fun _account(onceId: Int, accountId: Int): Long
 private external fun _mavinoteAccount(onceId: Int, accountId: Int): Long
 private external fun _devices(onceId: Int, accountId: Int): Long
 private external fun _addDevice(onceId: Int, accountId: Int, fingerprint: String): Long
-private external fun _removeDevice(onceId: Int, deviceId: Int): Long
+private external fun _deleteDevice(onceId: Int, accountId: Int, deviceId: Int): Long
 private external fun _requestVerification(onceId: Int, email: String): Long
 private external fun _waitVerification(onceId: Int, token: String): Long
 private external fun _sendVerificationCode(onceId: Int, email: String): Long

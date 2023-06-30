@@ -10,7 +10,7 @@ void * reax_account_account(int32_t once_id, int32_t account_id);
 void * reax_account_mavinote_account(int32_t once_id, int32_t account_id);
 void * reax_account_devices(int32_t once_id, int32_t account_id);
 void * reax_account_add_device(int32_t once_id, int32_t account_id, const char * fingerprint);
-void * reax_account_remove_device(int32_t once_id, int32_t device_id);
+void * reax_account_delete_device(int32_t once_id, int32_t account_id, int32_t device_id);
 void * reax_account_request_verification(int32_t once_id, const char * email);
 void * reax_account_wait_verification(int32_t once_id, const char * token);
 void * reax_account_add_account(int32_t once_id, const char * email);

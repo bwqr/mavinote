@@ -60,7 +60,8 @@ fun Devices(accountId: Int) {
 
             coroutine.launch {
                 try {
-                    AccountViewModel.removeDevice(deviceId)
+                    AccountViewModel.deleteDevice(accountId, deviceId)
+                    devices = devices.filter { d -> d.id != deviceId }
                 } catch (e: NoteError) {
                     e.handle()
                 } finally {
@@ -75,9 +76,9 @@ fun Devices(accountId: Int) {
 fun DevicesView(
     account: Account,
     devices: List<Device>,
-    onRemoveDevice: (deviceId: Int) -> Unit,
+    onDeleteDevice: (deviceId: Int) -> Unit,
 ) {
-    var deviceToRemove by remember { mutableStateOf<Device?>(null) }
+    var deviceToDelete by remember { mutableStateOf<Device?>(null) }
 
     Column(modifier = Modifier.padding(12.dp)) {
         Row {
@@ -108,7 +109,7 @@ fun DevicesView(
                             Icons.Filled.Delete,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.error,
-                            modifier = Modifier.clickable { deviceToRemove = device }
+                            modifier = Modifier.clickable { deviceToDelete = device }
                         )
                     }
                 )
@@ -120,16 +121,16 @@ fun DevicesView(
         }
     }
 
-    deviceToRemove?.let {
+    deviceToDelete?.let {
         AlertDialog(
-            onDismissRequest = { deviceToRemove = null },
+            onDismissRequest = { deviceToDelete = null },
             text = {
                 Column {
-                    Text("Are you sure about removing device?", modifier = Modifier.padding(0.dp, 8.dp))
+                    Text("Are you sure about deleting device?", modifier = Modifier.padding(0.dp, 8.dp))
 
-                    Text("Removed device will not be able to access the account's notes and folders anymore.", modifier = Modifier.padding(0.dp, 8.dp))
+                    Text("Deleted device will not be able to access the account's notes and folders anymore.", modifier = Modifier.padding(0.dp, 8.dp))
 
-                    Text("Removing a device will also cause any non synced notes and folders on the device to be lost.", modifier = Modifier.padding(0.dp, 8.dp))
+                    Text("Deleting a device will also cause any non synced notes and folders on the device to be lost.", modifier = Modifier.padding(0.dp, 8.dp))
                 }
             },
             confirmButton = {
@@ -137,11 +138,11 @@ fun DevicesView(
                     modifier = Modifier.fillMaxWidth(),
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
                     onClick = {
-                        onRemoveDevice(it.id)
-                        deviceToRemove = null
+                        onDeleteDevice(it.id)
+                        deviceToDelete = null
                     },
                 ) {
-                    Text("Remove Device")
+                    Text("Delete Device")
                 }
             }
         )

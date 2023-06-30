@@ -222,9 +222,15 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn delete_device(&self) -> Result<(), Error> {
+    pub async fn delete_device(&self, device_id: Option<i32>) -> Result<(), Error> {
+        let mut url = format!("{}/user/device", self.api_url);
+
+        if let Some(device_id) = device_id {
+            url += format!("?id={}", device_id).as_str();
+        }
+
         self.client
-            .delete(format!("{}/user/device", self.api_url))
+            .delete(url)
             .send()
             .await
             .map(|r| async { self.error_for_status(r).await })?

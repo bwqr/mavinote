@@ -57,13 +57,14 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1addDevi
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1removeDevice(
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1deleteDevice(
     _: JNIEnv,
     _: JClass,
     once_id: jint,
+    account_id: jint,
     device_id: jint,
 ) -> jlong {
-    universal::account::remove_device(once_id, device_id) as jlong
+    universal::account::delete_device(once_id, account_id, device_id) as jlong
 }
 
 #[no_mangle]

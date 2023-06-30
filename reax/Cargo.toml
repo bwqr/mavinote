@@ -34,7 +34,6 @@ serde = { version = "1.0.152", features = ["derive"] }
 [dependencies]
 note = { path = "./note", features = ["storage"] }
 
-
 [profile.dev]
 opt-level = "s"
 debug = false

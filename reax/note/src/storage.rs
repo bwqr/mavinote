@@ -188,7 +188,7 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     }
 
     mavinote_client(&mut conn, account_id).await?.unwrap()
-        .delete_device()
+        .delete_device(None)
         .await?;
 
     db::delete_account(&mut conn, account_id).await?;
@@ -229,8 +229,27 @@ pub async fn devices(account_id: i32) -> Result<Vec<Device>, Error> {
         .map_err(|e| e.into())
 }
 
-pub async fn remove_device(device_id: i32) -> Result<(), Error> {
-    Err(Error::Storage(StorageError::NotMavinoteAccount))
+pub async fn delete_device(account_id: i32, device_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let account = db::fetch_account(&mut conn, account_id).await?
+        .ok_or_else(|| {
+            log::error!("trying to remove an unknown account, {account_id}");
+
+            Error::Storage(StorageError::AccountNotFound)
+        })?;
+
+    if account.kind != AccountKind::Mavinote {
+        log::error!("can remove only mavinote account");
+
+        return Err(Error::Storage(StorageError::NotMavinoteAccount));
+    }
+
+    mavinote_client(&mut conn, account_id).await?.unwrap()
+        .delete_device(Some(device_id))
+        .await?;
+
+    db::delete_devices(&mut conn, account_id).await.map_err(|e| e.into())
 }
 
 pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {

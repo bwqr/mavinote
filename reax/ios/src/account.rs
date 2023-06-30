@@ -71,8 +71,8 @@ pub extern "C" fn reax_account_remove_account(
 }
 
 #[no_mangle]
-pub extern "C" fn reax_account_remove_device(once_id: i32, device_id: i32) -> *mut JoinHandle<()> {
-    universal::account::remove_device(once_id, device_id)
+pub extern "C" fn reax_account_delete_device(once_id: i32, account_id: i32, device_id: i32) -> *mut JoinHandle<()> {
+    universal::account::delete_device(once_id, account_id, device_id)
 }
 
 #[no_mangle]

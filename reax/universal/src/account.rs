@@ -77,9 +77,9 @@ pub fn add_device(once_id: i32, account_id: i32, fingerprint: String) -> * mut J
     Box::into_raw(Box::new(handle))
 }
 
-pub fn remove_device(once_id: i32, device_id: i32) -> *mut JoinHandle<()> {
+pub fn delete_device(once_id: i32, account_id: i32, device_id: i32) -> *mut JoinHandle<()> {
     let handle = spawn(async move {
-        let res = note::storage::remove_device(device_id).await;
+        let res = note::storage::delete_device(account_id, device_id).await;
 
         send_once(once_id, res);
     });
