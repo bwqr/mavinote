@@ -610,41 +610,17 @@ mod tests {
     };
     use base::{
         sanitize::Sanitized,
-        schema::{devices, folder_requests, folders, notes, users, note_requests},
-        types::Pool,
+        schema::{folder_requests, folders, notes, users, note_requests},
         HttpError, HttpMessage,
     };
+    use test_helpers::db::create_pool;
     use chrono::NaiveDateTime;
-    use user::models::Device;
+    use user::test::db::DeviceBuilder;
 
     use super::create_requests;
 
     use actix_web::web::{Data, Json};
-    use diesel::{prelude::*, r2d2::ConnectionManager, PgConnection};
-
-    fn create_pool() -> Pool {
-        let conn_info = "postgres://mavinote:toor@127.0.0.1/mavinote_test";
-        let manager = ConnectionManager::<PgConnection>::new(conn_info);
-
-        let pool = Pool::builder()
-            .build(manager)
-            .expect("Failed to create pool.");
-
-        pool.get().unwrap().begin_test_transaction().unwrap();
-
-        pool
-    }
-
-    fn create_device(conn: &mut PgConnection) -> Result<Device, diesel::result::Error> {
-        let (user_id, _, _): (i32, String, NaiveDateTime) = diesel::insert_into(users::table)
-            .values(users::email.eq("device@email.com"))
-            .get_result(conn)?;
-
-        diesel::insert_into(devices::table)
-            .values((devices::user_id.eq(user_id), devices::pubkey.eq("pubkey"), devices::password.eq("password")))
-            .get_result::<(i32, i32, String, String)>(conn)
-            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2 })
-    }
+    use diesel::{prelude::*, PgConnection};
 
     fn create_folder(
         conn: &mut PgConnection,
@@ -692,7 +668,7 @@ mod tests {
     {
         let pool = create_pool();
 
-        let device = create_device(&mut pool.get().unwrap()).unwrap();
+        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
         let request = CreateRequests {
             folder_ids: Vec::new(),
             note_ids: Vec::new(),
@@ -713,7 +689,7 @@ mod tests {
 
         let (device, folder) = {
             let mut conn = pool.get().unwrap();
-            let device = create_device(&mut conn).unwrap();
+            let device = DeviceBuilder::default().build(&mut conn).unwrap();
             let folder = create_folder(&mut conn, None).unwrap();
 
             (device, folder)
@@ -739,7 +715,7 @@ mod tests {
 
         let (device, note) = {
             let mut conn = pool.get().unwrap();
-            let device = create_device(&mut conn).unwrap();
+            let device = DeviceBuilder::default().build(&mut conn).unwrap();
             let note = create_note(&mut conn, None).unwrap();
 
             (device, note)
@@ -764,7 +740,7 @@ mod tests {
 
         let (device, folder, note) = {
             let mut conn = pool.get().unwrap();
-            let device = create_device(&mut conn).unwrap();
+            let device = DeviceBuilder::default().build(&mut conn).unwrap();
             let folder = create_folder(&mut conn, Some(device.user_id)).unwrap();
             let note = create_note(&mut conn, Some(folder.id)).unwrap();
 

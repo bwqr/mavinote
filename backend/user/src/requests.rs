@@ -8,6 +8,11 @@ pub struct AddDevice {
     pub pubkey: String,
 }
 
+#[derive(Deserialize)]
+pub struct DeleteDevice {
+    pub id: Option<i32>,
+}
+
 #[derive(Sanitize, Deserialize)]
 pub struct CloseAccount {
     pub code: String,

@@ -268,28 +268,16 @@ mod tests {
         crypto::Crypto,
         sanitize::Sanitized,
         schema::{devices, pending_users, users},
-        types::Pool,
         HttpError,
     };
+    use test_helpers::db::create_pool;
+
     use base64::prelude::{Engine, BASE64_STANDARD};
-    use diesel::{prelude::*, r2d2::ConnectionManager, PgConnection};
+    use diesel::prelude::*;
 
     use crate::requests;
 
     use super::sign_up;
-
-    fn create_pool() -> Pool {
-        let conn_info = "postgres://mavinote:toor@127.0.0.1/mavinote_test";
-        let manager = ConnectionManager::<PgConnection>::new(conn_info);
-
-        let pool = Pool::builder()
-            .build(manager)
-            .expect("Failed to create pool.");
-
-        pool.get().unwrap().begin_test_transaction().unwrap();
-
-        pool
-    }
 
     #[actix_web::test]
     async fn it_returns_invalid_pubkey_error_if_pubkey_is_not_base64_encoded_valid_pubkey_when_sign_up_is_called(

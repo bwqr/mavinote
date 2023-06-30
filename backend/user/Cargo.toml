@@ -6,9 +6,10 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-base = { path = "../base" }
+base.workspace = true
 derive = { path = "../derive" }
 notify = { path = "../notify" }
+test_helpers.workspace = true
 
 actix-web.workspace = true
 futures = "0.3.21"

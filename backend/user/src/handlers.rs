@@ -12,7 +12,7 @@ use base::{
 
 use crate::{
     models::{Device, DEVICE_COLUMNS},
-    requests::{AddDevice, CloseAccount},
+    requests::{AddDevice, CloseAccount, DeleteDevice},
 };
 
 pub async fn fetch_devices(
@@ -89,21 +89,30 @@ pub async fn add_device(
 pub async fn delete_device(
     pool: Data<Pool>,
     device: Device,
+    device_to_delete: web::Query<DeleteDevice>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
         let mut conn = pool.get().unwrap();
+        let device_to_delete = device_to_delete
+            .into_inner()
+            .id
+            .unwrap_or(device.id);
 
         let device_ids = devices::table
             .filter(devices::user_id.eq(device.user_id))
             .select(devices::id)
             .load::<i32>(&mut conn)?;
 
-        if device_ids.len() == 1 && device_ids[0] == device.id {
+        if device_ids.iter().find(|d| **d == device_to_delete).is_none() {
+            return Err(HttpError::not_found("unknown_device"));
+        }
+
+        if device_ids.len() == 1 {
             return Err(HttpError::conflict("cannot_delete_only_remaining_device"));
         }
 
         diesel::delete(devices::table)
-            .filter(devices::id.eq(device.id))
+            .filter(devices::id.eq(device_to_delete))
             .execute(&mut conn)?;
 
         Result::<(), HttpError>::Ok(())
@@ -171,4 +180,91 @@ pub async fn close_account(
     .await??;
 
     Ok(Json(HttpMessage::success()))
+}
+
+#[cfg(test)]
+mod tests {
+    use actix_web::web::Data;
+    use diesel::prelude::*;
+    use base::{HttpError, schema::devices};
+    use test_helpers::db::create_pool;
+
+    use crate::test::db::DeviceBuilder;
+
+    use super::delete_device;
+
+    #[actix_web::test]
+    async fn it_returns_unknown_device_error_if_user_does_not_have_a_device_with_given_id_when_delete_device_is_called(
+    ) {
+        let pool = create_pool();
+        let device = DeviceBuilder::default().email("email@email.com").build(&mut pool.get().unwrap()).unwrap();
+        let other_device = DeviceBuilder::default().email("email@email2.com").build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(other_device.id) };
+
+        let res = delete_device(Data::new(pool), device, actix_web::web::Query(request)).await;
+
+        assert_eq!(
+            HttpError::not_found("unknown_device"),
+            res.unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_returns_cannot_delete_only_remaining_device_error_if_user_has_only_one_device_remaining_when_delete_device_is_called(
+    ) {
+        let pool = create_pool();
+        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(device.id) };
+
+        let res = delete_device(Data::new(pool), device, actix_web::web::Query(request)).await;
+
+        assert_eq!(
+            HttpError::conflict("cannot_delete_only_remaining_device"),
+            res.unwrap_err()
+        );
+    }
+
+    #[actix_web::test]
+    async fn it_deletes_device_from_database_when_delete_device_is_called() {
+        let pool = create_pool();
+        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
+        let device_to_delete = DeviceBuilder::default().user_id(device.user_id).build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(device_to_delete.id) };
+
+        let res = delete_device(Data::new(pool.clone()), device.clone(), actix_web::web::Query(request)).await;
+
+        assert!(res.is_ok());
+
+        let device_to_delete_exists = diesel::select(diesel::dsl::exists(
+            devices::table.filter(devices::id.eq(&device_to_delete.id)),
+        ))
+        .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
+
+        let device_exists = diesel::select(diesel::dsl::exists(
+            devices::table.filter(devices::id.eq(&device.id)),
+        ))
+        .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
+
+        assert!(!device_to_delete_exists);
+        assert!(device_exists);
+    }
+
+    #[actix_web::test]
+    async fn it_deletes_current_device_from_database_if_no_device_id_is_given_when_delete_device_is_called() {
+        let pool = create_pool();
+        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
+        DeviceBuilder::default().user_id(device.user_id).email("test@email.com").build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: None };
+
+        let res = delete_device(Data::new(pool.clone()), device.clone(), actix_web::web::Query(request)).await;
+
+        assert!(res.is_ok());
+
+        let device_exists = diesel::select(diesel::dsl::exists(
+            devices::table.filter(devices::id.eq(&device.id)),
+        ))
+        .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
+
+        assert!(!device_exists);
+    }
 }

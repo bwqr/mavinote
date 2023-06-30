@@ -5,6 +5,7 @@ members = [
     "derive",
     "note",
     "notify",
+    "test_helpers",
     "user",
 ]
 
@@ -16,6 +17,9 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [workspace.dependencies]
+base = { path = "./base" }
+test_helpers = { path = "./test_helpers" }
+
 actix-web = "4.2.1"
 base64 = "0.21.0"
 chrono = { version = "0.4.19", features = ["serde"] }
@@ -25,7 +29,7 @@ log = "0.4.17"
 rand = "0.8.5"
 
 [dependencies]
-base = { path = "./base" }
+base.workspace = true
 auth = { path = "./auth" }
 note = { path = "./note" }
 notify = { path = "./notify" }
@@ -41,5 +45,5 @@ log.workspace = true
 diesel.workspace = true
 
 [profile.dev]
-opt-level = "z"
+opt-level = "s"
 debug = false

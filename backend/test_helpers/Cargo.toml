@@ -1,5 +1,5 @@
 [package]
-name = "note"
+name = "test_helpers"
 version = "0.1.0"
 edition = "2021"
 
@@ -7,14 +7,4 @@ edition = "2021"
 
 [dependencies]
 base.workspace = true
-derive = { path = "../derive" }
-user = { path = "../user" }
-test_helpers.workspace = true
-
-actix-web.workspace = true
-
-log.workspace = true
-
-chrono.workspace = true
 diesel.workspace = true
-serde.workspace = true
