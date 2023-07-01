@@ -4,6 +4,7 @@ import android.util.Log
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.reax.DeInt
+import com.bwqr.mavinote.reax.DeOption
 import com.bwqr.mavinote.reax.Deserialize
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.novi.serde.DeserializationError
@@ -62,7 +63,7 @@ sealed class MavinoteError : NoteError() {
     companion object {
         fun deserialize(deserializer: Deserializer): MavinoteError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> Unauthorized(DeInt.deserialize(deserializer))
+                0 -> Unauthorized(DeOption(DeInt).deserialize(deserializer))
                 1 -> Message(deserializer.deserialize_str())
                 2 -> NoConnection
                 3 -> UnexpectedResponse

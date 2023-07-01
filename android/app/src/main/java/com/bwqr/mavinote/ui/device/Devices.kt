@@ -95,12 +95,7 @@ fun DevicesView(
         }
 
         LazyColumn {
-            items(devices.mapIndexed { index, device ->
-                Pair(
-                    index,
-                    device
-                )
-            }) { (index, device) ->
+            items(devices) { device ->
                 ListItem(
                     headlineContent = { Text(device.pubkey) },
                     supportingContent = { Text("Device is added at ${device.createdAt}") },
@@ -114,9 +109,7 @@ fun DevicesView(
                     }
                 )
 
-                if (index != devices.size - 1) {
-                    Divider()
-                }
+                Divider()
             }
         }
     }

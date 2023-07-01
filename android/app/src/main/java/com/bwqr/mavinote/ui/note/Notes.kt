@@ -20,6 +20,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.Note
@@ -76,6 +78,7 @@ fun Notes(navController: NavController, folderId: Int) {
             coroutineScope.launch {
                 try {
                     NoteViewModel.deleteFolder(folderId)
+                    Bus.emit(BusEvent.ShowMessage("Folder is deleted"))
 
                     navController.navigateUp()
                 } catch (e: NoteError) {

@@ -24,7 +24,7 @@ struct FolderCreateView : View {
                     }
 
                     guard let accountId = accountId else {
-                        error = "Pleae select an account"
+                        error = "Please select an account"
                         return
                     }
 
@@ -77,56 +77,58 @@ private struct _FolderCreateView: View {
     @State var accountId: Int32?
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading) {
-                Text("Folder Name")
-                    .font(.callout)
-                    .padding(.bottom, 8)
-                    .padding(.top, 16)
-
-                TextField("Name", text: $name)
-                    .padding(10)
-                    .background(InputBackground)
-                    .cornerRadius(5)
-                    .padding(.bottom, 16)
-
-                if accounts.count > 1 {
-                    Text("Account this folder be created in")
+        VStack {
+            ScrollView {
+                VStack(alignment: .leading) {
+                    Text("Folder Name")
                         .font(.callout)
                         .padding(.bottom, 8)
+                        .padding(.top, 16)
 
-                    ForEach(accounts, id: \.self.id) { account in
-                        HStack {
-                            Image(systemName: accountId == account.id ? "circle.inset.filled" : "circle")
-                            Text(account.name).tag(account.id as Int32?)
+                    TextField("Name", text: $name)
+                        .padding(10)
+                        .background(InputBackground)
+                        .cornerRadius(5)
+                        .padding(.bottom, 16)
+
+                    if accounts.count > 1 {
+                        Text("Account this folder will be created in")
+                            .font(.callout)
+                            .padding(.bottom, 8)
+
+                        ForEach(accounts, id: \.self.id) { account in
+                            HStack {
+                                Image(systemName: accountId == account.id ? "circle.inset.filled" : "circle")
+                                Text(account.name).tag(account.id as Int32?)
+                            }
+                            .onTapGesture {
+                                accountId = account.id
+                            }
                         }
-                        .onTapGesture {
-                            accountId = account.id
-                        }
+                        .padding(.bottom, 12)
                     }
-                    .padding(.bottom, 12)
-                }
 
-                if let error = error {
-                    Text(error)
-                        .foregroundColor(.red)
+                    if let error = error {
+                        Text(error)
+                            .foregroundColor(.red)
+                    }
                 }
-
-                Button(action: {
-                    onCreate(accountId, name)
-                }) {
-                    Text("Create Folder")
-                        .frame(maxWidth: .infinity)
-                        .foregroundColor(.white)
-                }
-                .frame(maxWidth: .infinity)
-                .padding(12)
-                .background(.blue)
-                .cornerRadius(8)
-                .padding(.bottom, 12)
+                .padding([.leading, .trailing], 12)
             }
+
+            Button(action: {
+                onCreate(accountId, name)
+            }) {
+                Text("Create Folder")
+                    .frame(maxWidth: .infinity)
+                    .foregroundColor(.white)
+            }
+            .frame(maxWidth: .infinity)
+            .padding(12)
+            .background(.blue)
+            .cornerRadius(8)
+            .padding(12)
         }
-        .padding([.leading, .trailing], 18)
         .onAppear {
             accountId = accounts.first?.id
         }

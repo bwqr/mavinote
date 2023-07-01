@@ -1,5 +1,6 @@
 package com.bwqr.mavinote.ui.note
 
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -88,29 +89,38 @@ fun FolderCreateView(
         )
 
         Column(
-            modifier = Modifier.padding(40.dp, 0.dp, 0.dp, 0.dp).weight(1f)
+            modifier = Modifier.weight(1f)
         ) {
-            Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
+            Column {
                 Text(
                     text = stringResource(R.string.folder_name),
                     modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
                 )
-                TextField(value = folderName, onValueChange = { folderName = it })
+                TextField(
+                    modifier = Modifier.fillMaxWidth(1.0f),
+                    value = folderName,
+                    onValueChange = { folderName = it },
+                )
             }
 
-            Column(modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)) {
-                Text(
-                    text = stringResource(R.string.account_this_folder_will_be_created),
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
-                )
-                LazyColumn {
-                    items(accounts) { account ->
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            RadioButton(
-                                selected = accountId == account.id,
-                                onClick = { accountId = account.id }
-                            )
-                            Text(account.name)
+            if (accounts.size > 1) {
+                Column(modifier = Modifier.padding(0.dp, 32.dp, 0.dp, 0.dp)) {
+                    Text(
+                        text = stringResource(R.string.account_this_folder_will_be_created),
+                        modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
+                    )
+                    LazyColumn {
+                        items(accounts) { account ->
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier.clickable { accountId = account.id }
+                            ) {
+                                RadioButton(
+                                    selected = accountId == account.id,
+                                    onClick = { accountId = account.id }
+                                )
+                                Text(account.name)
+                            }
                         }
                     }
                 }

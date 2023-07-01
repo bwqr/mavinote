@@ -25,11 +25,11 @@ struct NotesView: View {
                     inProgress = true
 
                     tasks.append(Task {
-                        do {
-                            try await NoteViewModel.deleteFolder(folderId)
+                        switch await NoteViewModel.deleteFolder(folderId) {
+                        case .success(_):
+                            appState.emit(.ShowMessage("Folder is deleted"))
                             dismiss()
-                        } catch {
-                            print("failed to delete folder \(folderId)")
+                        case .failure(let e): appState.handleError(e)
                         }
 
                         inProgress = false
