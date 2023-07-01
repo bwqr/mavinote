@@ -34,7 +34,7 @@ struct FolderCreateView : View {
                     tasks.append(Task {
                         switch await NoteViewModel.createFolder(accountId, name) {
                         case .success(_): dismiss()
-                        case .failure(let e): e.handle(appState)
+                        case .failure(let e): appState.handleError(e)
                         }
 
                         inProgress = false
@@ -53,7 +53,7 @@ struct FolderCreateView : View {
                 for await result in stream {
                     switch result {
                     case .success(let a): accounts = a
-                    case .failure(let e): e.handle(appState)
+                    case .failure(let e): appState.handleError(e)
                     }
                 }
             })

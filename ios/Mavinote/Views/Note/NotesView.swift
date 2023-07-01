@@ -45,7 +45,7 @@ struct NotesView: View {
                 for await result in stream {
                     switch result {
                     case .success(let n): notes = n
-                    case .failure(let e): e.handle(appState)
+                    case .failure(let e): appState.handleError(e)
                     }
                 }
             })
@@ -53,7 +53,7 @@ struct NotesView: View {
             tasks.append(Task {
                 switch await NoteViewModel.folder(folderId) {
                 case .success(let f): folder = f
-                case .failure(let e): e.handle(appState)
+                case .failure(let e): appState.handleError(e)
                 }
             })
         }

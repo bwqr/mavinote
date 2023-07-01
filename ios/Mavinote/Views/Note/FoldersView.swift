@@ -27,8 +27,8 @@ struct FoldersView: View {
                                     folders: f.filter{ folder in folder.accountId == account.id }
                                 )
                             }
-                        case (.failure(let e), _): e.handle(appState)
-                        case (_, .failure(let e)): e.handle(appState)
+                        case (.failure(let e), _): appState.handleError(e)
+                        case (_, .failure(let e)): appState.handleError(e)
                         }
                     }
                 })

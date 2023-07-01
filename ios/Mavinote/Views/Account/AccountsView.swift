@@ -12,7 +12,7 @@ struct AccountsView : View {
                     for await result in AccountViewModel.accounts() {
                         switch result {
                         case .success(let a): accounts = a
-                        case .failure(let e): e.handle(appState)
+                        case .failure(let e): appState.handleError(e)
                         }
                     }
                 }

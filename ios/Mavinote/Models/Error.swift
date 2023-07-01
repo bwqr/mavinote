@@ -18,13 +18,6 @@ enum NoteError : Error, Deserialize {
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for NoteError")
         }
     }
-
-    func handle(_ appState: AppState) {
-        switch self {
-        case .Mavinote(.NoConnection): appState.emit(BusEvent.ShowMessage("No Internet Connection"))
-        default: debugPrint("Unhandled ReaxError \(self)")
-        }
-    }
 }
 
 enum MavinoteError {

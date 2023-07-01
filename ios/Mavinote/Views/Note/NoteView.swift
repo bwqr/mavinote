@@ -35,7 +35,7 @@ struct NoteView : View {
 
                         dismiss()
                     } catch let e as NoteError {
-                        e.handle(appState)
+                        appState.handleError(e)
                         deleting = false
                     } catch {
                         fatalError("\(error)")
@@ -58,7 +58,7 @@ struct NoteView : View {
                     } else {
                         print("WARNING: Note is not found")
                     }
-                case .failure(let e): e.handle(appState)
+                case .failure(let e): appState.handleError(e)
                 }
             })
         }.onDisappear {

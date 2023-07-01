@@ -131,11 +131,11 @@ private struct EnterAccountInfoView: View {
                             switch await AccountViewModel.addAccount(email) {
                             case .success(_):
                                 onAccountAdd(appState: appState)
-                            case .failure(let e): e.handle(appState)
+                            case .failure(let e): appState.handleError(e)
                             }
                         case .Storage(.AccountEmailUsed):
                             error = "An account with this email already exists. You can find it under Accounts page."
-                        default: e.handle(appState)
+                        default: appState.handleError(e)
                         }
                     }
 
@@ -198,7 +198,7 @@ private struct ShowPublicKeyView: View {
             Task {
                 switch await AccountViewModel.publicKey() {
                 case .success(let p): publicKey = p
-                case .failure(let e): e.handle(appState)
+                case .failure(let e): appState.handleError(e)
                 }
             }
 
@@ -208,10 +208,10 @@ private struct ShowPublicKeyView: View {
                     switch await AccountViewModel.addAccount(email) {
                     case .success(_):
                         onAccountAdd(appState: appState)
-                    case .failure(let e): e.handle(appState)
+                    case .failure(let e): appState.handleError(e)
                     }
-                    case .failure(let e):
-                        e.handle(appState)
+                case .failure(let e):
+                    appState.handleError(e)
                 }
             }
         }
@@ -297,7 +297,7 @@ private struct SendVerificationCodeView: View {
                             error = "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
                         case .Storage(.AccountEmailUsed):
                             error = "An account with this email already exists. You can find it under Accounts page."
-                        default: e.handle(appState)
+                        default: appState.handleError(e)
                         }
                     }
 

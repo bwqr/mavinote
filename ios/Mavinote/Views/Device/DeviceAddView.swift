@@ -73,7 +73,7 @@ struct DeviceAddView: View {
                             error = "Device with this public key is already added"
                         case .Mavinote(.Message("expired_pubkey")):
                             error = "5 minutes waiting is timed out. Please try the steps on new device again."
-                        default: e.handle(appState)
+                        default: appState.handleError(e)
                         }
                     }
 
