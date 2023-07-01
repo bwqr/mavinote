@@ -93,7 +93,7 @@ private struct _DevicesView: View {
 
                     Task {
                         let device = deviceToRemove!
-                        switch await AccountViewModel.removeDevice(device.id) {
+                        switch await AccountViewModel.deleteDevice(account.id, device.id) {
                         case .success(_):
                             appState.emit(.ShowMessage("Device is removed"))
                             onRemoveDevice(device)

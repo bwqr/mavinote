@@ -17,8 +17,8 @@ class AccountViewModel {
         return await Runtime.runOnceUnit { reax_account_add_device($0, accountId, fingerprint) }
     }
 
-    static func removeDevice(_ deviceId: Int32) async -> AccountResult<()> {
-        return await Runtime.runOnceUnit { reax_account_remove_device($0, deviceId) }
+    static func deleteDevice(_ accountId: Int32, _ deviceId: Int32) async -> AccountResult<()> {
+        return await Runtime.runOnceUnit { reax_account_delete_device($0, accountId, deviceId) }
     }
 
     static func requestVerification(_ email: String) async -> AccountResult<String> {

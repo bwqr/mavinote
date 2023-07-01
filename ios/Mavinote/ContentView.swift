@@ -47,9 +47,8 @@ struct ContentView: View {
                 })
 
                 tasks.append(Task {
-                    switch await NoteViewModel.sync() {
-                    case .failure(let e): e.handle(appState)
-                    default: break
+                    if case .failure(let e) = await NoteViewModel.sync() {
+                        appState.handleError(e)
                     }
                 })
             }

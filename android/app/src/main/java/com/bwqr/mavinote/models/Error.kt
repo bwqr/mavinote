@@ -2,10 +2,14 @@ package com.bwqr.mavinote.models
 
 import android.util.Log
 import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.reax.DeInt
 import com.bwqr.mavinote.reax.Deserialize
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
+import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.launch
 
 
 open class NoteError : Error() {
@@ -23,8 +27,23 @@ open class NoteError : Error() {
     fun handle() {
         when (this) {
             is MavinoteError.NoConnection -> Bus.message("No Internet Connection")
+            is MavinoteError.DeviceDeleted -> {
+                val accountId = this.accountId
+                MainScope().launch {
+                    try {
+                        AccountViewModel.removeAccount(accountId)
+                    } catch (e: NoteError) {
+                        if (e is MavinoteError.DeviceDeleted) {
+                            Log.e("NoteError", "Nested DeviceDeleted error is encountered")
+                            Bus.emit(BusEvent.ShowMessage("Nested DeviceDeleted error is encountered"))
+                        } else {
+                            e.handle()
+                        }
+                    }
+                }
+            }
             else -> {
-                Log.e("ReaxError", "Unhandled error, $this")
+                Log.e("NoteError", "Unhandled error, $this")
                 Bus.message(this.toString())
             }
         }
@@ -36,6 +55,8 @@ sealed class MavinoteError : NoteError() {
     class Message(override val message: String) : MavinoteError()
     object NoConnection : MavinoteError()
     object UnexpectedResponse : MavinoteError()
+    class DeviceDeleted(val accountId: Int) : MavinoteError()
+    class Internal(override val message: String) : MavinoteError()
     object Unknown : MavinoteError()
 
     companion object {
@@ -45,7 +66,9 @@ sealed class MavinoteError : NoteError() {
                 1 -> Message(deserializer.deserialize_str())
                 2 -> NoConnection
                 3 -> UnexpectedResponse
-                4 -> Unknown
+                4 -> DeviceDeleted(deserializer.deserialize_i32())
+                5 -> Internal(deserializer.deserialize_str())
+                6 -> Unknown
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }
         }

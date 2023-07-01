@@ -69,7 +69,14 @@ impl FromRequest for Device {
                     .find(device_id)
                     .select(DEVICE_COLUMNS)
                     .first::<Device>(&mut conn)
-                    .map_err(|e| e.into())
+                    .map_err(|e| match e {
+                        diesel::result::Error::NotFound => HttpError {
+                            code: StatusCode::UNAUTHORIZED,
+                            error: "device_deleted",
+                            message: None,
+                        },
+                        e => e.into(),
+                    })
             })
             .await?
         })

@@ -55,6 +55,21 @@ pub(crate) async fn mavinote_client(conn: &mut PoolConnection<Sqlite>, account_i
         .map_err(|e| e.into())
 }
 
+async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
+    let sender = ACCOUNTS.get().unwrap();
+    // If nobody loaded the accounts, then do not load the accounts
+    let load = match *sender.borrow() {
+        State::Initial => false,
+        _ => true,
+    };
+
+    if load {
+        sender.send_replace(State::Loading);
+
+        sender.send_replace(db::fetch_accounts(conn).await.map_err(|e| e.into()).into());
+    }
+}
+
 pub async fn public_key() -> Result<String, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
@@ -102,7 +117,7 @@ pub async fn add_account(email: String) -> Result<(), Error> {
 
     db::create_account(&mut conn, email.clone(), AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token }))).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    update_send_accounts(&mut conn).await;
 
     Ok(())
 }
@@ -166,7 +181,7 @@ pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
 
     db::create_account(&mut conn, email.clone(), AccountKind::Mavinote, Some(Json(Mavinote { email, token: token.token }))).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    update_send_accounts(&mut conn).await;
 
     Ok(())
 }
@@ -187,13 +202,19 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
         return Err(Error::Storage(StorageError::NotMavinoteAccount));
     }
 
-    mavinote_client(&mut conn, account_id).await?.unwrap()
+    match mavinote_client(&mut conn, account_id).await?.unwrap()
         .delete_device(None)
-        .await?;
+        .await {
+        Ok(_) | Err(crate::accounts::mavinote::Error::DeviceDeleted(_)) => {
+            // Since DeviceDeleted means our device for this account is already removed,
+            // receiving a DeviceDeleted while trying to remove the account is not important
+        },
+        Err(e) => return Err(e.into())
+    }
 
     db::delete_account(&mut conn, account_id).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    update_send_accounts(&mut conn).await;
     FOLDERS.get().unwrap().send_replace(State::Initial);
 
     Ok(())
@@ -216,7 +237,7 @@ pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
 
     db::delete_account(&mut conn, account_id).await?;
 
-    ACCOUNTS.get().unwrap().send_replace(State::Initial);
+    update_send_accounts(&mut conn).await;
     FOLDERS.get().unwrap().send_replace(State::Initial);
 
     Ok(())

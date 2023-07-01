@@ -32,6 +32,8 @@ enum MavinoteError {
     case Message(String)
     case NoConnection
     case UnexpectedResponse
+    case DeviceDeleted(Int32)
+    case Internal(String)
     case Unknown
 
     static func deserialize(_ deserializer: Deserializer) throws -> MavinoteError {
@@ -42,7 +44,9 @@ enum MavinoteError {
         case 1: return .Message(try String.deserialize(deserializer))
         case 2: return .NoConnection
         case 3: return .UnexpectedResponse
-        case 4: return .Unknown
+        case 4: return .DeviceDeleted(try Int32.deserialize(deserializer))
+        case 5: return .Internal(try String.deserialize(deserializer))
+        case 6: return .Unknown
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
         }
     }

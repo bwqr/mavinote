@@ -24,6 +24,8 @@ pub enum Error {
     Message(String),
     NoConnection,
     UnexpectedResponse,
+    DeviceDeleted(i32),
+    Internal(&'static str),
     Unknown,
 }
 
@@ -81,11 +83,19 @@ impl MavinoteClient {
             return Ok(response);
         }
 
+        let error = response.json::<HttpError>().await?.error;
+
         if status == StatusCode::UNAUTHORIZED {
+            if error == "device_deleted" {
+                let account_id = self.account_id.ok_or(Error::Internal("device_deleted response is received while account_id of the client is None"))?;
+
+                return Err(Error::DeviceDeleted(account_id));
+            }
+
             return Err(Error::Unauthorized(self.account_id));
         }
 
-        Err(Error::Message(response.json::<HttpError>().await?.error))
+        Err(Error::Message(error))
     }
 }
 
