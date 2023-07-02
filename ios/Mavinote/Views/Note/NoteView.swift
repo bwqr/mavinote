@@ -28,18 +28,17 @@ struct NoteView : View {
                 deleting = true
 
                 tasks.append(Task {
-                    do {
-                        if let noteId = noteId {
-                            try await NoteViewModel.deleteNote(noteId)
+                    if let noteId = noteId {
+                        switch await NoteViewModel.deleteNote(noteId) {
+                        case .success(_): dismiss()
+                        case .failure(let e):
+                            appState.handleError(e)
                         }
-
+                    } else {
                         dismiss()
-                    } catch let e as NoteError {
-                        appState.handleError(e)
-                        deleting = false
-                    } catch {
-                        fatalError("\(error)")
                     }
+
+                    deleting = false
                 })
             }
         )
@@ -69,14 +68,14 @@ struct NoteView : View {
             }
 
             Task {
-                do {
-                    if let noteId = noteId, modified {
-                        try await NoteViewModel.updateNote(noteId, text)
-                    } else if noteId == nil && !text.isEmpty {
-                        let _ = try await NoteViewModel.createNote(folderId, text)
+                if let noteId = noteId, modified {
+                    if case .failure(let e) = await NoteViewModel.updateNote(noteId, text) {
+                        appState.handleError(e)
                     }
-                } catch {
-                    print("failed to update or create note", error)
+                } else if noteId == nil && !text.isEmpty {
+                    if case .failure(let e) = await NoteViewModel.createNote(folderId, text) {
+                        appState.handleError(e)
+                    }
                 }
             }
         }

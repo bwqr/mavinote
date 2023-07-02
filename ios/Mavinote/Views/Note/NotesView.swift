@@ -13,29 +13,32 @@ struct NotesView: View {
     @Environment(\.dismiss) var dismiss: DismissAction
 
     var body: some View {
-        SafeContainer(value: $folder) { folder in
-            _NotesView(
-                folder: folder,
-                notes: $notes,
-                onDelete: {
-                    if inProgress {
-                        return
-                    }
-
-                    inProgress = true
-
-                    tasks.append(Task {
-                        switch await NoteViewModel.deleteFolder(folderId) {
-                        case .success(_):
-                            appState.emit(.ShowMessage("Folder is deleted"))
-                            dismiss()
-                        case .failure(let e): appState.handleError(e)
+        ZStack {
+            if let folder = folder {
+                _NotesView(
+                    folder: folder,
+                    notes: notes,
+                    onDelete: {
+                        if inProgress {
+                            return
                         }
 
-                        inProgress = false
-                    })
-                }
-            )
+                        inProgress = true
+
+                        tasks.append(Task {
+                            switch await NoteViewModel.deleteFolder(folderId) {
+                            case .success(_):
+                                appState.emit(.ShowMessage("Folder is deleted"))
+                                dismiss()
+                            case .failure(let e): appState.handleError(e)
+                            }
+
+                            inProgress = false
+                        })
+                    }
+                )
+
+            }
         }
         .navigationTitle(folderName)
         .onAppear {
@@ -64,8 +67,8 @@ struct NotesView: View {
 }
 
 private struct _NotesView : View {
-    @Binding var folder: Folder
-    @Binding var notes: [Note]
+    let folder: Folder
+    let notes: [Note]
 
     let onDelete: () -> ()
 
@@ -81,8 +84,9 @@ private struct _NotesView : View {
                     NavigationLink(destination: NoteView(folderId: folder.id, noteName: note.name, noteId: note.id)) {
                         Text(note.name)
                     }
+                    .padding(12)
                 }
-                    }
+            }
 
             HStack {
                 Spacer()
@@ -121,8 +125,8 @@ struct NotesView_Preview : PreviewProvider {
 
         NavigationView {
             _NotesView(
-                folder: .constant(folder),
-                notes: .constant(notes),
+                folder: folder,
+                notes: notes,
                 onDelete: { }
             )
             .navigationTitle(folder.name)

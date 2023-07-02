@@ -47,18 +47,28 @@ private struct _FoldersView : View {
         NavigationView {
             VStack {
                 List(accounts) { accountWithFolder in
-                    Section(header: HStack {
-                        Text(accountWithFolder.account.name)
-                        Spacer()
-                        Text("\(accountWithFolder.folders.count)")
-                            .font(.footnote)
-                    }) {
-                        ForEach(accountWithFolder.folders) { folder in
-                            NavigationLink(destination: NotesView(folderName: folder.name, folderId: folder.id)) {
-                                Text(folder.name)
+                    Section(
+                        content: {
+                            ForEach(accountWithFolder.folders) { folder in
+                                NavigationLink(destination: NotesView(folderName: folder.name, folderId: folder.id)) {
+                                    Text(folder.name)
+                                }
+                            }
+                        },
+                        header: {
+                            HStack {
+                                Text(accountWithFolder.account.name)
+                                Spacer()
+                                Text("\(accountWithFolder.folders.count)")
+                                    .font(.footnote)
+                            }
+                        },
+                        footer: {
+                            if accountWithFolder.folders.count == 0 {
+                                Text("There is no folder in this account")
                             }
                         }
-                    }
+                    )
                     .padding(12)
                 }
 
@@ -99,14 +109,16 @@ struct FoldersView_Preview: PreviewProvider {
                     Folder(id: 5, accountId: 1, remoteId: nil, name: "Kernel", state: .Clean),
                ]
             ),
+            AccountWithFolders(account: Account(id: 3, name: "Remote", kind: .Mavinote), folders: []),
             AccountWithFolders(
                 account: Account(id: 2, name: "Mavinote", kind: .Mavinote),
                 folders: [
                     Folder(id: 3, accountId: 2, remoteId: nil, name: "Race Cars", state: .Clean),
                ]
-            )
+            ),
         ]
 
         _FoldersView(accounts: .constant(accounts))
+            .environmentObject(AppState())
     }
 }
