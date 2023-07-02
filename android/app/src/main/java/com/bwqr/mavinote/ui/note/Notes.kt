@@ -13,6 +13,9 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
 import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
@@ -20,6 +23,7 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -94,8 +98,8 @@ fun Notes(navController: NavController, folderId: Int) {
             coroutineScope.launch {
                 try {
                     NoteViewModel.deleteFolder(folderId)
-                    Bus.emit(BusEvent.ShowMessage("Folder is deleted"))
 
+                    Bus.emit(BusEvent.ShowMessage("Folder is deleted"))
                     navController.navigateUp()
                 } catch (e: NoteError) {
                     e.handle()
@@ -115,6 +119,7 @@ fun NotesView(
     onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showDeleteWarn by remember { mutableStateOf(false) }
 
     Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(16.dp)) {
         Column {
@@ -127,7 +132,7 @@ fun NotesView(
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                     DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                         DropdownMenuItem(
-                            onClick = onDelete,
+                            onClick = { showDeleteWarn = true },
                             text = { Text(text = stringResource(R.string.delete)) }
                         )
                     }
@@ -172,7 +177,25 @@ fun NotesView(
                 }
             }
         }
+    }
 
+    if (showDeleteWarn) {
+        AlertDialog(
+            onDismissRequest = { showDeleteWarn = false },
+            text = { Text("Deleting a folder will also delete its notes. Are you sure about deleting the folder?") },
+            confirmButton = {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        showDeleteWarn = false
+                        onDelete()
+                    },
+                ) {
+                    Text("Delete Folder")
+                }
+            }
+        )
     }
 }
 

@@ -9,10 +9,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
@@ -31,6 +35,8 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.navigation.NavController
+import com.bwqr.mavinote.Bus
+import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
@@ -123,6 +129,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                 try {
                     NoteViewModel.deleteNote(deletingNoteId)
 
+                    Bus.emit(BusEvent.ShowMessage("Note is deleted"))
                     navController.navigateUp()
                 } catch (e: NoteError) {
                     e.handle()
@@ -140,6 +147,7 @@ fun NoteView(
     onDelete: () -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var showDeleteWarn by remember { mutableStateOf(false) }
 
     Column(
         verticalArrangement = Arrangement.spacedBy(24.dp),
@@ -155,7 +163,7 @@ fun NoteView(
                     Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
                     DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
                         DropdownMenuItem(
-                            onClick = onDelete,
+                            onClick = { showDeleteWarn = true },
                             text = { Text(text = "Delete") }
                         )
                     }
@@ -173,6 +181,25 @@ fun NoteView(
             modifier = Modifier
                 .fillMaxHeight()
                 .fillMaxWidth()
+        )
+    }
+
+    if (showDeleteWarn) {
+        AlertDialog(
+            onDismissRequest = { showDeleteWarn = false },
+            text = { Text("Are you sure about deleting the note?") },
+            confirmButton = {
+                Button(
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error),
+                    onClick = {
+                        showDeleteWarn = false
+                        onDelete()
+                    },
+                ) {
+                    Text("Delete Note")
+                }
+            }
         )
     }
 }
