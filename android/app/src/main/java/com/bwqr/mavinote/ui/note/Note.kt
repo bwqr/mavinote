@@ -1,11 +1,28 @@
 package com.bwqr.mavinote.ui.note
 
 import android.util.Log
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalLifecycleOwner
@@ -72,6 +89,7 @@ fun Note(navController: NavController, folderId: Int?, noteId: Int?) {
                         e.handle()
                     }
                 }
+
                 else -> {}
             }
         }
@@ -123,20 +141,28 @@ fun NoteView(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Title(title ?: "New Note", modifier = Modifier.weight(1f))
-            IconButton(onClick = { expanded = true }) {
-                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-                DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(
-                        onClick = onDelete,
-                        text = { Text(text = "Delete") }
-                    )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = Modifier.padding(16.dp),
+    ) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Title(title ?: "New Note", modifier = Modifier.weight(1f))
+                IconButton(onClick = { expanded = true }) {
+                    Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+                    DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(
+                            onClick = onDelete,
+                            text = { Text(text = "Delete") }
+                        )
+                    }
                 }
             }
+            Text(text = "Note")
         }
-        Text(text = "Note", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
 
         TextField(
             value = text,

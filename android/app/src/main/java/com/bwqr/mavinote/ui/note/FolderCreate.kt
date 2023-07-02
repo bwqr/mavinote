@@ -1,11 +1,25 @@
 package com.bwqr.mavinote.ui.note
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
@@ -30,7 +44,7 @@ fun FolderCreate(navController: NavController) {
     var inProgress by remember { mutableStateOf(false) }
 
     var accounts by remember { mutableStateOf<List<Account>?>(null) }
-    var error by remember { mutableStateOf<String?>(null) }
+    var validationErrors by remember { mutableStateOf<Set<ValidationErrors>>(setOf()) }
 
     LaunchedEffect(key1 = 0) {
         AccountViewModel
@@ -45,22 +59,31 @@ fun FolderCreate(navController: NavController) {
     }
 
     accounts?.let {
-        FolderCreateView(it, error) { accountId, folderName ->
+        FolderCreateView(it, validationErrors) { accountId, folderName ->
             if (inProgress) {
                 return@FolderCreateView
             }
 
-            if (accountId == null || folderName.isBlank()) {
-                error = "Please specify a folder name and select an account"
+            val validations = mutableSetOf<ValidationErrors>()
+
+            if (folderName.isBlank()) {
+                validations.add(ValidationErrors.InvalidFolderName)
+            }
+
+            if (accountId == null) {
+                validations.add(ValidationErrors.InvalidAccount)
+            }
+
+            validationErrors = validations
+            if (validationErrors.isNotEmpty()) {
                 return@FolderCreateView
             }
 
-            error = ""
             inProgress = true
 
             coroutineScope.launch {
                 try {
-                    NoteViewModel.createFolder(accountId, folderName)
+                    NoteViewModel.createFolder(accountId!!, folderName)
 
                     navController.navigateUp()
                 } catch (e: NoteError) {
@@ -73,65 +96,63 @@ fun FolderCreate(navController: NavController) {
     }
 }
 
+private enum class ValidationErrors {
+    InvalidFolderName,
+    InvalidAccount
+}
+
 @Composable
-fun FolderCreateView(
+private fun FolderCreateView(
     accounts: List<Account>,
-    error: String?,
+    validationErrors: Set<ValidationErrors>,
     onCreateFolder: (accountId: Int?, folderName: String) -> Unit
 ) {
+    val scrollState = rememberScrollState()
+
     var folderName by remember { mutableStateOf("") }
     var accountId by remember { mutableStateOf(accounts.firstOrNull()?.id) }
 
-    Column(modifier = Modifier.padding(12.dp)) {
-        Title(
-            stringResource(R.string.create_folder),
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
-        )
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(16.dp)) {
+        Title(stringResource(R.string.create_folder))
 
         Column(
-            modifier = Modifier.weight(1f)
+            verticalArrangement = Arrangement.spacedBy(24.dp),
+            modifier = Modifier.weight(1f).verticalScroll(scrollState),
         ) {
-            Column {
-                Text(
-                    text = stringResource(R.string.folder_name),
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
-                )
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.folder_name))
                 TextField(
                     modifier = Modifier.fillMaxWidth(1.0f),
                     value = folderName,
                     onValueChange = { folderName = it },
                 )
-            }
-
-            if (accounts.size > 1) {
-                Column(modifier = Modifier.padding(0.dp, 32.dp, 0.dp, 0.dp)) {
-                    Text(
-                        text = stringResource(R.string.account_this_folder_will_be_created),
-                        modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
-                    )
-                    LazyColumn {
-                        items(accounts) { account ->
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.clickable { accountId = account.id }
-                            ) {
-                                RadioButton(
-                                    selected = accountId == account.id,
-                                    onClick = { accountId = account.id }
-                                )
-                                Text(account.name)
-                            }
-                        }
-                    }
+                if (validationErrors.contains(ValidationErrors.InvalidFolderName)) {
+                    Text(text = "Please specify a folder name", color = MaterialTheme.colorScheme.error)
                 }
             }
 
-            if (error != null) {
-                Text(
-                    text = error,
-                    color = MaterialTheme.colorScheme.error,
-                    modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 32.dp)
-                )
+            if (accounts.size > 1) {
+                Column {
+                    Text(stringResource(R.string.account_this_folder_will_be_created))
+
+                    for (account in accounts) {
+                        Row(
+                            horizontalArrangement = Arrangement.Start,
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { accountId = account.id }
+                        ) {
+                            RadioButton(
+                                selected = accountId == account.id,
+                                onClick = { accountId = account.id }
+                            )
+                            Text(account.name)
+                        }
+                    }
+
+                    if (validationErrors.contains(ValidationErrors.InvalidAccount)) {
+                        Text(text = "Please specify an account", color = MaterialTheme.colorScheme.error)
+                    }
+                }
             }
         }
 
@@ -152,7 +173,7 @@ fun FolderCreatePreview() {
         Account(2, "Remote", AccountKind.Mavinote)
     )
 
-    val error = null
+    val validationErrors = setOf(ValidationErrors.InvalidFolderName, ValidationErrors.InvalidAccount)
 
-    FolderCreateView(accounts, error) { _, _ -> }
+    FolderCreateView(accounts, validationErrors) { _, _ -> }
 }

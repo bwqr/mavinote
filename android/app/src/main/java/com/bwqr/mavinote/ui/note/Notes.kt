@@ -2,6 +2,7 @@ package com.bwqr.mavinote.ui.note
 
 import android.util.Log
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,11 +11,26 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.Card
+import androidx.compose.material3.Divider
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExtendedFloatingActionButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -100,40 +116,58 @@ fun NotesView(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(modifier = Modifier.padding(12.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
-            Title(folder.name, modifier = Modifier.weight(1f))
-            IconButton(onClick = { expanded = true }) {
-                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-                DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(
-                        onClick = onDelete,
-                        text = { Text(text = stringResource(R.string.delete)) }
-                    )
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp), modifier = Modifier.padding(16.dp)) {
+        Column {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                modifier = Modifier.fillMaxWidth()
+            ) {
+                Title(folder.name, modifier = Modifier.weight(1f))
+                IconButton(onClick = { expanded = true }) {
+                    Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
+                    DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
+                        DropdownMenuItem(
+                            onClick = onDelete,
+                            text = { Text(text = stringResource(R.string.delete)) }
+                        )
+                    }
                 }
             }
-        }
 
-        Text(text = "Notes", modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp))
+            Text(text = "Notes", color = Color.Gray)
+        }
 
         if (notes.isEmpty()) {
             Text(text = "There is no note in this folder")
         } else {
             Card(
                 modifier = Modifier
-                    .padding(24.dp, 0.dp, 0.dp, 0.dp)
                     .fillMaxWidth()
-                    .padding(0.dp, 0.dp, 0.dp, 18.dp)
             ) {
                 LazyColumn {
-                    items(notes) { note ->
-                        Text(
-                            note.name,
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable { navController.navigate("note?noteId=${note.id}") }
-                                .padding(16.dp, 12.dp)
-                        )
+                    items(notes.mapIndexed { index, note -> Pair(index, note) }) { (index, note) ->
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.clickable { navController.navigate("note?noteId=${note.id}") }
+                        ) {
+                            Text(
+                                note.name,
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .padding(24.dp, 12.dp)
+                            )
+
+                            Icon(
+                                Icons.Filled.KeyboardArrowRight,
+                                contentDescription = null,
+                                tint = Color.Gray,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+
+                        if (index < notes.size - 1) {
+                            Divider()
+                        }
                     }
                 }
             }
@@ -144,9 +178,11 @@ fun NotesView(
 
 @Composable
 fun NotesFab(navController: NavController, folderId: Int) {
-    FloatingActionButton(onClick = { navController.navigate("note?folderId=$folderId") }) {
-        Icon(Icons.Filled.Add, contentDescription = null)
-    }
+    ExtendedFloatingActionButton(
+        text = { Text("Note") },
+        icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+        onClick = { navController.navigate("note?folderId=$folderId") }
+    )
 }
 
 @Preview(showBackground = true)

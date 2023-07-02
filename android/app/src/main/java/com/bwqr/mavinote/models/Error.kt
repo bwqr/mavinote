@@ -9,7 +9,7 @@ import com.bwqr.mavinote.reax.Deserialize
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.novi.serde.DeserializationError
 import com.novi.serde.Deserializer
-import kotlinx.coroutines.MainScope
+import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 
@@ -30,7 +30,7 @@ open class NoteError : Error() {
             is MavinoteError.NoConnection -> Bus.message("No Internet Connection")
             is MavinoteError.DeviceDeleted -> {
                 val accountId = this.accountId
-                MainScope().launch {
+                GlobalScope.launch {
                     try {
                         AccountViewModel.removeAccount(accountId)
                     } catch (e: NoteError) {
