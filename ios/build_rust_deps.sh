@@ -25,10 +25,10 @@ for arch in $ARCHS; do
     arm64)
       if [ $IS_SIMULATOR -eq 0 ]; then
         # Hardware iOS targets
-        cargo build $RELFLAG --target aarch64-apple-ios --package ios
+        env -i PATH=$PATH CARGO_TARGET_DIR=$CARGO_TARGET_DIR cargo build $RELFLAG --target aarch64-apple-ios --package ios
       else
         # M1 iOS simulator -- currently in Nightly only and requires to build `libstd`
-        cargo build $RELFLAG --target aarch64-apple-ios-sim --package ios
+        env -i PATH=$PATH CARGO_TARGET_DIR=$CARGO_TARGET_DIR cargo build $RELFLAG --target aarch64-apple-ios-sim --package ios
       fi
   esac
 done

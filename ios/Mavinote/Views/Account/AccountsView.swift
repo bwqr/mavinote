@@ -31,6 +31,7 @@ private struct _AccountsView : View {
                 ) {
                     Text(account.name)
                 }
+                .padding(12)
             }
 
             Spacer()

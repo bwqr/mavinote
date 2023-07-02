@@ -11,7 +11,7 @@ struct AccountView : View {
 
     var body: some View {
         ZStack {
-            if let account = account, let mavinote = mavinote {
+            if let account = account {
                 _AccountView(
                     account: account,
                     mavinote: mavinote
@@ -73,32 +73,28 @@ private struct _AccountView : View {
                             .foregroundColor(.gray)
                     }
                     .padding(.vertical)
-                }
-            }
-            .listStyle(.plain)
 
-            if mavinote != nil {
-                List {
                     NavigationLink(destination: DevicesView(accountId: account.id)) {
                         Text("Devices")
                             .padding(.vertical)
                     }
-                    
+
                     Button("Remove Account From Device") {
                         showRemoveAccount = true
                     }
                     .disabled(inProgress)
                     .foregroundColor(inProgress ? .gray : .red)
                     .padding(.vertical)
-                    
+
                     NavigationLink(destination: AccountCloseView(accountId: account.id)) {
                         Text("Close Account")
                             .padding(.vertical)
                     }
                     .foregroundColor(.red)
+
                 }
-                .listStyle(.plain)
             }
+            .listStyle(.plain)
         }
         .alert(
             "Are you sure about removing the account?",

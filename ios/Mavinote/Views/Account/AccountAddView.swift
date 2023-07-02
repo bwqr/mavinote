@@ -153,6 +153,7 @@ private struct EnterAccountInfoView: View {
             .cornerRadius(8)
             .padding(.all, 12)
         }
+        .navigationTitle("Add an Existing Account")
         .alert(item: $error) { error in
             Alert(
                 title: Text(""),
@@ -174,7 +175,7 @@ private struct ShowPublicKeyView: View {
     var body: some View {
         ScrollView {
             VStack(alignment: .leading, spacing: 32.0) {
-                Text("A verification request is sent to server for $email email address.")
+                Text("A verification request is sent to server for \(email) email address.")
 
                 Text(
                     "In order to complete the progress, on the other device that has already account added, " +
@@ -194,6 +195,7 @@ private struct ShowPublicKeyView: View {
             }
             .padding(.all, 12.0)
         }
+        .navigationTitle("Enter Public Key")
         .onAppear {
             Task {
                 switch await AccountViewModel.publicKey() {
@@ -315,6 +317,7 @@ private struct SendVerificationCodeView: View {
             .cornerRadius(8)
             .padding(.all, 12)
         }
+        .navigationTitle("Create a New Account")
         .alert(item: $error) { error in
             Alert(
                 title: Text(""),
@@ -416,6 +419,7 @@ private struct VerifyCodeView: View {
             .cornerRadius(8)
             .padding(.all, 12)
         }
+        .navigationTitle("Verify Account")
         .alert(item: $error) { error in
             Alert(
                 title: Text(""),

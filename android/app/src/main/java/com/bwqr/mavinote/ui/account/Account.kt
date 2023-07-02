@@ -1,12 +1,32 @@
 package com.bwqr.mavinote.ui.account
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Divider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItem
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
@@ -14,7 +34,11 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.R
-import com.bwqr.mavinote.models.*
+import com.bwqr.mavinote.models.Account
+import com.bwqr.mavinote.models.AccountKind
+import com.bwqr.mavinote.models.Mavinote
+import com.bwqr.mavinote.models.MavinoteError
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.AccountViewModel
@@ -44,6 +68,7 @@ fun Account(navController: NavController, accountId: Int) {
                     e is MavinoteError.Message && e.message == "cannot_delete_only_remaining_device" -> {
                         Bus.message("This device is the only remaining device for this account. If you want to close the account, choose Close Account option.")
                     }
+
                     else -> e.handle()
                 }
             } finally {
@@ -86,15 +111,22 @@ fun AccountView(
     mavinote: Mavinote?,
     onRemoveAccount: () -> Unit,
 ) {
-    Column(modifier = Modifier.padding(12.dp)) {
-        Row {
-            Title(account.name, modifier = Modifier.weight(1f))
-        }
+    val scrollState = rememberScrollState()
+    var showRemoveWarn by remember { mutableStateOf(false) }
 
-        Text(
-            text = stringResource(R.string.account),
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 12.dp)
-        )
+    Column(
+        verticalArrangement = Arrangement.spacedBy(24.dp),
+        modifier = Modifier
+            .padding(16.dp)
+            .verticalScroll(scrollState)
+    ) {
+        Column {
+            Row {
+                Title(account.name, modifier = Modifier.weight(1f))
+            }
+
+            Text(text = stringResource(R.string.account), color = Color.Gray)
+        }
 
         Column {
             ListItem(
@@ -109,65 +141,57 @@ fun AccountView(
                 trailingContent = { Text(account.kind.toString(), style = Typography.bodyMedium) },
             )
 
-        }
 
-        mavinote?.let {
-            Divider()
+            mavinote?.let {
+                Divider()
 
-            MavinoteAccountView(navController, account.id, it, onRemoveAccount)
-        }
-    }
-}
-
-@Composable
-fun MavinoteAccountView(
-    navController: NavController,
-    accountId: Int,
-    mavinote: Mavinote,
-    onRemoveAccount: () -> Unit,
-) {
-    var showRemoveWarn by remember { mutableStateOf(false) }
-
-    Column {
-        ListItem(
-            headlineContent = { Text("Email") },
-            trailingContent = { Text(mavinote.email, style = Typography.bodyMedium) },
-            modifier = Modifier.padding(0.dp, 0.dp, 0.dp, 20.dp),
-        )
-
-        ListItem(
-            headlineContent = { Text("Devices") },
-            trailingContent = {
-                Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
-            },
-            modifier = Modifier.clickable { navController.navigate("devices?accountId=$accountId") }
-        )
-
-        Divider()
-
-        ListItem(
-            headlineContent = {
-                Text(
-                    "Remove Account From Device",
-                    color = MaterialTheme.colorScheme.error
+                ListItem(
+                    headlineContent = { Text("Email") },
+                    trailingContent = { Text(mavinote.email, style = Typography.bodyMedium) },
                 )
-            },
-            modifier = Modifier.clickable { showRemoveWarn = true }
-        )
 
-        Divider()
+                Divider()
 
-        ListItem(
-            headlineContent = { Text("Close Account", color = MaterialTheme.colorScheme.error) },
-            trailingContent = {
-                Icon(
-                    Icons.Filled.KeyboardArrowRight,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.error
+                ListItem(
+                    headlineContent = { Text("Devices") },
+                    trailingContent = {
+                        Icon(Icons.Filled.KeyboardArrowRight, contentDescription = null)
+                    },
+                    modifier = Modifier.clickable { navController.navigate("devices?accountId=${account.id}") }
                 )
-            },
-            modifier = Modifier.clickable { navController.navigate("account-close?accountId=$accountId") }
-        )
+
+                Divider()
+
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            "Remove Account From Device",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    modifier = Modifier.clickable { showRemoveWarn = true }
+                )
+
+                Divider()
+
+                ListItem(
+                    headlineContent = {
+                        Text(
+                            "Close Account",
+                            color = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    trailingContent = {
+                        Icon(
+                            Icons.Filled.KeyboardArrowRight,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.error
+                        )
+                    },
+                    modifier = Modifier.clickable { navController.navigate("account-close?accountId=${account.id}") }
+                )
+            }
+        }
     }
 
     if (showRemoveWarn) {
