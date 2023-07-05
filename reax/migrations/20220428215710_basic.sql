@@ -9,7 +9,7 @@ create table accounts(
 insert into accounts (name, kind) values ('Local', 'Local');
 
 create table devices(
-    id  integer,
+    id          integer     not null,
     account_id  integer     not null,
     pubkey      varchar(64) not null,
     created_at  text        not null,

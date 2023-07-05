@@ -65,10 +65,18 @@ pub async fn create_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, 
         .map(|_| ())
 }
 
-pub async fn delete_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
-    sqlx::query("delete from devices where account_id = ?")
-        .bind(account_id)
-        .execute(conn)
+pub async fn delete_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32, device_ids: &[i32]) -> Result<(), Error> {
+    let binds: String = itertools::Itertools::intersperse(device_ids.into_iter().map(|_| "(id = ? and account_id = ?)"), " or ")
+        .collect();
+
+    let query = format!("delete from devices where {}", binds);
+    let mut query = sqlx::query(&query);
+
+    for id in device_ids {
+        query = query.bind(id).bind(account_id);
+    }
+
+    query.execute(conn)
         .await
         .map(|_| ())
 }

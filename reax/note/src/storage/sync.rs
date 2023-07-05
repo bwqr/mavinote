@@ -4,7 +4,7 @@ use std::sync::Arc;
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 
 use super::db;
-use crate::Error;
+use crate::{Error, StorageError};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest};
 use crate::models::{AccountKind, State as ModelState, Account, RemoteId, Note};
 
@@ -27,7 +27,8 @@ pub async fn sync() -> Result<(), Error> {
 async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Account) -> Result<(), Error> {
     log::debug!("syncing mavinote account with id {}", account.id);
 
-    let mavinote = super::mavinote_client(conn, account.id).await?.unwrap();
+    let mavinote = super::mavinote_client(conn, account.id).await?
+        .ok_or(StorageError::NotMavinoteAccount)?;
 
     sync_devices(conn, &mavinote, account.id).await?;
 
@@ -42,11 +43,23 @@ async fn sync_mavinote_account(conn: &mut PoolConnection<Sqlite>, account: Accou
 
 async fn sync_devices(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
     let new_devices = mavinote.fetch_devices().await?;
+    let old_devices = db::fetch_devices(conn, account_id).await?;
 
-    db::delete_devices(conn, account_id).await?;
+    let devices_to_delete = old_devices.iter()
+        .filter(|od| new_devices.iter().find(|nd| od.id == nd.id && od.pubkey == nd.pubkey).is_none())
+        .map(|od| od.id)
+        .collect::<Vec<_>>();
 
-    if !new_devices.is_empty() {
-        db::create_devices(conn, account_id, &new_devices).await?;
+    let devices_to_create = new_devices.into_iter()
+        .filter(|nd| old_devices.iter().find(|od| od.id == nd.id && od.pubkey == nd.pubkey).is_none())
+        .collect::<Vec<_>>();
+
+    if !devices_to_delete.is_empty() {
+        db::delete_devices(conn, account_id, &devices_to_delete).await?;
+    }
+
+    if !devices_to_create.is_empty() {
+        db::create_devices(conn, account_id, &devices_to_create).await?;
     }
 
     Ok(())
@@ -152,36 +165,22 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
         let mut remote_folder_id = local_folder.remote_id();
 
         if remote_folder_id.is_none() {
-            for _ in 0..2 {
-                let devices = db::fetch_devices(conn, account_id).await?;
+            let devices = db::fetch_devices(conn, account_id).await?;
 
-                let request = devices
-                    .into_iter()
-                    .map(|device| CreateFolderRequest{ device_id: device.id, name: local_folder.name.clone() })
-                    .collect();
+            let request = devices
+                .into_iter()
+                .map(|device| CreateFolderRequest{ device_id: device.id, name: local_folder.name.clone() })
+                .collect();
 
-                match mavinote.create_folder(request).await {
-                    Ok(remote_folder) => {
-                        db::update_folder_remote_id(conn, local_folder.local_id(), remote_folder.id()).await?;
+            match mavinote.create_folder(request).await {
+                Ok(remote_folder) => {
+                    db::update_folder_remote_id(conn, local_folder.local_id(), remote_folder.id()).await?;
 
-                        remote_folder_id = Some(remote_folder.id());
-
-                        break;
-                    },
-                    Err(crate::accounts::mavinote::Error::Message(msg)) if msg == "devices_mismatch" => {
-                        let new_devices = mavinote.fetch_devices().await?;
-
-                        db::delete_devices(conn, account_id).await?;
-
-                        if !new_devices.is_empty() {
-                            db::create_devices(conn, account_id, &new_devices).await?;
-                        }
-                    },
-                    Err(e) => {
-                        log::error!("failed to create folder in remote {e:?}");
-                        break;
-                    },
-                }
+                    remote_folder_id = Some(remote_folder.id());
+                },
+                Err(e) => {
+                    log::error!("failed to create folder in remote {e:?}");
+                },
             }
         };
 
