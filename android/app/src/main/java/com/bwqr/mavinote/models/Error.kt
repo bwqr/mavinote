@@ -82,6 +82,7 @@ sealed class StorageError : NoteError() {
     object AccountNotFound : StorageError()
     object AccountEmailUsed : StorageError()
     object FolderNotFound : StorageError()
+    object NoteNotFound: StorageError()
 
     companion object {
         fun deserialize(deserializer: Deserializer): StorageError {
@@ -91,6 +92,7 @@ sealed class StorageError : NoteError() {
                 2 -> AccountNotFound
                 3 -> AccountEmailUsed
                 4 -> FolderNotFound
+                5 -> NoteNotFound
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }
         }

@@ -21,6 +21,7 @@ pub enum StorageError {
     AccountNotFound,
     AccountEmailUsed,
     FolderNotFound,
+    NoteNotFound,
 }
 
 #[cfg(feature = "storage")]
@@ -33,5 +34,11 @@ impl From<sqlx::Error> for Error {
 impl From<accounts::mavinote::Error> for Error {
     fn from(e: accounts::mavinote::Error) -> Self {
         Error::Mavinote(e)
+    }
+}
+
+impl From<StorageError> for Error {
+    fn from(e: StorageError) -> Self {
+        Error::Storage(e)
     }
 }

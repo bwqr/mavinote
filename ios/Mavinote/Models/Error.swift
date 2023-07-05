@@ -51,6 +51,7 @@ enum StorageError {
     case AccountNotFound
     case AccountEmailUsed
     case FolderNotFound
+    case NoteNotFound
 
     static func deserialize(_ deserializer: Deserializer) throws -> StorageError {
         let index = try deserializer.deserialize_variant_index()
@@ -61,6 +62,7 @@ enum StorageError {
         case 2: return .AccountNotFound
         case 3: return .AccountEmailUsed
         case 4: return .FolderNotFound
+        case 5: return .NoteNotFound
         default: throw DeserializationError.invalidInput(issue: "Unknown variant index for StorageError")
         }
     }
