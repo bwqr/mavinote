@@ -20,6 +20,7 @@ open class NoteError : Error() {
                 0 -> MavinoteError.deserialize(deserializer)
                 1 -> StorageError.deserialize(deserializer)
                 2 -> DatabaseError.deserialize(deserializer)
+                3 -> CryptoError.deserialize(deserializer)
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
         }
@@ -103,6 +104,25 @@ data class DatabaseError(override val message: String) : NoteError() {
     companion object {
         fun deserialize(deserializer: Deserializer): DatabaseError {
             return DatabaseError(deserializer.deserialize_str())
+        }
+    }
+}
+
+sealed class CryptoError: NoteError() {
+    object Base64Decode : CryptoError()
+    object InvalidLength : CryptoError()
+    object Decrypt : CryptoError()
+    object Encrypt : CryptoError()
+
+    companion object {
+        fun deserialize(deserializer: Deserializer): CryptoError {
+            return when (val index = deserializer.deserialize_variant_index()) {
+                0 -> Base64Decode
+                1 -> InvalidLength
+                2 -> Decrypt
+                3 -> Encrypt
+                else -> throw DeserializationError("Unknown variant index for CryptoError: $index")
+            }
         }
     }
 }

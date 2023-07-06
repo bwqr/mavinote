@@ -1,6 +1,5 @@
 use std::sync::Arc;
 
-use aes_gcm_siv::{Aes256GcmSiv, Nonce, KeyInit, aead::Aead};
 use base64ct::{Base64, Encoding};
 use rand::{Rng, thread_rng, distributions::Alphanumeric, rngs::OsRng};
 use once_cell::sync::OnceCell;
@@ -10,7 +9,7 @@ use x25519_dalek::{StaticSecret, PublicKey};
 
 use base::{State, observable_map::{ObservableMap, Receiver}, Config};
 
-use crate::{Error, StorageError, models::{StoreKey, Device}};
+use crate::{Error, StorageError, models::{StoreKey, Device}, crypto};
 use crate::accounts::mavinote::{MavinoteClient, CreateFolderRequest, CreateNoteRequest};
 use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
@@ -287,19 +286,13 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
 
     let remote_id = if let Some(mavinote) = mavinote_client(&mut conn, account_id).await? {
         let devices = db::fetch_devices(&mut conn, account_id).await?;
-        let privkey = StaticSecret::from(<Vec<u8> as TryInto::<[u8; 32]>>::try_into(Base64::decode_vec(&db::fetch_value(&mut conn, StoreKey::IdentityPrivKey).await?.unwrap().value).unwrap()).unwrap());
+        let privkey = crypto::load_privkey(&mut conn).await?;
 
-        let device_folders = devices
-            .into_iter()
-            .map(|device| {
-                let pubkey = PublicKey::from(<Vec<u8> as TryInto::<[u8; 32]>>::try_into(Base64::decode_vec(&device.pubkey).unwrap()).unwrap());
-                let shared_secret = privkey.diffie_hellman(&pubkey);
-                let cipher = Aes256GcmSiv::new_from_slice(&shared_secret.to_bytes()).unwrap();
-                let nonce = Nonce::from_slice(b"unique nonce");
-                let ciphertext = Base64::encode_string(cipher.encrypt(nonce, name.as_bytes()).unwrap().as_slice());
-                CreateFolderRequest{ device_id: device.id, name: ciphertext }
-            })
-            .collect();
+        let mut device_folders = vec![];
+        for device in devices {
+            let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
+            device_folders.push(CreateFolderRequest { device_id: device.id, name: cipher.encrypt(&name)? });
+        }
 
         match mavinote.create_folder(device_folders).await {
             Ok(folder) => Some(folder.id()),
@@ -394,10 +387,13 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
     let remote_note = if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
         if let Some(remote_id) = folder.remote_id() {
             let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
-            let device_notes = devices
-                .into_iter()
-                .map(|device| CreateNoteRequest{ device_id: device.id, name: &name, text: &text })
-                .collect();
+            let privkey = crypto::load_privkey(&mut conn).await?;
+
+            let mut device_notes = vec![];
+            for device in devices {
+                let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
+                device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
+            }
 
             match mavinote.create_note(remote_id, device_notes).await {
                 Ok(note) => Some(note),
@@ -447,10 +443,13 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
         let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
         if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
             let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
-            let device_notes = devices
-                .into_iter()
-                .map(|device| CreateNoteRequest{ device_id: device.id, name: &name, text: &text })
-                .collect();
+            let privkey = crypto::load_privkey(&mut conn).await?;
+
+            let mut device_notes = vec![];
+            for device in devices {
+                let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
+                device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
+            }
 
             match mavinote.update_note(remote_id, note.commit, device_notes).await {
                 Ok(commit) => (commit.commit, ModelState::Clean),

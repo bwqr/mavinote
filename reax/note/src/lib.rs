@@ -1,3 +1,4 @@
+use crypto::CryptoError;
 use serde::Serialize;
 
 pub mod accounts;
@@ -6,12 +7,15 @@ pub mod models;
 #[cfg(feature = "storage")]
 pub mod storage;
 
+mod crypto;
+
 
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
     Mavinote(accounts::mavinote::Error),
     Storage(StorageError),
     Database(String),
+    Crypto(CryptoError),
 }
 
 #[derive(Clone, Debug, Serialize)]
@@ -40,5 +44,11 @@ impl From<accounts::mavinote::Error> for Error {
 impl From<StorageError> for Error {
     fn from(e: StorageError) -> Self {
         Error::Storage(e)
+    }
+}
+
+impl From<CryptoError> for Error {
+    fn from(e: CryptoError) -> Self {
+        Error::Crypto(e)
     }
 }

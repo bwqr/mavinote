@@ -4,7 +4,7 @@ use std::sync::Arc;
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 
 use super::db;
-use crate::{Error, StorageError};
+use crate::{Error, StorageError, crypto};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest};
 use crate::models::{AccountKind, State as ModelState, Account, RemoteId, Note};
 
@@ -67,6 +67,12 @@ async fn sync_devices(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClie
 
 async fn sync_remote(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
     let remote_folders = mavinote.fetch_folders().await?;
+    let privkey = crypto::load_privkey(conn).await?;
+
+    let mut ciphers = vec![];
+    for device in db::fetch_devices(conn, account_id).await? {
+        ciphers.push((device.id, crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?));
+    }
 
     for remote_folder in remote_folders {
         if let ModelState::Deleted = remote_folder.state {
@@ -78,7 +84,12 @@ async fn sync_remote(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClien
             folder
         } else {
             if let Some(device_folder) = &remote_folder.device_folder {
-                db::create_folder(conn, Some(remote_folder.id()), account_id, device_folder.name.clone()).await?
+                if let Some((_, cipher)) = ciphers.iter().find(|(device_id, _)| *device_id == device_folder.sender_device_id) {
+                    db::create_folder(conn, Some(remote_folder.id()), account_id, cipher.decrypt(&device_folder.name)?).await?
+                } else {
+                    log::warn!("A folder with unknown sender is received");
+                    continue;
+                }
             } else {
                 log::warn!("A folder with no device folder is received. Some other devices must create our device folder");
                 continue;
@@ -124,14 +135,19 @@ async fn sync_remote(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClien
                     Ok(Some(remote_note)) => {
                         let (remote_id, remote_commit) = (remote_note.id(), remote_note.commit);
                         if let Some(device_note) = remote_note.device_note {
-                            db::create_note(
-                                conn,
-                                folder.local_id(),
-                                Some(remote_id),
-                                device_note.name,
-                                device_note.text,
-                                remote_commit
-                            ).await?;
+                            if let Some((_, cipher)) = ciphers.iter().find(|(device_id, _)| *device_id == device_note.sender_device_id) {
+                                db::create_note(
+                                    conn,
+                                    folder.local_id(),
+                                    Some(remote_id),
+                                    cipher.decrypt(&device_note.name)?,
+                                    cipher.decrypt(&device_note.text)?,
+                                    remote_commit
+                                ).await?;
+                            } else {
+                                log::warn!("A note with unknown sender is received");
+                            }
+
                         } else {
                             log::warn!("A note with no device note is received. Some other devices must create our device note");
                         }
@@ -148,6 +164,12 @@ async fn sync_remote(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClien
 
 async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient, account_id: i32) -> Result<(), Error> {
     let local_folders = db::fetch_account_folders(conn, account_id).await?;
+    let privkey = crypto::load_privkey(conn).await?;
+
+    let mut ciphers = vec![];
+    for device in db::fetch_devices(conn, account_id).await? {
+        ciphers.push((device.id, crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?));
+    }
 
     for local_folder in local_folders {
         if let ModelState::Deleted = local_folder.state {
@@ -165,12 +187,10 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
         let mut remote_folder_id = local_folder.remote_id();
 
         if remote_folder_id.is_none() {
-            let devices = db::fetch_devices(conn, account_id).await?;
-
-            let request = devices
-                .into_iter()
-                .map(|device| CreateFolderRequest{ device_id: device.id, name: local_folder.name.clone() })
-                .collect();
+            let mut request = vec![];
+            for (device_id, cipher) in &ciphers {
+                request.push(CreateFolderRequest{ device_id: *device_id, name: cipher.encrypt(&local_folder.name)? });
+            }
 
             match mavinote.create_folder(request).await {
                 Ok(remote_folder) => {
@@ -198,12 +218,10 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
                     }
                 } else if let Some(remote_id) = local_note.remote_id() {
                     if ModelState::Modified == local_note.state {
-
-                        let devices = db::fetch_devices(conn, account_id).await?;
-                        let device_notes = devices
-                            .into_iter()
-                            .map(|device| CreateNoteRequest{ device_id: device.id, name: &local_note.name, text: &local_note.text })
-                            .collect();
+                        let mut device_notes = vec![];
+                        for (device_id, cipher) in &ciphers {
+                            device_notes.push(CreateNoteRequest{ device_id: *device_id, name: cipher.encrypt(&local_note.name)?, text: cipher.encrypt(&local_note.text)? });
+                        }
 
                         match mavinote.update_note(remote_id, local_note.commit, device_notes).await {
                             Ok(commit) => db::update_commit(conn, local_note.local_id(), commit.commit).await?,
@@ -211,11 +229,10 @@ async fn sync_local(conn: &mut PoolConnection<Sqlite>, mavinote: &MavinoteClient
                         }
                     }
                 } else if local_note.remote_id().is_none() {
-                    let devices = db::fetch_devices(conn, account_id).await?;
-                    let device_notes = devices
-                        .into_iter()
-                        .map(|device| CreateNoteRequest{ device_id: device.id, name: &local_note.name, text: &local_note.text })
-                        .collect();
+                    let mut device_notes = vec![];
+                    for (device_id, cipher) in &ciphers {
+                        device_notes.push(CreateNoteRequest{ device_id: *device_id, name: cipher.encrypt(&local_note.name)?, text: cipher.encrypt(&local_note.text)? });
+                    }
 
                     match mavinote.create_note(remote_folder_id, device_notes).await {
                         Ok(remote_note) => {

@@ -5,6 +5,7 @@ enum NoteError : Error, Deserialize {
     case Mavinote(MavinoteError)
     case Storage(StorageError)
     case Database(String)
+    case Crypto(CryptoError)
     // This is used by Swift and not returned from Rust
     case TaskCancellation
 
@@ -15,7 +16,8 @@ enum NoteError : Error, Deserialize {
         case 0: return .Mavinote(try MavinoteError.deserialize(deserializer))
         case 1: return .Storage(try StorageError.deserialize(deserializer))
         case 2: return .Database(try deserializer.deserialize_str())
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for NoteError")
+        case 3: return .Crypto(try CryptoError.deserialize(deserializer))
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index \(index) for NoteError")
         }
     }
 }
@@ -40,7 +42,7 @@ enum MavinoteError {
         case 4: return .DeviceDeleted(try Int32.deserialize(deserializer))
         case 5: return .Internal(try String.deserialize(deserializer))
         case 6: return .Unknown
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for MavinoteError")
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index \(index) for MavinoteError")
         }
     }
 }
@@ -63,7 +65,26 @@ enum StorageError {
         case 3: return .AccountEmailUsed
         case 4: return .FolderNotFound
         case 5: return .NoteNotFound
-        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for StorageError")
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index \(index) for StorageError")
+        }
+    }
+}
+
+enum CryptoError {
+    case Base64Decode
+    case InvalidLength
+    case Decrypt
+    case Encrypt
+
+    static func deserialize(_ deserializer: Deserializer) throws -> CryptoError {
+        let index = try deserializer.deserialize_variant_index()
+
+        switch index {
+        case 0: return .Base64Decode
+        case 1: return .InvalidLength
+        case 2: return .Decrypt
+        case 3: return .Encrypt
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index \(index) for CryptoError")
         }
     }
 }

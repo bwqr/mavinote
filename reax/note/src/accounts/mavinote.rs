@@ -260,7 +260,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn create_folder<'a>(&self, request: Vec<requests::CreateFolderRequest>) -> Result<responses::CreatedFolder, Error> {
+    pub async fn create_folder(&self, request: Vec<requests::CreateFolderRequest>) -> Result<responses::CreatedFolder, Error> {
         self.client
             .post(format!("{}/note/folder", self.api_url))
             .body(serde_json::to_string(&request).unwrap())
@@ -300,7 +300,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn create_note<'a>(&self, folder_id: RemoteId, device_notes: Vec<requests::CreateNoteRequest<'a>>) -> Result<responses::CreatedNote, Error> {
+    pub async fn create_note(&self, folder_id: RemoteId, device_notes: Vec<requests::CreateNoteRequest>) -> Result<responses::CreatedNote, Error> {
         self.client
             .post(format!("{}/note/note?folder_id={}", self.api_url, folder_id.0))
             .body(serde_json::to_string(&device_notes).unwrap())
@@ -313,7 +313,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn update_note<'a>(&self, note_id: RemoteId, commit: i32, device_notes: Vec<requests::CreateNoteRequest<'a>>) -> Result<responses::Commit, Error> {
+    pub async fn update_note(&self, note_id: RemoteId, commit: i32, device_notes: Vec<requests::CreateNoteRequest>) -> Result<responses::Commit, Error> {
         let request = requests::UpdateNoteRequest { commit,  device_notes };
 
         self.client
@@ -396,16 +396,16 @@ mod requests {
     }
 
     #[derive(Serialize)]
-    pub struct CreateNoteRequest<'a> {
-        pub name: &'a str,
-        pub text: &'a str,
+    pub struct CreateNoteRequest {
+        pub name: String,
+        pub text: String,
         pub device_id: i32,
     }
 
     #[derive(Serialize)]
-    pub struct UpdateNoteRequest<'a> {
+    pub struct UpdateNoteRequest {
         pub commit: i32,
-        pub device_notes: Vec<CreateNoteRequest<'a>>,
+        pub device_notes: Vec<CreateNoteRequest>,
     }
 
     #[derive(Serialize)]
