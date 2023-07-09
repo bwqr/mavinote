@@ -323,16 +323,28 @@ pub async fn update_note(
             .set(notes::commit.eq(commit + 1))
             .execute(&mut conn)?;
 
-        // We may need to create device_note records where a device does not have a device_note
         for device_note in device_notes {
-            diesel::update(device_notes::table)
-                .filter(device_notes::note_id.eq(note_id))
-                .filter(device_notes::receiver_device_id.eq(device_note.device_id))
+            diesel::insert_into(device_notes::table)
+                .values((
+                    device_notes::note_id.eq(note_id),
+                    device_notes::receiver_device_id.eq(device_note.device_id),
+                    device_notes::sender_device_id.eq(device.id),
+                    device_notes::name.eq(&device_note.name),
+                    device_notes::text.eq(&device_note.text),
+                ))
+                .on_conflict((device_notes::note_id, device_notes::receiver_device_id))
+                .do_update()
                 .set((
                     device_notes::sender_device_id.eq(device.id),
-                    device_notes::name.eq(device_note.name),
-                    device_notes::text.eq(device_note.text),
+                    device_notes::name.eq(&device_note.name),
+                    device_notes::text.eq(&device_note.text),
                 ))
+                .execute(&mut conn)?;
+
+            // Remove old senders since we have updated all of the receiver with this sender
+            diesel::delete(device_notes::table)
+                .filter(device_notes::note_id.eq(note_id))
+                .filter(device_notes::sender_device_id.ne(device.id))
                 .execute(&mut conn)?;
         }
 
