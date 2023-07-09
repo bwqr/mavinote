@@ -53,9 +53,11 @@ pub async fn init() -> Result<(), Error> {
 pub(crate) async fn mavinote_client(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<Option<MavinoteClient>, Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
-    db::fetch_account_data::<Mavinote>(conn, account_id).await
-        .map(|opt| opt.map(|mavinote| MavinoteClient::new(account_id, config.api_url.clone(), mavinote.token)))
-        .map_err(|e| e.into())
+    match db::fetch_account_data::<Mavinote>(conn, account_id).await {
+        Ok(opt) => Ok(opt.map(|mavinote| MavinoteClient::new(account_id, config.api_url.clone(), mavinote.token))),
+        Err(sqlx::Error::ColumnDecode { .. }) => Ok(None),
+        Err(e) => Err(e.into())
+    }
 }
 
 pub(crate) async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
