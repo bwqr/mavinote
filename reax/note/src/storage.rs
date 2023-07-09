@@ -9,13 +9,17 @@ use x25519_dalek::{StaticSecret, PublicKey};
 
 use base::{State, observable_map::{ObservableMap, Receiver}, Config};
 
-use crate::{Error, StorageError, models::{StoreKey, Device}, crypto};
+use crate::{Error, StorageError, models::{StoreKey, Device}, crypto, accounts::mavinote::AuthClient};
 use crate::accounts::mavinote::{MavinoteClient, CreateFolderRequest, CreateNoteRequest};
 use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
 
 pub mod db;
 pub mod sync;
+
+const NOT_MAVINOTE_ACCOUNT: Error = Error::Unreachable("NotMavinoteAccount");
+const FOLDER_NOT_FOUND: Error = Error::Unreachable("FolderNotFound");
+const NOTE_NOT_FOUND: Error = Error::Unreachable("NoteNotFound");
 
 static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
 pub(crate) static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
@@ -50,11 +54,11 @@ pub(crate) async fn mavinote_client(conn: &mut PoolConnection<Sqlite>, account_i
     let config = runtime::get::<Arc<Config>>().unwrap();
 
     db::fetch_account_data::<Mavinote>(conn, account_id).await
-        .map(|opt| opt.map(|mavinote| MavinoteClient::new(Some(account_id), config.api_url.clone(), Some(mavinote.token))))
+        .map(|opt| opt.map(|mavinote| MavinoteClient::new(account_id, config.api_url.clone(), mavinote.token)))
         .map_err(|e| e.into())
 }
 
-async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
+pub(crate) async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
     let sender = ACCOUNTS.get().unwrap();
     // If nobody loaded the accounts, then do not load the accounts
     let load = match *sender.borrow() {
@@ -66,6 +70,21 @@ async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
         sender.send_replace(State::Loading);
 
         sender.send_replace(db::fetch_accounts(conn).await.map_err(|e| e.into()).into());
+    }
+}
+
+pub(crate) async fn update_send_folders(conn: &mut PoolConnection<Sqlite>) {
+    let sender = FOLDERS.get().unwrap();
+    // If nobody loaded the accounts, then do not load the accounts
+    let load = match *sender.borrow() {
+        State::Initial => false,
+        _ => true,
+    };
+
+    if load {
+        sender.send_replace(State::Loading);
+
+        sender.send_replace(db::fetch_folders(conn).await.map_err(|e| e.into()).into());
     }
 }
 
@@ -82,13 +101,13 @@ pub async fn request_verification(email: String) -> Result<String, Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
     if db::account_with_email_exists(&mut conn, &email).await? {
-        return Err(Error::Storage(StorageError::AccountEmailUsed));
+        return Err(Error::Storage(StorageError::EmailAlreadyExists));
     }
 
     let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
     let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
 
-    MavinoteClient::new(None, config.api_url.clone(), None)
+    AuthClient::new(config.api_url.clone())
         .request_verification(&email, &identity_public_key, &password).await
         .map(|token| token.token)
         .map_err(|e| e.into())
@@ -97,7 +116,7 @@ pub async fn request_verification(email: String) -> Result<String, Error> {
 pub async fn wait_verification(token: String) -> Result<(), Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
-    MavinoteClient::wait_verification(&config.ws_url, &token)
+    AuthClient::wait_verification(&config.ws_url, &token)
         .await
         .map_err(|e| e.into())
 }
@@ -109,7 +128,7 @@ pub async fn add_account(email: String) -> Result<(), Error> {
     let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
     let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
 
-    let token = MavinoteClient::new(None, config.api_url.clone(), None)
+    let token = AuthClient::new(config.api_url.clone())
         .login(&email, &identity_public_key, &password)
         .await?;
 
@@ -125,10 +144,10 @@ pub async fn send_verification_code(email: String) -> Result<(), Error> {
     let config = runtime::get::<Arc<Config>>().unwrap();
 
     if db::account_with_email_exists(&mut conn, &email).await? {
-        return Err(Error::Storage(StorageError::AccountEmailUsed));
+        return Err(Error::Storage(StorageError::EmailAlreadyExists));
     }
 
-    MavinoteClient::new(None, config.api_url.clone(), None)
+    AuthClient::new(config.api_url.clone())
         .send_verification_code(&email).await
         .map_err(|e| e.into())
 }
@@ -165,7 +184,7 @@ pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     if db::account_with_email_exists(&mut conn, &email).await? {
-        return Err(Error::Storage(StorageError::AccountEmailUsed));
+        return Err(Error::Storage(StorageError::EmailAlreadyExists));
     }
 
     let config = runtime::get::<Arc<Config>>().unwrap();
@@ -173,7 +192,7 @@ pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
     let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
     let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
 
-    let token = MavinoteClient::new(None, config.api_url.clone(), None)
+    let token = AuthClient::new(config.api_url.clone())
         .sign_up(&email, &code, &identity_public_key, &password)
         .await?;
 
@@ -188,7 +207,7 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     match mavinote_client(&mut conn, account_id).await?
-        .ok_or(StorageError::NotMavinoteAccount)?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?
         .delete_device(None)
         .await {
         Ok(_) | Err(crate::accounts::mavinote::Error::DeviceDeleted(_)) => {
@@ -210,7 +229,7 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
 pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
     mavinote_client(&mut conn, account_id).await?
-        .ok_or(StorageError::NotMavinoteAccount)?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?
         .send_account_close_code().await
         .map_err(|e| e.into())
 }
@@ -218,7 +237,7 @@ pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
 pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
     mavinote_client(&mut conn, account_id).await?
-        .ok_or(StorageError::NotMavinoteAccount)?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?
         .close_account(&code)
         .await?;
 
@@ -241,7 +260,7 @@ pub async fn delete_device(account_id: i32, device_id: i32) -> Result<(), Error>
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     mavinote_client(&mut conn, account_id).await?
-        .ok_or(StorageError::NotMavinoteAccount)?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?
         .delete_device(Some(device_id))
         .await?;
 
@@ -252,7 +271,7 @@ pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let device = mavinote_client(&mut conn, account_id).await?
-        .ok_or(StorageError::NotMavinoteAccount)?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?
         .add_device(pubkey).await?;
 
     db::create_devices(&mut conn, account_id, &[device]).await.map_err(|e| e.into())
@@ -290,7 +309,7 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
 
         let mut device_folders = vec![];
         for device in devices {
-            let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
+            let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
             device_folders.push(CreateFolderRequest { device_id: device.id, name: cipher.encrypt(&name)? });
         }
 
@@ -320,7 +339,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let folder = db::fetch_folder(&mut conn, LocalId(folder_id)).await?
-        .ok_or(StorageError::FolderNotFound)?;
+        .ok_or(FOLDER_NOT_FOUND)?;
 
     let mut delete = true;
 
@@ -378,7 +397,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
 
     let folder = db::fetch_folder(&mut conn, LocalId(folder_id))
         .await?
-        .ok_or(StorageError::FolderNotFound)?;
+        .ok_or(FOLDER_NOT_FOUND)?;
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
@@ -391,7 +410,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
 
             let mut device_notes = vec![];
             for device in devices {
-                let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
+                let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
                 device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
             }
 
@@ -433,7 +452,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let note = db::fetch_note(&mut conn, LocalId(note_id)).await?
-        .ok_or(StorageError::NoteNotFound)?;
+        .ok_or(NOTE_NOT_FOUND)?;
 
     let text = text.as_str().trim();
     let ending_index = text.char_indices().nth(30).unwrap_or((text.len(), ' ')).0;
@@ -441,27 +460,25 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
 
     let (commit, state) = if let Some(remote_id) = note.remote_id() {
         let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
-        if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
-            let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
-            let privkey = crypto::load_privkey(&mut conn).await?;
+        let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? else {
+            return Err(Error::Unreachable("Mavinote account must have a client"));
+        };
 
-            let mut device_notes = vec![];
-            for device in devices {
-                let cipher = crypto::DeviceCipher::try_from_key(&privkey, &device.pubkey)?;
-                device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
-            }
+        let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
+        let privkey = crypto::load_privkey(&mut conn).await?;
 
-            match mavinote.update_note(remote_id, note.commit, device_notes).await {
-                Ok(commit) => (commit.commit, ModelState::Clean),
-                Err(e) => {
-                    log::debug!("failed to update note with id {note_id}, {e:?}");
-                    (note.commit, ModelState::Modified)
-                }
+        let mut device_notes = vec![];
+        for device in devices {
+            let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
+            device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
+        }
+
+        match mavinote.update_note(remote_id, note.commit, device_notes).await {
+            Ok(commit) => (commit.commit, ModelState::Clean),
+            Err(e) => {
+                log::debug!("failed to update note with id {note_id}, {e:?}");
+                (note.commit, ModelState::Modified)
             }
-        } else {
-            // This if branch should not be possible. If a note has remote_id, it must also have a
-            // mavinote account
-            (note.commit, ModelState::Clean)
         }
     } else {
         (note.commit, ModelState::Clean)
@@ -486,7 +503,7 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let note = db::fetch_note(&mut conn, LocalId(note_id)).await?
-        .ok_or(StorageError::NoteNotFound)?;
+        .ok_or(NOTE_NOT_FOUND)?;
 
     let mut delete = true;
 

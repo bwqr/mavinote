@@ -21,6 +21,7 @@ open class NoteError : Error() {
                 1 -> StorageError.deserialize(deserializer)
                 2 -> DatabaseError.deserialize(deserializer)
                 3 -> CryptoError.deserialize(deserializer)
+                4 -> UnreachableError.deserialize(deserializer)
                 else -> throw DeserializationError("Unknown variant index for Error: $index")
             }
         }
@@ -58,8 +59,7 @@ sealed class MavinoteError : NoteError() {
     object NoConnection : MavinoteError()
     object UnexpectedResponse : MavinoteError()
     class DeviceDeleted(val accountId: Int) : MavinoteError()
-    class Internal(override val message: String) : MavinoteError()
-    object Unknown : MavinoteError()
+    class Unknown(override val message: String) : MavinoteError()
 
     companion object {
         fun deserialize(deserializer: Deserializer): MavinoteError {
@@ -69,8 +69,7 @@ sealed class MavinoteError : NoteError() {
                 2 -> NoConnection
                 3 -> UnexpectedResponse
                 4 -> DeviceDeleted(deserializer.deserialize_i32())
-                5 -> Internal(deserializer.deserialize_str())
-                6 -> Unknown
+                5 -> Unknown(deserializer.deserialize_str())
                 else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
             }
         }
@@ -78,23 +77,13 @@ sealed class MavinoteError : NoteError() {
 }
 
 sealed class StorageError : NoteError() {
-    class InvalidState(override val message: String) : StorageError()
-    object NotMavinoteAccount : StorageError()
-    object AccountNotFound : StorageError()
-    object AccountEmailUsed : StorageError()
-    object FolderNotFound : StorageError()
-    object NoteNotFound: StorageError()
+    object EmailAlreadyExists : StorageError()
 
     companion object {
         fun deserialize(deserializer: Deserializer): StorageError {
             return when (val index = deserializer.deserialize_variant_index()) {
-                0 -> InvalidState(deserializer.deserialize_str())
-                1 -> NotMavinoteAccount
-                2 -> AccountNotFound
-                3 -> AccountEmailUsed
-                4 -> FolderNotFound
-                5 -> NoteNotFound
-                else -> throw DeserializationError("Unknown variant index for MavinoteError: $index")
+                0 -> EmailAlreadyExists
+                else -> throw DeserializationError("Unknown variant index for StorageError: $index")
             }
         }
     }
@@ -123,6 +112,14 @@ sealed class CryptoError: NoteError() {
                 3 -> Encrypt
                 else -> throw DeserializationError("Unknown variant index for CryptoError: $index")
             }
+        }
+    }
+}
+
+data class UnreachableError(override val message: String) : NoteError() {
+    companion object {
+        fun deserialize(deserializer: Deserializer): UnreachableError {
+            return UnreachableError(deserializer.deserialize_str())
         }
     }
 }

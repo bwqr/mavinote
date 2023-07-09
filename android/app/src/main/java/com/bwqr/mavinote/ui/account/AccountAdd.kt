@@ -241,7 +241,7 @@ fun EnterAccountInfo(navController: NavController, onAccountAdd: () -> Unit) {
                                             "However, the passwords do not match. In order to resolve the issue, from a device this account is already added, " +
                                             "you can remove the device with our public key and try to add account again."
                             }
-                            e is StorageError.AccountEmailUsed -> {
+                            e is StorageError.EmailAlreadyExists -> {
                                 error =
                                     "An account with this email already exists. You can find it under Accounts page."
                             }
@@ -407,7 +407,7 @@ fun SendVerificationCode(navController: NavController) {
                         navController.navigate("verify-code?email=$email")
                     } catch (e: NoteError) {
                         when {
-                            e is StorageError.AccountEmailUsed -> {
+                            e is StorageError.EmailAlreadyExists -> {
                                 error =
                                     "An account with this email already exists. You can find it under Accounts page."
                             }
@@ -509,7 +509,7 @@ fun VerifyCode(email: String, onVerify: () -> Unit) {
                         onVerify()
                     } catch (e: NoteError) {
                         when {
-                            e is StorageError.AccountEmailUsed -> {
+                            e is StorageError.EmailAlreadyExists -> {
                                 error =
                                     "An account with this email already exists. You can find it under Accounts page."
                             }

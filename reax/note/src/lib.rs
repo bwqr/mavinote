@@ -1,4 +1,3 @@
-use crypto::CryptoError;
 use serde::Serialize;
 
 pub mod accounts;
@@ -9,23 +8,18 @@ pub mod storage;
 
 mod crypto;
 
-
 #[derive(Clone, Debug, Serialize)]
 pub enum Error {
     Mavinote(accounts::mavinote::Error),
     Storage(StorageError),
     Database(String),
-    Crypto(CryptoError),
+    Crypto(crypto::Error),
+    Unreachable(&'static str),
 }
 
 #[derive(Clone, Debug, Serialize)]
 pub enum StorageError {
-    InvalidState(String),
-    NotMavinoteAccount,
-    AccountNotFound,
-    AccountEmailUsed,
-    FolderNotFound,
-    NoteNotFound,
+    EmailAlreadyExists,
 }
 
 #[cfg(feature = "storage")]
@@ -47,8 +41,8 @@ impl From<StorageError> for Error {
     }
 }
 
-impl From<CryptoError> for Error {
-    fn from(e: CryptoError) -> Self {
+impl From<crypto::Error> for Error {
+    fn from(e: crypto::Error) -> Self {
         Error::Crypto(e)
     }
 }

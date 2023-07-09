@@ -133,7 +133,7 @@ private struct EnterAccountInfoView: View {
                                 onAccountAdd(appState: appState)
                             case .failure(let e): appState.handleError(e)
                             }
-                        case .Storage(.AccountEmailUsed):
+                        case .Storage(.EmailAlreadyExists):
                             error = "An account with this email already exists. You can find it under Accounts page."
                         default: appState.handleError(e)
                         }
@@ -297,7 +297,7 @@ private struct SendVerificationCodeView: View {
                         switch e {
                         case .Mavinote(.Message("email_already_used")):
                             error = "This email address is already used for another account. You can add it by choosing Add an Existing Account option."
-                        case .Storage(.AccountEmailUsed):
+                        case .Storage(.EmailAlreadyExists):
                             error = "An account with this email already exists. You can find it under Accounts page."
                         default: appState.handleError(e)
                         }
@@ -395,7 +395,7 @@ private struct VerifyCodeView: View {
                         appState.navigate(route: .Accounts)
                     case .failure(let e):
                         switch e {
-                        case .Storage(.AccountEmailUsed):
+                        case .Storage(.EmailAlreadyExists):
                             error = "An account with this email already exists. You can find it under Accounts page."
                         case .Mavinote(.Message("expired_code")):
                             error = "5 minutes waiting is timed out. Please try again."

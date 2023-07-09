@@ -25,8 +25,7 @@ pub enum Error {
     NoConnection,
     UnexpectedResponse,
     DeviceDeleted(i32),
-    Internal(&'static str),
-    Unknown,
+    Unknown(String),
 }
 
 impl From<reqwest::Error> for Error {
@@ -44,62 +43,48 @@ impl From<reqwest::Error> for Error {
             return Error::UnexpectedResponse
         }
 
-        Error::Unknown
+        Error::Unknown(format!("{e:?}"))
     }
 }
 
-#[derive(Clone, Debug)]
-pub struct MavinoteClient {
-    account_id: Option<i32>,
+pub struct AuthClient {
     api_url: String,
     client: Client,
 }
 
-impl MavinoteClient {
-    pub fn new(account_id: Option<i32>, api_url: String, token: Option<String>) -> Self {
+impl AuthClient {
+    pub fn new(api_url: String) -> AuthClient {
         let mut headers = HeaderMap::new();
         headers.insert("Content-Type", HeaderValue::from_static("application/json"));
 
-        if let Some(token) = token {
-            headers.insert("Authorization", HeaderValue::from_str(&format!("Bearer {}", token)).unwrap());
-        }
-
         let client = ClientBuilder::new()
             .default_headers(headers)
+            .connect_timeout(std::time::Duration::from_secs(5))
             .build()
             .unwrap();
 
-        MavinoteClient {
-            account_id,
+        AuthClient {
             api_url,
             client,
         }
     }
 
-    async fn error_for_status(&self, response: reqwest::Response) -> Result<reqwest::Response, Error> {
+    async fn error_for_status(response: reqwest::Response) -> Result<reqwest::Response, Error> {
         let status = response.status();
 
         if status.is_success() {
             return Ok(response);
         }
 
-        let error = response.json::<HttpError>().await?.error;
-
         if status == StatusCode::UNAUTHORIZED {
-            if error == "device_deleted" {
-                let account_id = self.account_id.ok_or(Error::Internal("device_deleted response is received while account_id of the client is None"))?;
-
-                return Err(Error::DeviceDeleted(account_id));
-            }
-
-            return Err(Error::Unauthorized(self.account_id));
+            return Err(Error::Unauthorized(None));
         }
+
+        let error = response.json::<HttpError>().await?.error;
 
         Err(Error::Message(error))
     }
-}
 
-impl MavinoteClient {
     pub async fn login(&self, email: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
         let request = requests::Login { email, pubkey, password };
 
@@ -108,7 +93,7 @@ impl MavinoteClient {
             .body(serde_json::to_string(&request).unwrap())
             .send()
             .await
-            .map(|r| async { self.error_for_status(r).await })?
+            .map(Self::error_for_status)?
             .await?
             .json()
             .await
@@ -149,7 +134,7 @@ impl MavinoteClient {
             .body(serde_json::to_string(&request).unwrap())
             .send()
             .await
-            .map(|r| async { self.error_for_status(r).await })?
+            .map(Self::error_for_status)?
             .await?
             .json()
             .await
@@ -164,11 +149,74 @@ impl MavinoteClient {
             .body(serde_json::to_string(&request).unwrap())
             .send()
             .await
-            .map(|r| async { self.error_for_status(r).await })?
+            .map(Self::error_for_status)?
             .await
             .map(|_| ())
     }
 
+    pub async fn sign_up(&self, email: &str, code: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
+        let request = requests::SignUp { email, code, pubkey, password };
+
+        self.client
+            .post(format!("{}/auth/sign-up", self.api_url))
+            .body(serde_json::to_string(&request).unwrap())
+            .send()
+            .await
+            .map(Self::error_for_status)?
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct MavinoteClient {
+    account_id: i32,
+    api_url: String,
+    client: Client,
+}
+
+impl MavinoteClient {
+    pub fn new(account_id: i32, api_url: String, token: String) -> Self {
+        let mut headers = HeaderMap::new();
+        headers.insert("Content-Type", HeaderValue::from_static("application/json"));
+        headers.insert("Authorization", HeaderValue::from_str(&format!("Bearer {}", token)).unwrap());
+
+        let client = ClientBuilder::new()
+            .default_headers(headers)
+            .build()
+            .unwrap();
+
+        MavinoteClient {
+            account_id,
+            api_url,
+            client,
+        }
+    }
+
+    async fn error_for_status(&self, response: reqwest::Response) -> Result<reqwest::Response, Error> {
+        let status = response.status();
+
+        if status.is_success() {
+            return Ok(response);
+        }
+
+        let error = response.json::<HttpError>().await?.error;
+
+        if status == StatusCode::UNAUTHORIZED {
+            if error == "device_deleted" {
+                return Err(Error::DeviceDeleted(self.account_id));
+            }
+
+            return Err(Error::Unauthorized(Some(self.account_id)));
+        }
+
+        Err(Error::Message(error))
+    }
+}
+
+impl MavinoteClient {
     pub async fn send_account_close_code(&self) -> Result<(), Error> {
         self.client
             .post(format!("{}/user/send-close-code", self.api_url))
@@ -188,21 +236,6 @@ impl MavinoteClient {
             .map(|r| async { self.error_for_status(r).await })?
             .await
             .map(|_| ())
-    }
-
-    pub async fn sign_up(&self, email: &str, code: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
-        let request = requests::SignUp { email, code, pubkey, password };
-
-        self.client
-            .post(format!("{}/auth/sign-up", self.api_url))
-            .body(serde_json::to_string(&request).unwrap())
-            .send()
-            .await
-            .map(|r| async { self.error_for_status(r).await })?
-            .await?
-            .json()
-            .await
-            .map_err(|e| e.into())
     }
 
     pub async fn fetch_devices(&self) -> Result<Vec<responses::Device>, Error> {
@@ -362,10 +395,10 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn respond_requests(&self, request: RespondRequests) -> Result<(), Error> {
+    pub async fn respond_requests(&self, request: &RespondRequests) -> Result<(), Error> {
         self.client
             .post(format!("{}/note/respond-requests", self.api_url))
-            .body(serde_json::to_string(&request).unwrap())
+            .body(serde_json::to_string(request).unwrap())
             .send()
             .await
             .map(|r| async { self.error_for_status(r).await })?
