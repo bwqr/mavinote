@@ -13,7 +13,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material3.Card
-import androidx.compose.material3.Divider
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
@@ -92,11 +91,11 @@ fun FoldersView(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-        modifier = Modifier.padding(16.dp)
-    ) {
-        Row(verticalAlignment = Alignment.CenterVertically, modifier = Modifier.fillMaxWidth()) {
+    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+        ) {
             Title(
                 stringResource(R.string.folders),
                 modifier = Modifier
@@ -113,47 +112,44 @@ fun FoldersView(
             }
         }
 
-
-        for (account in accounts) {
-            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                Row(
-                    verticalAlignment = Alignment.Bottom,
-                    modifier = Modifier
-                        .fillMaxWidth()
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            items(accounts) { account ->
+                Column(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp)
                 ) {
-                    Text(
-                        account.account.name,
-                        style = Typography.titleMedium,
-                        color = Color.Gray,
-                        modifier = Modifier
-                            .padding(start = 24.dp)
-                    )
-
-                    Text(
-                        text = account.folders.size.toString(),
-                        textAlign = TextAlign.End,
-                        style = Typography.titleMedium,
-                        color = Color.Gray,
+                    Row(
+                        verticalAlignment = Alignment.Bottom,
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(end = 24.dp)
-                    )
-                }
+                    ) {
+                        Text(
+                            account.account.name,
+                            style = Typography.titleMedium,
+                            color = Color.Gray,
+                            modifier = Modifier
+                                .padding(start = 24.dp)
+                        )
 
-                if (account.folders.isEmpty()) {
-                    Text(
-                        text = stringResource(R.string.no_folder_in_account),
-                        modifier = Modifier.padding(16.dp, 8.dp)
-                    )
-                } else {
-                    Card(modifier = Modifier.fillMaxWidth()) {
-                        LazyColumn {
-                            items(account.folders.mapIndexed { index, folder ->
-                                Pair(
-                                    index,
-                                    folder
-                                )
-                            }) { (index, folder) ->
+                        Text(
+                            text = account.folders.size.toString(),
+                            textAlign = TextAlign.End,
+                            style = Typography.titleMedium,
+                            color = Color.Gray,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(end = 24.dp)
+                        )
+                    }
+
+                    if (account.folders.isEmpty()) {
+                        Text(
+                            text = stringResource(R.string.no_folder_in_account),
+                            modifier = Modifier.padding(16.dp, 8.dp)
+                        )
+                    } else {
+                        Card(modifier = Modifier.fillMaxWidth()) {
+                            for (folder in account.folders) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     modifier = Modifier.clickable { navController.navigate("notes/${folder.id}") }
@@ -171,10 +167,6 @@ fun FoldersView(
                                         tint = Color.Gray,
                                         modifier = Modifier.padding(16.dp)
                                     )
-                                }
-
-                                if (index < account.folders.size - 1) {
-                                    Divider()
                                 }
                             }
                         }

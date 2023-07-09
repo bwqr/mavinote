@@ -150,7 +150,7 @@ fun NotesView(
                     .fillMaxWidth()
             ) {
                 LazyColumn {
-                    items(notes.mapIndexed { index, note -> Pair(index, note) }) { (index, note) ->
+                    items(notes) { note ->
                         Row(
                             verticalAlignment = Alignment.CenterVertically,
                             modifier = Modifier.clickable { navController.navigate("note?noteId=${note.id}") }
@@ -168,10 +168,6 @@ fun NotesView(
                                 tint = Color.Gray,
                                 modifier = Modifier.padding(16.dp)
                             )
-                        }
-
-                        if (index < notes.size - 1) {
-                            Divider()
                         }
                     }
                 }
