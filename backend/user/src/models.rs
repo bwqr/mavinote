@@ -1,6 +1,6 @@
 use base::{
     models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
-    schema::devices,
+    schema::{devices, user_devices},
     types::Pool,
     HttpError,
 };
@@ -16,16 +16,15 @@ use diesel::Queryable;
 use futures::future::LocalBoxFuture;
 use serde::Serialize;
 
-#[derive(Clone, Queryable, Serialize)]
+#[derive(Queryable, Serialize)]
 pub struct Device {
     pub id: i32,
-    pub user_id: i32,
     pub pubkey: String,
     pub created_at: NaiveDateTime,
 }
 
-pub const DEVICE_COLUMNS: (devices::id, devices::user_id, devices::pubkey, devices::created_at) =
-    (devices::id, devices::user_id, devices::pubkey, devices::created_at);
+pub const DEVICE_COLUMNS: (devices::id, devices::pubkey, devices::created_at) =
+    (devices::id, devices::pubkey, devices::created_at);
 
 #[derive(Queryable, Serialize)]
 pub struct User {
@@ -34,7 +33,13 @@ pub struct User {
     pub created_at: NaiveDateTime,
 }
 
-impl FromRequest for Device {
+#[derive(Clone, Queryable)]
+pub struct UserDevice {
+    pub user_id: i32,
+    pub device_id: i32
+}
+
+impl FromRequest for UserDevice {
     type Error = HttpError;
     type Future = LocalBoxFuture<'static, Result<Self, Self::Error>>;
 
@@ -48,7 +53,7 @@ impl FromRequest for Device {
             .extensions()
             .get::<Token>()
             .ok_or("Token could not be extracted from request in impl FromRequest for Device")
-            .map(|token| (token.id, token.kind.clone()));
+            .map(|token| (token.user_id, token.device_id, token.kind.clone()));
 
         Box::pin(async move {
             let map_err = |message: &'static str| HttpError {
@@ -58,17 +63,18 @@ impl FromRequest for Device {
             };
 
             let mut conn = conn.map_err(map_err)?;
-            let (device_id, kind) = token.map_err(map_err)?;
+            let (user_id, device_id, kind) = token.map_err(map_err)?;
 
             if kind != TokenKind::Device {
                 return Err(UNEXPECTED_TOKEN_KIND);
             }
 
             block(move || {
-                devices::table
-                    .find(device_id)
-                    .select(DEVICE_COLUMNS)
-                    .first::<Device>(&mut conn)
+                user_devices::table
+                    .filter(user_devices::user_id.eq(user_id))
+                    .filter(user_devices::device_id.eq(device_id))
+                    .select((user_devices::user_id, user_devices::device_id))
+                    .first::<UserDevice>(&mut conn)
                     .map_err(|e| match e {
                         diesel::result::Error::NotFound => HttpError {
                             code: StatusCode::UNAUTHORIZED,

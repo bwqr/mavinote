@@ -9,7 +9,7 @@ pub type AddrServer = Addr<Server>;
 pub use actix_web_actors::ws::start;
 
 pub struct Server {
-    pending_devices: HashMap<i32, Addr<Connection>>,
+    pending_devices: HashMap<(i32, i32), Addr<Connection>>,
 }
 
 impl Server {
@@ -28,7 +28,7 @@ impl Handler<messages::AddConnection> for Server {
     type Result = <messages::AddConnection as Message>::Result;
 
     fn handle(&mut self, msg: messages::AddConnection, _: &mut Self::Context) -> Self::Result {
-        if let Some(addr) = self.pending_devices.insert(msg.pending_device_id, msg.conn) {
+        if let Some(addr) = self.pending_devices.insert((msg.user_id, msg.device_id), msg.conn) {
             debug!("A pending device is added twice into connection list");
             addr.do_send(messages::StopConnection);
         }
@@ -39,7 +39,7 @@ impl Handler<messages::RemoveConnection> for Server {
     type Result = <messages::RemoveConnection as Message>::Result;
 
     fn handle(&mut self, msg: messages::RemoveConnection, _: &mut Self::Context) -> Self::Result {
-        if self.pending_devices.remove(&msg.0).is_none() {
+        if self.pending_devices.remove(&(msg.user_id, msg.device_id)).is_none() {
             debug!("An unknown pending device is removed from connection list");
         }
     }
@@ -49,7 +49,7 @@ impl Handler<messages::AcceptPendingDevice> for Server {
     type Result = <messages::AcceptPendingDevice as Message>::Result;
 
     fn handle(&mut self, msg: messages::AcceptPendingDevice, _: &mut Self::Context) -> Self::Result {
-        if let Some(addr) = self.pending_devices.get(&msg.0) {
+        if let Some(addr) = self.pending_devices.get(&(msg.user_id, msg.device_id)) {
             addr.do_send(msg);
 
             true
@@ -62,12 +62,13 @@ impl Handler<messages::AcceptPendingDevice> for Server {
 #[derive(MessageResponse)]
 pub struct Connection {
     server: Addr<Server>,
-    pending_device_id: i32,
+    user_id: i32,
+    device_id: i32,
 }
 
 impl Connection {
-    pub fn new(server: Addr<Server>, pending_device_id: i32) -> Self {
-        Connection { server, pending_device_id }
+    pub fn new(server: Addr<Server>, user_id: i32, device_id: i32) -> Self {
+        Connection { server, user_id, device_id }
     }
 }
 
@@ -78,7 +79,8 @@ impl Actor for Connection {
         self.server
             .send(messages::AddConnection {
                 conn: ctx.address(),
-                pending_device_id: self.pending_device_id,
+                user_id: self.user_id,
+                device_id: self.device_id,
             })
             .into_actor(self)
             .then(|_, _, _| fut::ready(()))
@@ -92,7 +94,10 @@ impl Actor for Connection {
     }
 
     fn stopping(&mut self, _: &mut Self::Context) -> Running {
-        self.server.do_send(messages::RemoveConnection(self.pending_device_id));
+        self.server.do_send(messages::RemoveConnection {
+            user_id: self.user_id,
+            device_id: self.device_id,
+        });
 
         Running::Stop
     }
@@ -145,7 +150,10 @@ pub mod messages {
         type Result = ();
     }
 
-    pub struct RemoveConnection(pub i32);
+    pub struct RemoveConnection {
+        pub user_id: i32,
+        pub device_id: i32,
+    }
 
     impl Message for RemoveConnection {
         type Result = ();
@@ -153,14 +161,18 @@ pub mod messages {
 
     pub struct AddConnection {
         pub conn: Addr<Connection>,
-        pub pending_device_id: i32,
+        pub user_id: i32,
+        pub device_id: i32,
     }
 
     impl Message for AddConnection {
         type Result = ();
     }
 
-    pub struct AcceptPendingDevice(pub i32);
+    pub struct AcceptPendingDevice {
+        pub user_id: i32,
+        pub device_id: i32,
+    }
 
     impl Message for AcceptPendingDevice {
         type Result = bool;

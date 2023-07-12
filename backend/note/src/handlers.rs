@@ -9,12 +9,12 @@ use diesel::prelude::*;
 use base::{
     sanitize::Sanitized,
     schema::{
-        device_folders, device_notes, devices, folder_requests, folders, note_requests, notes,
+        device_folders, device_notes, folder_requests, folders, note_requests, notes, user_devices
     },
     types::Pool,
     HttpError, HttpMessage,
 };
-use user::models::{Device, DEVICE_COLUMNS};
+use user::models::UserDevice;
 
 use crate::{
     models::{Folder, Note, State},
@@ -28,7 +28,7 @@ use crate::{
 #[get("folders")]
 pub async fn fetch_folders(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<Vec<responses::Folder>>, HttpError> {
     let folders = block(move || {
         folders::table
@@ -36,7 +36,7 @@ pub async fn fetch_folders(
             .left_join(
                 device_folders::table.on(device_folders::folder_id
                     .eq(folders::id)
-                    .and(device_folders::receiver_device_id.eq(device.id))),
+                    .and(device_folders::receiver_device_id.eq(device.device_id))),
             )
             .select((
                 folders::id,
@@ -54,30 +54,30 @@ pub async fn fetch_folders(
 pub async fn create_folder(
     pool: Data<Pool>,
     request: Sanitized<Json<Vec<CreateFolderRequest>>>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<CreatedFolder>, HttpError> {
     let created_folder = block(move || {
         let device_folders_to_create = request.0 .0;
 
         let mut conn = pool.get().unwrap();
 
-        let devices = devices::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
-            .select(DEVICE_COLUMNS)
-            .load::<Device>(&mut conn)?;
+        let device_ids = user_devices::table
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(user_devices::device_id.ne(device.device_id))
+            .select(user_devices::device_id)
+            .load::<i32>(&mut conn)?;
 
         let device_not_exist_in_request = device_folders_to_create
             .iter()
             .find(|device_folder| {
-                devices
+                device_ids
                     .iter()
-                    .find(|d| d.id == device_folder.device_id)
+                    .find(|id| **id == device_folder.device_id)
                     .is_none()
             })
             .is_some();
 
-        if devices.len() != device_folders_to_create.iter().map(|d| d.device_id).collect::<HashSet<i32>>().len() || device_not_exist_in_request {
+        if device_ids.len() != device_folders_to_create.iter().map(|d| d.device_id).collect::<HashSet<i32>>().len() || device_not_exist_in_request {
             return Err(HttpError::unprocessable_entity("devices_mismatch"));
         }
 
@@ -93,7 +93,7 @@ pub async fn create_folder(
                         (
                             device_folders::folder_id.eq(folder.id),
                             device_folders::receiver_device_id.eq(folder_to_create.device_id),
-                            device_folders::sender_device_id.eq(device.id),
+                            device_folders::sender_device_id.eq(device.device_id),
                             device_folders::name.eq(folder_to_create.name),
                         )
                     })
@@ -112,7 +112,7 @@ pub async fn create_folder(
 pub async fn delete_folder(
     pool: Data<Pool>,
     folder_id: Path<i32>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
         let mut conn = pool.get().unwrap();
@@ -146,7 +146,7 @@ pub async fn delete_folder(
 pub async fn fetch_commits(
     pool: Data<Pool>,
     folder_id: Path<i32>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<Vec<Commit>>, HttpError> {
     let commits = block(move || {
         let mut conn = pool.get().unwrap();
@@ -174,7 +174,7 @@ pub async fn create_note(
     pool: Data<Pool>,
     query: Query<FolderId>,
     request: Sanitized<Json<Vec<CreateNoteRequest>>>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<CreatedNote>, HttpError> {
     let note = block(move || {
         let notes_to_create = request.0 .0;
@@ -188,23 +188,23 @@ pub async fn create_note(
             .select(folders::id)
             .first::<i32>(&mut conn)?;
 
-        let devices = devices::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
-            .select(DEVICE_COLUMNS)
-            .load::<Device>(&mut conn)?;
+        let device_ids = user_devices::table
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(user_devices::device_id.ne(device.device_id))
+            .select(user_devices::device_id)
+            .load::<i32>(&mut conn)?;
 
         let device_not_exist_in_request = notes_to_create
             .iter()
             .find(|note_to_create| {
-                devices
+                device_ids
                     .iter()
-                    .find(|d| d.id == note_to_create.device_id)
+                    .find(|id| **id == note_to_create.device_id)
                     .is_none()
             })
             .is_some();
 
-        if devices.len() != notes_to_create.len() || device_not_exist_in_request {
+        if device_ids.len() != notes_to_create.len() || device_not_exist_in_request {
             return Err(HttpError::unprocessable_entity("devices_mismatch"));
         }
 
@@ -220,7 +220,7 @@ pub async fn create_note(
                         (
                             device_notes::note_id.eq(note.id),
                             device_notes::receiver_device_id.eq(note_to_create.device_id),
-                            device_notes::sender_device_id.eq(device.id),
+                            device_notes::sender_device_id.eq(device.device_id),
                             device_notes::name.eq(note_to_create.name),
                             device_notes::text.eq(note_to_create.text),
                         )
@@ -243,7 +243,7 @@ pub async fn create_note(
 pub async fn fetch_note(
     pool: Data<Pool>,
     note_id: Path<i32>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<responses::Note>, HttpError> {
     let note = block(move || {
         notes::table
@@ -253,7 +253,7 @@ pub async fn fetch_note(
             .left_join(
                 device_notes::table.on(device_notes::note_id
                     .eq(notes::id)
-                    .and(device_notes::receiver_device_id.eq(device.id))),
+                    .and(device_notes::receiver_device_id.eq(device.device_id))),
             )
             .select((
                 notes::id,
@@ -278,7 +278,7 @@ pub async fn update_note(
     pool: Data<Pool>,
     note_id: Path<i32>,
     request: Sanitized<Json<UpdateNoteRequest>>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<Commit>, HttpError> {
     let commit = block(move || -> Result<Commit, HttpError> {
         let mut conn = pool.get().unwrap();
@@ -298,23 +298,23 @@ pub async fn update_note(
 
         let device_notes = request.0 .0.device_notes;
 
-        let devices = devices::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
-            .select(DEVICE_COLUMNS)
-            .load::<Device>(&mut conn)?;
+        let device_ids = user_devices::table
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(user_devices::device_id.ne(device.device_id))
+            .select(user_devices::device_id)
+            .load::<i32>(&mut conn)?;
 
         let device_not_exist_in_request = device_notes
             .iter()
             .find(|note_to_create| {
-                devices
+                device_ids
                     .iter()
-                    .find(|d| d.id == note_to_create.device_id)
+                    .find(|id| **id == note_to_create.device_id)
                     .is_none()
             })
             .is_some();
 
-        if devices.len() != device_notes.len() || device_not_exist_in_request {
+        if device_ids.len() != device_notes.len() || device_not_exist_in_request {
             return Err(HttpError::unprocessable_entity("devices_mismatch"));
         }
 
@@ -328,14 +328,14 @@ pub async fn update_note(
                 .values((
                     device_notes::note_id.eq(note_id),
                     device_notes::receiver_device_id.eq(device_note.device_id),
-                    device_notes::sender_device_id.eq(device.id),
+                    device_notes::sender_device_id.eq(device.device_id),
                     device_notes::name.eq(&device_note.name),
                     device_notes::text.eq(&device_note.text),
                 ))
                 .on_conflict((device_notes::note_id, device_notes::receiver_device_id))
                 .do_update()
                 .set((
-                    device_notes::sender_device_id.eq(device.id),
+                    device_notes::sender_device_id.eq(device.device_id),
                     device_notes::name.eq(&device_note.name),
                     device_notes::text.eq(&device_note.text),
                 ))
@@ -344,7 +344,7 @@ pub async fn update_note(
             // Remove old senders since we have updated all of the receiver with this sender
             diesel::delete(device_notes::table)
                 .filter(device_notes::note_id.eq(note_id))
-                .filter(device_notes::sender_device_id.ne(device.id))
+                .filter(device_notes::sender_device_id.ne(device.device_id))
                 .execute(&mut conn)?;
         }
 
@@ -363,7 +363,7 @@ pub async fn update_note(
 pub async fn delete_note(
     pool: Data<Pool>,
     note_id: Path<i32>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
         let mut conn = pool.get().unwrap();
@@ -391,23 +391,23 @@ pub async fn delete_note(
 }
 
 #[get("requests")]
-pub async fn fetch_requests(pool: Data<Pool>, device: Device) -> Result<Json<Requests>, HttpError> {
+pub async fn fetch_requests(pool: Data<Pool>, device: UserDevice) -> Result<Json<Requests>, HttpError> {
     let requests = block(move || {
         let mut conn = pool.get().unwrap();
 
         let folders: Vec<FolderRequest> = folder_requests::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
-            .inner_join(devices::table)
-            .select((folder_requests::folder_id, devices::id))
-            .get_results(&mut conn)?;
+            .inner_join(user_devices::table.on(folder_requests::device_id.eq(user_devices::device_id)))
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(folder_requests::device_id.ne(device.device_id))
+            .select((folder_requests::folder_id, folder_requests::device_id))
+            .load(&mut conn)?;
 
         let notes: Vec<NoteRequest> = note_requests::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
-            .inner_join(devices::table)
-            .select((note_requests::note_id, devices::id))
-            .get_results(&mut conn)?;
+            .inner_join(user_devices::table.on(note_requests::device_id.eq(user_devices::device_id)))
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(note_requests::device_id.ne(device.device_id))
+            .select((note_requests::note_id, note_requests::device_id))
+            .load(&mut conn)?;
 
         Result::<_, HttpError>::Ok(Requests {
             folder_requests: folders,
@@ -421,7 +421,7 @@ pub async fn fetch_requests(pool: Data<Pool>, device: Device) -> Result<Json<Req
 
 pub async fn create_requests(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
     request: Sanitized<Json<CreateRequests>>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     let request = request.0 .0;
@@ -463,7 +463,7 @@ pub async fn create_requests(
                 .map(|id| {
                     (
                         folder_requests::folder_id.eq(id),
-                        folder_requests::device_id.eq(device.id),
+                        folder_requests::device_id.eq(device.device_id),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -485,7 +485,7 @@ pub async fn create_requests(
                 .map(|id| {
                     (
                         note_requests::note_id.eq(id),
-                        note_requests::device_id.eq(device.id),
+                        note_requests::device_id.eq(device.device_id),
                     )
                 })
                 .collect::<Vec<_>>();
@@ -510,7 +510,7 @@ pub async fn create_requests(
 #[post("respond-requests")]
 pub async fn respond_requests(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
     request: Sanitized<Json<RespondRequests>>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     let request = request.0 .0;
@@ -563,7 +563,7 @@ pub async fn respond_requests(
                         (
                             device_folders::folder_id.eq(req.folder_id),
                             device_folders::receiver_device_id.eq(request.device_id),
-                            device_folders::sender_device_id.eq(device.id),
+                            device_folders::sender_device_id.eq(device.device_id),
                             device_folders::name.eq(req.name),
                         )
                     })
@@ -588,7 +588,7 @@ pub async fn respond_requests(
                         (
                             device_notes::note_id.eq(req.note_id),
                             device_notes::receiver_device_id.eq(request.device_id),
-                            device_notes::sender_device_id.eq(device.id),
+                            device_notes::sender_device_id.eq(device.device_id),
                             device_notes::name.eq(req.name),
                             device_notes::text.eq(req.text),
                         )
@@ -627,7 +627,7 @@ mod tests {
     };
     use test_helpers::db::create_pool;
     use chrono::NaiveDateTime;
-    use user::test::db::DeviceBuilder;
+    use user::test::db::UserDeviceBuilder;
 
     use super::create_requests;
 
@@ -680,7 +680,7 @@ mod tests {
     {
         let pool = create_pool();
 
-        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
+        let device = UserDeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
         let request = CreateRequests {
             folder_ids: Vec::new(),
             note_ids: Vec::new(),
@@ -701,7 +701,7 @@ mod tests {
 
         let (device, folder) = {
             let mut conn = pool.get().unwrap();
-            let device = DeviceBuilder::default().build(&mut conn).unwrap();
+            let device = UserDeviceBuilder::default().build(&mut conn).unwrap();
             let folder = create_folder(&mut conn, None).unwrap();
 
             (device, folder)
@@ -727,7 +727,7 @@ mod tests {
 
         let (device, note) = {
             let mut conn = pool.get().unwrap();
-            let device = DeviceBuilder::default().build(&mut conn).unwrap();
+            let device = UserDeviceBuilder::default().build(&mut conn).unwrap();
             let note = create_note(&mut conn, None).unwrap();
 
             (device, note)
@@ -752,7 +752,7 @@ mod tests {
 
         let (device, folder, note) = {
             let mut conn = pool.get().unwrap();
-            let device = DeviceBuilder::default().build(&mut conn).unwrap();
+            let device = UserDeviceBuilder::default().build(&mut conn).unwrap();
             let folder = create_folder(&mut conn, Some(device.user_id)).unwrap();
             let note = create_note(&mut conn, Some(folder.id)).unwrap();
 
@@ -776,7 +776,7 @@ mod tests {
         let folder_request_exist = diesel::select(diesel::dsl::exists(
             folder_requests::table
                 .filter(folder_requests::folder_id.eq(folder.id))
-                .filter(folder_requests::device_id.eq(device.id)),
+                .filter(folder_requests::device_id.eq(device.device_id)),
         ))
         .get_result::<bool>(&mut pool.get().unwrap())
         .unwrap();
@@ -784,7 +784,7 @@ mod tests {
         let note_request_exist = diesel::select(diesel::dsl::exists(
             note_requests::table
                 .filter(note_requests::note_id.eq(note.id))
-                .filter(note_requests::device_id.eq(device.id)),
+                .filter(note_requests::device_id.eq(device.device_id)),
         ))
         .get_result::<bool>(&mut pool.get().unwrap())
         .unwrap();

@@ -16,6 +16,8 @@ drop table folders;
 
 drop table pending_devices;
 
+drop table user_devices;
+
 drop table devices;
 
 drop table pending_delete_users;

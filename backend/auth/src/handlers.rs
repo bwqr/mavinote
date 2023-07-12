@@ -2,7 +2,7 @@ use base::{
     crypto::Crypto,
     models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
     sanitize::Sanitized,
-    schema::{devices, pending_devices, pending_users, users},
+    schema::{devices, pending_devices, pending_users, users, user_devices},
     types::Pool,
     HttpError, HttpMessage,
 };
@@ -29,13 +29,13 @@ pub async fn login(
     request: Json<Login>,
 ) -> Result<Json<responses::Token>, HttpError> {
     let token = block(move || -> Result<String, HttpError> {
-        let device_id = devices::table
+        let (user_id, device_id) = devices::table
             .filter(devices::pubkey.eq(&request.pubkey))
             .filter(devices::password.eq(crypto.sign512(&request.password)))
             .filter(users::email.eq(&request.email))
-            .inner_join(users::table)
-            .select(devices::id)
-            .first::<i32>(&mut pool.get().unwrap())
+            .inner_join(user_devices::table.inner_join(users::table))
+            .select((users::id, devices::id))
+            .first::<(i32, i32)>(&mut pool.get().unwrap())
             .map_err(|e| match e {
                 diesel::result::Error::NotFound => HttpError {
                     code: StatusCode::UNAUTHORIZED,
@@ -46,7 +46,7 @@ pub async fn login(
             })?;
 
         crypto
-            .encode(&Token::device(device_id))
+            .encode(&Token::device(user_id, device_id))
             .map_err(|e| e.into())
     })
     .await??;
@@ -92,7 +92,7 @@ pub async fn sign_up(
             return Err(HttpError::unprocessable_entity("invalid_code"));
         }
 
-        let (user_id, _, _) = diesel::insert_into(users::table)
+        let user_id = diesel::insert_into(users::table)
             .values(users::email.eq(pending_user.email))
             .get_result::<(i32, String, NaiveDateTime)>(&mut conn)
             .map_err(|e| match e {
@@ -101,23 +101,30 @@ pub async fn sign_up(
                     _,
                 ) => HttpError::conflict("email_already_used"),
                 _ => e.into(),
-            })?;
+            })?
+            .0;
 
         let device_id = diesel::insert_into(devices::table)
             .values((
-                devices::user_id.eq(user_id),
                 devices::pubkey.eq(&request.pubkey),
                 devices::password.eq(crypto.sign512(&request.password)),
             ))
-            .get_result::<(i32, i32, String, String, NaiveDateTime)>(&mut conn)?
+            .get_result::<(i32, String, String, NaiveDateTime)>(&mut conn)?
             .0;
+
+        diesel::insert_into(user_devices::table)
+            .values((
+                user_devices::user_id.eq(&user_id),
+                user_devices::device_id.eq(&device_id),
+            ))
+            .execute(&mut conn)?;
 
         diesel::delete(pending_users::table)
             .filter(pending_users::email.eq(&request.email))
             .execute(&mut conn)?;
 
         crypto
-            .encode(&Token::device(device_id))
+            .encode(&Token::device(user_id, device_id))
             .map_err(|e| e.into())
     })
     .await??;
@@ -180,46 +187,55 @@ pub async fn request_verification(
     let token = block(move || {
         let mut conn = pool.get().unwrap();
 
-        let user_exists = diesel::select(diesel::dsl::exists(
-            users::table.filter(users::email.eq(&request.email)),
-        ))
-        .get_result::<bool>(&mut conn)?;
-
-        if !user_exists {
-            return Err(HttpError::unprocessable_entity("email_not_found"));
-        }
+        let Some(user_id) = users::table
+            .filter(users::email.eq(&request.email))
+            .select(users::id)
+            .first::<i32>(&mut conn)
+            .optional()? else {
+                return Err(HttpError::unprocessable_entity("email_not_found"));
+            };
 
         let password = crypto.sign512(&request.password);
 
-        let existing_dev_pass = devices::table
-            .filter(devices::pubkey.eq(&request.pubkey))
-            .filter(users::email.eq(&request.email))
-            .inner_join(users::table)
-            .select(devices::password)
-            .first::<String>(&mut conn)
-            .optional()?;
+        diesel::insert_into(devices::table)
+            .values((
+                devices::pubkey.eq(&request.pubkey),
+                devices::password.eq(&password)
+            ))
+            .on_conflict(devices::pubkey)
+            .do_nothing()
+            .execute(&mut conn)?;
 
-        if let Some(pass) = existing_dev_pass {
-            return if pass == password {
-                Err(HttpError::conflict("device_already_exists"))
-            } else {
-                Err(HttpError::conflict("device_exists_but_passwords_mismatch"))
-            };
+        let (device_id, _, pass, _) = devices::table
+            .filter(devices::pubkey.eq(&request.pubkey))
+            .first::<(i32, String, String, NaiveDateTime)>(&mut conn)?;
+
+        if pass != password {
+            return Err(HttpError::conflict("device_exists_but_passwords_mismatch"));
         }
 
-        let (pending_device_id, _, _, _, _) = diesel::insert_into(pending_devices::table)
+        let user_device_exists = diesel::dsl::select(diesel::dsl::exists(
+                user_devices::table
+                    .filter(user_devices::user_id.eq(&user_id))
+                    .filter(user_devices::device_id.eq(&device_id))
+        ))
+            .get_result::<bool>(&mut conn)?;
+
+        if user_device_exists {
+            return Err(HttpError::conflict("device_already_exists"));
+        }
+
+        diesel::insert_into(pending_devices::table)
             .values((
-                pending_devices::email.eq(&request.email),
-                pending_devices::pubkey.eq(&request.pubkey),
-                pending_devices::password.eq(&password),
+                pending_devices::user_id.eq(&user_id),
+                pending_devices::device_id.eq(&device_id),
             ))
-            .on_conflict((pending_devices::email, pending_devices::pubkey))
-            .do_update()
-            .set(pending_devices::password.eq(&password))
-            .get_result::<(i32, String, String, String, NaiveDateTime)>(&mut conn)?;
+            .on_conflict((pending_devices::user_id, pending_devices::device_id))
+            .do_nothing()
+            .execute(&mut conn)?;
 
         crypto
-            .encode(&Token::pending_device(pending_device_id))
+            .encode(&Token::pending_device(user_id, device_id))
             .map_err(|e| e.into())
     })
     .await??;
@@ -241,16 +257,17 @@ pub async fn wait_verification(
         return Err(UNEXPECTED_TOKEN_KIND);
     }
 
-    let pending_device_id = block(move || {
+    let (user_id, device_id) = block(move || {
         pending_devices::table
-            .filter(pending_devices::id.eq(token.id))
-            .select(pending_devices::id)
+            .filter(pending_devices::user_id.eq(token.user_id))
+            .filter(pending_devices::device_id.eq(token.device_id))
+            .select((pending_devices::user_id, pending_devices::device_id))
             .first(&mut pool.get().unwrap())
     })
     .await??;
 
     notify::ws::start(
-        notify::ws::Connection::new((&**ws_server).clone(), pending_device_id),
+        notify::ws::Connection::new((&**ws_server).clone(), user_id, device_id),
         &req,
         stream,
     )
@@ -267,7 +284,7 @@ mod tests {
     use base::{
         crypto::Crypto,
         sanitize::Sanitized,
-        schema::{devices, pending_users, users},
+        schema::{devices, pending_users, users, user_devices},
         HttpError,
     };
     use test_helpers::db::create_pool;
@@ -442,19 +459,26 @@ mod tests {
 
         assert!(res.is_ok());
 
-        let user = users::table
+        let user_id = users::table
             .filter(users::email.eq("EMAIL"))
-            .select((users::id, users::email))
-            .first::<(i32, String)>(&mut pool.get().unwrap());
+            .select(users::id)
+            .first::<i32>(&mut pool.get().unwrap());
 
-        assert!(user.is_ok());
+        assert!(user_id.is_ok());
 
-        let device = devices::table
-            .filter(devices::user_id.eq(user.unwrap().0))
+        let device_id = devices::table
             .filter(devices::pubkey.eq(BASE64_STANDARD.encode([1; 32])))
             .select(devices::id)
             .first::<i32>(&mut pool.get().unwrap());
 
-        assert!(device.is_ok());
+        assert!(device_id.is_ok());
+
+        let user_device = user_devices::table
+            .filter(user_devices::device_id.eq(device_id.unwrap()))
+            .filter(user_devices::user_id.eq(user_id.unwrap()))
+            .select(user_devices::device_id)
+            .first::<i32>(&mut pool.get().unwrap());
+
+        assert!(user_device.is_ok());
     }
 }

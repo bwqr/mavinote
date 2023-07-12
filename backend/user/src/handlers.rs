@@ -5,24 +5,25 @@ use rand::seq::SliceRandom;
 
 use base::{
     sanitize::Sanitized,
-    schema::{devices, pending_devices, users, pending_delete_users},
+    schema::{devices, pending_devices, users, pending_delete_users, user_devices},
     types::Pool,
     HttpError, HttpMessage
 };
 
 use crate::{
-    models::{Device, DEVICE_COLUMNS},
+    models::{Device, DEVICE_COLUMNS, UserDevice},
     requests::{AddDevice, CloseAccount, DeleteDevice},
 };
 
 pub async fn fetch_devices(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<Vec<Device>>, HttpError> {
     let devices = web::block(move || {
-        devices::table
-            .filter(devices::user_id.eq(device.user_id))
-            .filter(devices::id.ne(device.id))
+        user_devices::table
+            .inner_join(devices::table)
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(user_devices::device_id.ne(device.device_id))
             .select(DEVICE_COLUMNS)
             .load(&mut pool.get().unwrap())
     })
@@ -34,29 +35,30 @@ pub async fn fetch_devices(
 pub async fn add_device(
     pool: Data<Pool>,
     ws_server: Data<notify::ws::AddrServer>,
-    device: Device,
+    device: UserDevice,
     request: Sanitized<Json<AddDevice>>,
 ) -> Result<Json<Device>, HttpError> {
     let (created_device, pending_device_id) = block(move || {
         let mut conn = pool.get().unwrap();
 
-        let device_exists = diesel::dsl::select(diesel::dsl::exists(
-            devices::table
+        let user_device_exists = diesel::dsl::select(diesel::dsl::exists(
+            user_devices::table
+                .inner_join(devices::table)
                 .filter(devices::pubkey.eq(&request.pubkey))
-                .filter(devices::user_id.eq(&device.user_id))
+                .filter(user_devices::user_id.eq(&device.user_id))
         ))
             .get_result::<bool>(&mut conn)?;
 
-        if device_exists {
+        if user_device_exists {
             return Err(HttpError::conflict("device_already_exists"));
         }
 
-        let (pending_device_id, email, pubkey, password, updated_at) = pending_devices::table
-            .filter(pending_devices::pubkey.eq(&request.pubkey))
-            .filter(users::id.eq(device.user_id))
-            .inner_join(users::table.on(pending_devices::email.eq(users::email)))
-            .select(pending_devices::all_columns)
-            .first::<(i32, String, String, String, NaiveDateTime)>(&mut conn)?;
+        let (pending_device_id, updated_at) = pending_devices::table
+            .inner_join(devices::table)
+            .filter(devices::pubkey.eq(&request.pubkey))
+            .filter(pending_devices::user_id.eq(device.user_id))
+            .select((pending_devices::device_id, pending_devices::updated_at))
+            .first::<(i32, NaiveDateTime)>(&mut conn)?;
 
         let minutes_since_pubkey_received = Utc::now()
             .naive_utc()
@@ -68,27 +70,31 @@ pub async fn add_device(
         }
 
         diesel::delete(pending_devices::table)
-            .filter(pending_devices::email.eq(&email))
-            .filter(pending_devices::pubkey.eq(&pubkey))
+            .filter(pending_devices::user_id.eq(&device.user_id))
+            .filter(pending_devices::device_id.eq(&pending_device_id))
             .execute(&mut conn)?;
 
-        let device = diesel::insert_into(devices::table)
-            .values((devices::user_id.eq(device.user_id), devices::pubkey.eq(pubkey), devices::password.eq(password)))
-            .get_result::<(i32, i32, String, String, NaiveDateTime)>(&mut conn)
-            .map(|row| Device { id: row.0, user_id: row.1, pubkey: row.2, created_at: row.4 })?;
+        diesel::insert_into(user_devices::table)
+            .values((user_devices::user_id.eq(device.user_id), user_devices::device_id.eq(pending_device_id)))
+            .execute(&mut conn)?;
+
+        let device = devices::table
+            .find(pending_device_id)
+            .select(DEVICE_COLUMNS)
+            .first::<Device>(&mut conn)?;
 
         Ok((device, pending_device_id))
     })
     .await??;
 
-    ws_server.do_send(notify::ws::messages::AcceptPendingDevice(pending_device_id));
+    ws_server.do_send(notify::ws::messages::AcceptPendingDevice { user_id: device.user_id, device_id: pending_device_id });
 
     Ok(Json(created_device))
 }
 
 pub async fn delete_device(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
     device_to_delete: web::Query<DeleteDevice>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
@@ -96,11 +102,11 @@ pub async fn delete_device(
         let device_to_delete = device_to_delete
             .into_inner()
             .id
-            .unwrap_or(device.id);
+            .unwrap_or(device.device_id);
 
-        let device_ids = devices::table
-            .filter(devices::user_id.eq(device.user_id))
-            .select(devices::id)
+        let device_ids = user_devices::table
+            .filter(user_devices::user_id.eq(device.user_id))
+            .select(user_devices::device_id)
             .load::<i32>(&mut conn)?;
 
         if device_ids.iter().find(|d| **d == device_to_delete).is_none() {
@@ -111,8 +117,8 @@ pub async fn delete_device(
             return Err(HttpError::conflict("cannot_delete_only_remaining_device"));
         }
 
-        diesel::delete(devices::table)
-            .filter(devices::id.eq(device_to_delete))
+        diesel::delete(user_devices::table)
+            .filter(user_devices::device_id.eq(device_to_delete))
             .execute(&mut conn)?;
 
         Result::<(), HttpError>::Ok(())
@@ -124,7 +130,7 @@ pub async fn delete_device(
 
 pub async fn send_close_account_code(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
         let code: String = b"0123456789"
@@ -146,7 +152,7 @@ pub async fn send_close_account_code(
 
 pub async fn close_account(
     pool: Data<Pool>,
-    device: Device,
+    device: UserDevice,
     request: Sanitized<Json<CloseAccount>>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
@@ -170,7 +176,7 @@ pub async fn close_account(
             return Err(HttpError::unprocessable_entity("invalid_code"));
         }
 
-        diesel::delete(devices::table.filter(devices::user_id.eq(device.user_id)))
+        diesel::delete(user_devices::table.filter(user_devices::user_id.eq(device.user_id)))
             .execute(&mut conn)?;
 
         diesel::delete(users::table.filter(users::id.eq(device.user_id)))
@@ -186,10 +192,10 @@ pub async fn close_account(
 mod tests {
     use actix_web::web::Data;
     use diesel::prelude::*;
-    use base::{HttpError, schema::devices};
+    use base::{HttpError, schema::user_devices};
     use test_helpers::db::create_pool;
 
-    use crate::test::db::DeviceBuilder;
+    use crate::test::db::UserDeviceBuilder;
 
     use super::delete_device;
 
@@ -197,9 +203,9 @@ mod tests {
     async fn it_returns_unknown_device_error_if_user_does_not_have_a_device_with_given_id_when_delete_device_is_called(
     ) {
         let pool = create_pool();
-        let device = DeviceBuilder::default().email("email@email.com").build(&mut pool.get().unwrap()).unwrap();
-        let other_device = DeviceBuilder::default().email("email@email2.com").build(&mut pool.get().unwrap()).unwrap();
-        let request = crate::requests::DeleteDevice { id: Some(other_device.id) };
+        let device = UserDeviceBuilder::default().email("email@email.com").pubkey("pubkey1").build(&mut pool.get().unwrap()).unwrap();
+        let other_device = UserDeviceBuilder::default().email("email@email2.com").pubkey("pubkey2").build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(other_device.device_id) };
 
         let res = delete_device(Data::new(pool), device, actix_web::web::Query(request)).await;
 
@@ -213,8 +219,8 @@ mod tests {
     async fn it_returns_cannot_delete_only_remaining_device_error_if_user_has_only_one_device_remaining_when_delete_device_is_called(
     ) {
         let pool = create_pool();
-        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
-        let request = crate::requests::DeleteDevice { id: Some(device.id) };
+        let device = UserDeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(device.device_id) };
 
         let res = delete_device(Data::new(pool), device, actix_web::web::Query(request)).await;
 
@@ -227,21 +233,21 @@ mod tests {
     #[actix_web::test]
     async fn it_deletes_device_from_database_when_delete_device_is_called() {
         let pool = create_pool();
-        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
-        let device_to_delete = DeviceBuilder::default().user_id(device.user_id).build(&mut pool.get().unwrap()).unwrap();
-        let request = crate::requests::DeleteDevice { id: Some(device_to_delete.id) };
+        let device = UserDeviceBuilder::default().pubkey("pubkey1").build(&mut pool.get().unwrap()).unwrap();
+        let device_to_delete = UserDeviceBuilder::default().user_id(device.user_id).pubkey("pubkey2").build(&mut pool.get().unwrap()).unwrap();
+        let request = crate::requests::DeleteDevice { id: Some(device_to_delete.device_id) };
 
         let res = delete_device(Data::new(pool.clone()), device.clone(), actix_web::web::Query(request)).await;
 
         assert!(res.is_ok());
 
         let device_to_delete_exists = diesel::select(diesel::dsl::exists(
-            devices::table.filter(devices::id.eq(&device_to_delete.id)),
+            user_devices::table.filter(user_devices::device_id.eq(&device_to_delete.device_id)),
         ))
         .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
 
         let device_exists = diesel::select(diesel::dsl::exists(
-            devices::table.filter(devices::id.eq(&device.id)),
+            user_devices::table.filter(user_devices::device_id.eq(&device.device_id)),
         ))
         .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
 
@@ -252,8 +258,8 @@ mod tests {
     #[actix_web::test]
     async fn it_deletes_current_device_from_database_if_no_device_id_is_given_when_delete_device_is_called() {
         let pool = create_pool();
-        let device = DeviceBuilder::default().build(&mut pool.get().unwrap()).unwrap();
-        DeviceBuilder::default().user_id(device.user_id).email("test@email.com").build(&mut pool.get().unwrap()).unwrap();
+        let device = UserDeviceBuilder::default().pubkey("pubkey1").build(&mut pool.get().unwrap()).unwrap();
+        UserDeviceBuilder::default().pubkey("pubkey2").user_id(device.user_id).build(&mut pool.get().unwrap()).unwrap();
         let request = crate::requests::DeleteDevice { id: None };
 
         let res = delete_device(Data::new(pool.clone()), device.clone(), actix_web::web::Query(request)).await;
@@ -261,7 +267,7 @@ mod tests {
         assert!(res.is_ok());
 
         let device_exists = diesel::select(diesel::dsl::exists(
-            devices::table.filter(devices::id.eq(&device.id)),
+            user_devices::table.filter(user_devices::device_id.eq(&device.device_id)),
         ))
         .get_result::<bool>(&mut pool.get().unwrap()).unwrap();
 

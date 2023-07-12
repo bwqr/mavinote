@@ -36,7 +36,6 @@ diesel::table! {
 diesel::table! {
     devices (id) {
         id -> Int4,
-        user_id -> Int4,
         pubkey -> Varchar,
         password -> Varchar,
         created_at -> Timestamp,
@@ -92,11 +91,9 @@ diesel::table! {
 }
 
 diesel::table! {
-    pending_devices (id) {
-        id -> Int4,
-        email -> Varchar,
-        pubkey -> Varchar,
-        password -> Varchar,
+    pending_devices (user_id, device_id) {
+        user_id -> Int4,
+        device_id -> Int4,
         updated_at -> Timestamp,
     }
 }
@@ -110,6 +107,14 @@ diesel::table! {
 }
 
 diesel::table! {
+    user_devices (user_id, device_id) {
+        user_id -> Int4,
+        device_id -> Int4,
+        created_at -> Timestamp,
+    }
+}
+
+diesel::table! {
     users (id) {
         id -> Int4,
         email -> Varchar,
@@ -119,7 +124,6 @@ diesel::table! {
 
 diesel::joinable!(device_folders -> folders (folder_id));
 diesel::joinable!(device_notes -> notes (note_id));
-diesel::joinable!(devices -> users (user_id));
 diesel::joinable!(folder_requests -> devices (device_id));
 diesel::joinable!(folder_requests -> folders (folder_id));
 diesel::joinable!(folders -> users (user_id));
@@ -127,6 +131,10 @@ diesel::joinable!(note_requests -> devices (device_id));
 diesel::joinable!(note_requests -> notes (note_id));
 diesel::joinable!(notes -> folders (folder_id));
 diesel::joinable!(pending_delete_users -> users (user_id));
+diesel::joinable!(pending_devices -> devices (device_id));
+diesel::joinable!(pending_devices -> users (user_id));
+diesel::joinable!(user_devices -> devices (device_id));
+diesel::joinable!(user_devices -> users (user_id));
 
 diesel::allow_tables_to_appear_in_same_query!(
     device_folders,
@@ -139,5 +147,6 @@ diesel::allow_tables_to_appear_in_same_query!(
     pending_delete_users,
     pending_devices,
     pending_users,
+    user_devices,
     users,
 );

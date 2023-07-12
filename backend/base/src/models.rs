@@ -22,11 +22,12 @@ pub struct Token {
     // expire time
     pub exp: i64,
     pub kind: TokenKind,
-    pub id: i32,
+    pub user_id: i32,
+    pub device_id: i32,
 }
 
 impl Token {
-    pub fn device(device_id: i32) -> Self {
+    pub fn device(user_id: i32, device_id: i32) -> Self {
         const TIMEOUT: i64 = 60 * 60 * 24 * 7;
 
         let now = Utc::now().timestamp();
@@ -35,11 +36,12 @@ impl Token {
             iat: now,
             exp: now + TIMEOUT,
             kind: TokenKind::Device,
-            id: device_id,
+            user_id,
+            device_id,
         }
     }
 
-    pub fn pending_device(pending_device_id: i32) -> Self {
+    pub fn pending_device(user_id: i32, device_id: i32) -> Self {
         const TIMEOUT: i64 = 60 * 5;
 
         let now = Utc::now().timestamp();
@@ -48,7 +50,8 @@ impl Token {
             iat: now,
             exp: now + TIMEOUT,
             kind: TokenKind::PendingDevice,
-            id: pending_device_id,
+            user_id,
+            device_id,
         }
     }
 }

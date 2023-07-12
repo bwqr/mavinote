@@ -28,22 +28,28 @@ create table pending_delete_users(
 );
 
 create table devices(
-    id      serial  primary key not null,
-    user_id int         not null,
-    pubkey  varchar(64) not null,
+    id          serial  primary key not null,
+    pubkey      varchar(64)     not null unique,
     password    varchar(128)    not null,
-    created_at  timestamp       not null default current_timestamp,
-    constraint  fk_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action
+    created_at  timestamp       not null default current_timestamp
+);
+
+create table user_devices(
+    user_id     int not null,
+    device_id   int not null,
+    created_at  timestamp   not null default current_timestamp,
+    primary key (user_id, device_id),
+    constraint  fk_user_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action,
+    constraint  fk_user_devices_device_id foreign key (device_id) references devices (id) on delete no action on update no action
 );
 
 create table pending_devices(
-    id          serial primary key  not null,
-    email       varchar(255)    not null,
-    pubkey      varchar(64)     not null,
-    password    varchar(128)    not null,
-    updated_at  timestamp       not null default current_timestamp,
-    unique(email, pubkey),
-    constraint  fk_pending_devices_email foreign key (email) references users (email) on delete cascade on update no action
+    user_id     int         not null,
+    device_id   int         not null,
+    updated_at  timestamp   not null default current_timestamp,
+    primary key (user_id, device_id),
+    constraint  fk_pending_devices_user_id foreign key (user_id) references users (id) on delete cascade on update no action,
+    constraint  fk_pending_devices_device_id foreign key (device_id) references devices (id) on delete cascade on update no action
 );
 
 create table folders(
