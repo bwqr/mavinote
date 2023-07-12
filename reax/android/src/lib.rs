@@ -7,8 +7,8 @@ use std::{
 };
 
 use jni::{
-    objects::{JObject, JString, JValue, JClass},
-    signature::{JavaType, Primitive},
+    objects::{JObject, JString, JClass, JValue},
+    signature::{Primitive, ReturnType},
     JNIEnv, sys::jlong,
 };
 use libc::c_char;
@@ -39,7 +39,7 @@ fn capture_stderr() {
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     api_url: JString,
     ws_url: JString,
@@ -48,21 +48,21 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
     capture_stderr();
 
     let api_url = env
-        .get_string(api_url)
+        .get_string(&api_url)
         .unwrap()
         .to_str()
         .unwrap()
         .to_owned();
 
     let ws_url = env
-        .get_string(ws_url)
+        .get_string(&ws_url)
         .unwrap()
         .to_str()
         .unwrap()
         .to_owned();
 
     let storage_dir = env
-        .get_string(storage_dir)
+        .get_string(&storage_dir)
         .unwrap()
         .to_str()
         .unwrap()
@@ -97,14 +97,14 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     callback: JObject,
 ) {
     let (send, recv) = std::sync::mpsc::channel();
     universal::init_handler(send);
 
-    let callback_class = env.get_object_class(callback).unwrap();
+    let callback_class = env.get_object_class(&callback).unwrap();
     let callback_method_id = env
         .get_method_id(callback_class, "invoke", "(I[B)V")
         .unwrap();
@@ -112,25 +112,29 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1initHandler(
     while let Ok((wait_id, bytes)) = recv.recv() {
         let bytes_array = env.new_byte_array(bytes.len().try_into().unwrap()).unwrap();
         env.set_byte_array_region(
-            bytes_array,
+            &bytes_array,
             0,
             bytes
-                .iter()
-                .map(|byte| *byte as i8)
+                .into_iter()
+                .map(|byte| byte as i8)
                 .collect::<Vec<i8>>()
                 .as_slice(),
         )
         .unwrap();
 
-        if let Err(e) = env.call_method_unchecked(
-            callback,
-            callback_method_id,
-            JavaType::Primitive(Primitive::Void),
-            &[
-                JValue::Int(wait_id),
-                JValue::Object(bytes_array.into()),
-            ],
-        ) {
+        let res = unsafe {
+            env.call_method_unchecked(
+                &callback,
+                callback_method_id,
+                ReturnType::Primitive(Primitive::Void),
+                &[
+                    JValue::Int(wait_id).as_jni(),
+                    JValue::Object(&bytes_array).as_jni(),
+                ],
+            )
+        };
+
+        if let Err(e) = res {
             ::log::error!("failed to call storeHandler, {:?}", e);
         }
 

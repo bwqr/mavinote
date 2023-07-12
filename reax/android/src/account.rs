@@ -45,13 +45,13 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1devices
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1addDevice(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     account_id: jint,
     fingerprint: JString,
 ) -> jlong {
-    let fingerprint = env.get_string(fingerprint).unwrap().to_str().unwrap().to_owned();
+    let fingerprint = env.get_string(&fingerprint).unwrap().to_str().unwrap().to_owned();
 
     universal::account::add_device(once_id, account_id, fingerprint) as jlong
 }
@@ -69,36 +69,36 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1deleteD
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1requestVerification(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     email: JString,
 ) -> jlong {
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+    let email = env.get_string(&email).unwrap().to_str().unwrap().to_owned();
 
     universal::account::request_verification(once_id, email) as jlong
 }
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1waitVerification(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     token: JString,
 ) -> jlong {
-    let token = env.get_string(token).unwrap().to_str().unwrap().to_owned();
+    let token = env.get_string(&token).unwrap().to_str().unwrap().to_owned();
 
     universal::account::wait_verification(once_id, token) as jlong
 }
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1addAccount(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     email: JString,
 ) -> jlong {
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+    let email = env.get_string(&email).unwrap().to_str().unwrap().to_owned();
 
     universal::account::add_account(once_id, email) as jlong
 }
@@ -114,26 +114,26 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1publicK
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendVerificationCode(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     email: JString,
 ) -> jlong {
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
+    let email = env.get_string(&email).unwrap().to_str().unwrap().to_owned();
 
     universal::account::send_verification_code(once_id, email) as jlong
 }
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1signUp(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     email: JString,
     code: JString,
 ) -> jlong {
-    let email = env.get_string(email).unwrap().to_str().unwrap().to_owned();
-    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
+    let email = env.get_string(&email).unwrap().to_str().unwrap().to_owned();
+    let code = env.get_string(&code).unwrap().to_str().unwrap().to_owned();
 
     universal::account::sign_up(once_id, email, code) as jlong
 }
@@ -160,13 +160,13 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1sendAcc
 
 #[no_mangle]
 pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1closeAccount(
-    env: JNIEnv,
+    mut env: JNIEnv,
     _: JClass,
     once_id: jint,
     account_id: jint,
     code: JString,
 ) -> jlong {
-    let code = env.get_string(code).unwrap().to_str().unwrap().to_owned();
+    let code = env.get_string(&code).unwrap().to_str().unwrap().to_owned();
 
     universal::account::close_account(once_id, account_id, code) as jlong
 }

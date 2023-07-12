@@ -17,7 +17,7 @@ log.workspace = true
 libc = "0.2.125"
 once_cell.workspace = true
 
-jni = { version = "0.19.0", default-features = false }
+jni = { version = "0.21.1", default-features = false }
 reqwest.workspace = true
 serde.workspace = true
 sqlx.workspace = true
