@@ -104,13 +104,24 @@ pub async fn sign_up(
             })?
             .0;
 
-        let device_id = diesel::insert_into(devices::table)
+        let password = crypto.sign512(&request.password);
+
+        diesel::insert_into(devices::table)
             .values((
                 devices::pubkey.eq(&request.pubkey),
-                devices::password.eq(crypto.sign512(&request.password)),
+                devices::password.eq(&password)
             ))
-            .get_result::<(i32, String, String, NaiveDateTime)>(&mut conn)?
-            .0;
+            .on_conflict(devices::pubkey)
+            .do_nothing()
+            .execute(&mut conn)?;
+
+        let (device_id, _, pass, _) = devices::table
+            .filter(devices::pubkey.eq(&request.pubkey))
+            .first::<(i32, String, String, NaiveDateTime)>(&mut conn)?;
+
+        if pass != password {
+            return Err(HttpError::conflict("device_exists_but_passwords_mismatch"));
+        }
 
         diesel::insert_into(user_devices::table)
             .values((
