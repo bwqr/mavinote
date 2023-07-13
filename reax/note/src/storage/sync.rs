@@ -1,14 +1,18 @@
 use std::collections::{HashSet, HashMap};
 use std::sync::Arc;
 
+use base::Config;
+use futures_util::{StreamExt, FutureExt};
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
+use tokio::sync::watch::{channel, Receiver};
+use tokio_tungstenite::connect_async;
 use x25519_dalek::StaticSecret;
 
 use super::db;
 use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest};
-use crate::models::{AccountKind, State as ModelState, RemoteId, Note};
+use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote};
 
 struct Sync<'a> {
     account_id: i32,
@@ -333,4 +337,77 @@ pub async fn sync() -> Result<(), Error> {
     super::update_send_folders(&mut conn).await;
 
     Ok(())
+}
+
+pub async fn listen_notifications(account_id: i32) -> Result<Receiver<Result<String, Error>>, Error> {
+    let (tx, rx) = channel(Ok("initial".to_string()));
+
+    let token = {
+        let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+        match db::fetch_account_data::<Mavinote>(&mut conn, account_id).await {
+            Ok(Some(mavinote)) => mavinote.token,
+            Ok(None) => return Err(super::NOT_MAVINOTE_ACCOUNT),
+            Err(sqlx::Error::ColumnDecode { .. }) => return Err(super::NOT_MAVINOTE_ACCOUNT),
+            Err(e) => return Err(e.into()),
+        }
+    };
+
+    let ws_url = runtime::get::<Arc<Config>>().unwrap().ws_url.clone();
+
+    tokio::spawn(async move {
+        let mut wait = 2;
+
+        loop {
+            let Ok((mut sock, _)) = connect_async(format!("{}/user/notifications?token={}", ws_url, token)).await else {
+                if tx.is_closed() {
+                    return;
+                }
+
+                tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
+
+                wait = std::cmp::min(16, wait * 2);
+
+                continue;
+            };
+
+            wait = 2;
+
+            loop {
+                let stream = sock.next();
+                let close_check = tx.closed().fuse();
+                futures_util::pin_mut!(stream);
+                futures_util::pin_mut!(close_check);
+
+                let res = futures_util::select! {
+                    res = stream => res,
+                    _ = close_check => return,
+                };
+
+                let Some(frame) = res else {
+                    log::debug!("Socket stream is ended");
+                    break;
+                };
+
+                let msg = match frame {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        log::debug!("Error on socket {e:?}");
+                        break;
+                    },
+                };
+
+                let text = match msg.into_text() {
+                    Ok(text) => text,
+                    Err(e) => {
+                        log::debug!("non text message is received, {e:?}");
+                        break;
+                    }
+                };
+
+                let _ = tx.send_replace(Ok(text));
+            }
+        }
+    });
+
+    Ok(rx)
 }

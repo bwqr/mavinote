@@ -289,7 +289,7 @@ fun ShowPublicKey(email: String, token: String, onAccountAdd: () -> Unit) {
         } catch (e: NoteError) {
             when {
                 e is MavinoteError.Message && e.message == "ws_failed" -> {
-                    error = "Could not to wait for verification. Please try again."
+                    error = "Could not wait for verification. Please try again."
                 }
                 e is MavinoteError.Message && e.message == "ws_timeout" -> {
                     error = "5 minutes waiting is timed out. Please try again."

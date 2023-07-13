@@ -17,7 +17,7 @@ use crate::models::{Folder, Note, State as ModelState, LocalId, Account, Account
 pub mod db;
 pub mod sync;
 
-const NOT_MAVINOTE_ACCOUNT: Error = Error::Unreachable("NotMavinoteAccount");
+pub(crate) const NOT_MAVINOTE_ACCOUNT: Error = Error::Unreachable("NotMavinoteAccount");
 const FOLDER_NOT_FOUND: Error = Error::Unreachable("FolderNotFound");
 const NOTE_NOT_FOUND: Error = Error::Unreachable("NoteNotFound");
 

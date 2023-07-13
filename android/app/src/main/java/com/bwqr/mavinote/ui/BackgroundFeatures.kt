@@ -7,7 +7,10 @@ import androidx.compose.material3.SnackbarHost
 import androidx.compose.material3.SnackbarHostState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
@@ -17,14 +20,31 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.BusEvent
+import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.account.*
+import com.bwqr.mavinote.ui.account.Account
+import com.bwqr.mavinote.ui.account.AccountAdd
+import com.bwqr.mavinote.ui.account.AccountClose
+import com.bwqr.mavinote.ui.account.Accounts
+import com.bwqr.mavinote.ui.account.AccountsFab
 import com.bwqr.mavinote.ui.device.DeviceAdd
 import com.bwqr.mavinote.ui.device.Devices
 import com.bwqr.mavinote.ui.device.DevicesFab
-import com.bwqr.mavinote.ui.note.*
+import com.bwqr.mavinote.ui.note.FolderCreate
+import com.bwqr.mavinote.ui.note.Folders
+import com.bwqr.mavinote.ui.note.FoldersFab
+import com.bwqr.mavinote.ui.note.Note
+import com.bwqr.mavinote.ui.note.Notes
+import com.bwqr.mavinote.ui.note.NotesFab
+import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.channels.consumeEach
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.launchIn
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onCompletion
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.launch
 
 open class Screen(val route: String) {
@@ -53,6 +73,7 @@ fun BackgroundFeatures() {
     val snackbarHostState = remember { SnackbarHostState() }
     val navController = rememberNavController()
     val backstackEntry = navController.currentBackStackEntryAsState()
+    var notificationJobs by remember { mutableStateOf(listOf<Job>()) }
 
     LaunchedEffect(key1 = 1) {
         launch {
@@ -64,6 +85,35 @@ fun BackgroundFeatures() {
 
             Log.e("BackgroundFeatures", "Bus listening is stopped")
         }
+
+        AccountViewModel
+            .accounts()
+            .map { it.filter { acc -> acc.kind == AccountKind.Mavinote } }
+            .onEach { accounts ->
+                notificationJobs.forEach { it.cancel() }
+
+                notificationJobs = accounts.map { account ->
+                    AccountViewModel
+                        .listenNotifications(account.id)
+                        .onEach {
+                            Log.i("BackgroundFeatures", "Received notification for account ${account.id}, notification $it")
+                        }
+                        .catch {
+                            Log.e(
+                                "BackgroundFeatures",
+                                "Failure for account ${account.id}, cause ${it.cause}"
+                            )
+                        }
+                        .onCompletion {
+                            Log.d(
+                                "BackgroundFeatures",
+                                "Job is finished for account ${account.id}"
+                            )
+                        }
+                        .launchIn(this)
+                }
+            }
+            .launchIn(this)
 
         try {
             NoteViewModel.sync()

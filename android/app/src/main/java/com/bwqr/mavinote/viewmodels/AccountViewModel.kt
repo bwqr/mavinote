@@ -53,6 +53,8 @@ class AccountViewModel {
             Runtime.runOnceUnit { _closeAccount(it, accountId, code) }
 
         suspend fun publicKey(): String = Runtime.runOnce(DeString) { _publicKey(it) }
+
+        fun listenNotifications(accountId: Int): Flow<String> = Runtime.runStream(DeString) { _listenNotifications(it, accountId) }
     }
 }
 
@@ -71,3 +73,4 @@ private external fun _removeAccount(onceId: Int, accountId: Int): Long
 private external fun _sendAccountCloseCode(onceId: Int, accountId: Int): Long
 private external fun _closeAccount(onceId: Int, accountId: Int, code: String): Long
 private external fun _publicKey(onceId: Int): Long
+private external fun _listenNotifications(streamId: Int, accountId: Int): Long

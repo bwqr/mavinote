@@ -176,3 +176,32 @@ pub fn close_account(once_id: i32, account_id: i32, code: String) -> *mut JoinHa
 
     Box::into_raw(Box::new(handle))
 }
+
+pub fn listen_notifications(stream_id: i32, account_id: i32) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let mut rx = match note::storage::sync::listen_notifications(account_id).await {
+            Ok(rx) => rx,
+            Err(e) => {
+                send_stream::<()>(stream_id, Message::Err(e.clone()));
+                send_stream::<()>(stream_id, Message::Complete);
+                return;
+            },
+        };
+
+        match &*rx.borrow() {
+            Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+            Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+        };
+
+        while rx.changed().await.is_ok() {
+            match &*rx.borrow() {
+                Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
+                Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+            };
+        }
+
+        send_stream::<()>(stream_id, Message::Complete);
+    });
+
+    Box::into_raw(Box::new(handle))
+}

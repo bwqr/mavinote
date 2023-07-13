@@ -1,8 +1,7 @@
 # Mavinote
 
-Simple and open source note-taking application. You can take notes that reside only in your device or use a Mavinote account to synchronize your notes across your devices.
-
-**### Please note that your notes are not stored as encrypted both on your device and on Mavinote servers. Storing notes as encrpyted is in the TODO list.**
+Simple, secure and open source note-taking application. You can take notes that reside only in your device or use a Mavinote account to synchronize your notes across your devices.
+All notes belonging to Mavinote account are stored as encrypted on the servers and can only be decrypted by your devices.
 
 Contents of this Readme
 

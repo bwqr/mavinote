@@ -170,3 +170,13 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1closeAc
 
     universal::account::close_account(once_id, account_id, code) as jlong
 }
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1listenNotifications(
+    _: JNIEnv,
+    _: JClass,
+    stream_id: jint,
+    account_id: jint,
+) -> jlong {
+    universal::account::listen_notifications(stream_id, account_id) as jlong
+}
