@@ -26,6 +26,7 @@ struct ContentView: View {
     @State private var tasks: [Task<(), Never>] = []
     @State private var showToast = false
     @State private var toast: String = ""
+    @State private var notificationTasks: [Task<(), Never>] = []
 
     var body: some View {
         FoldersView()
@@ -51,9 +52,35 @@ struct ContentView: View {
                         appState.handleError(e)
                     }
                 })
+
+                tasks.append(Task {
+                    for await result in AccountViewModel.accounts() {
+                        switch result {
+                        case .success(let accounts):
+                            print("Number of accounts \(accounts.count)")
+                            print("Number of notification tasks \(notificationTasks.count)")
+                            notificationTasks.forEach { $0.cancel() }
+
+                            notificationTasks = accounts
+                                .filter { $0.kind == .Mavinote }
+                                .map { account in
+                                    Task {
+                                        for await result in AccountViewModel.listenNotifications(account.id) {
+                                            if case .failure(let e) = result {
+                                                appState.handleError(e)
+                                            }
+                                        }
+                                    }
+                                }
+
+                        case .failure(let e): appState.handleError(e)
+                        }
+                    }
+                })
             }
             .onDisappear {
                 tasks.forEach { $0.cancel() }
+                notificationTasks.forEach { $0.cancel() }
             }
     }}
 

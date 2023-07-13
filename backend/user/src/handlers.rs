@@ -1,11 +1,12 @@
-use actix_web::web::{self, block, Data, Json};
+use actix_web::{web::{self, block, Data, Json, Payload}, HttpRequest, HttpResponse, http::StatusCode};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
+use notify::ws::messages::{DeviceMessage, SendDeviceMessage};
 use rand::seq::SliceRandom;
 
 use base::{
     sanitize::Sanitized,
-    schema::{devices, pending_devices, users, pending_delete_users, user_devices},
+    schema::{devices, pending_devices, users, pending_delete_users, user_devices, device_notes, device_folders, note_requests, folder_requests},
     types::Pool,
     HttpError, HttpMessage
 };
@@ -87,7 +88,11 @@ pub async fn add_device(
     })
     .await??;
 
-    ws_server.do_send(notify::ws::messages::AcceptPendingDevice { user_id: device.user_id, device_id: pending_device_id });
+    ws_server.do_send(SendDeviceMessage {
+        user_id: device.user_id,
+        device_id: pending_device_id,
+        message: DeviceMessage::AcceptPendingDevice,
+    });
 
     Ok(Json(created_device))
 }
@@ -119,6 +124,30 @@ pub async fn delete_device(
 
         diesel::delete(user_devices::table)
             .filter(user_devices::device_id.eq(device_to_delete))
+            .execute(&mut conn)?;
+
+        diesel::delete(device_notes::table)
+            .filter(
+                device_notes::sender_device_id.eq(device_to_delete)
+                    .or(device_notes::receiver_device_id.eq(device_to_delete))
+            )
+            .execute(&mut conn)?;
+
+        diesel::delete(device_folders::table)
+            .filter(
+                device_folders::sender_device_id.eq(device_to_delete)
+                    .or(device_folders::receiver_device_id.eq(device_to_delete))
+            )
+            .execute(&mut conn)?;
+
+        // Removing requests with respect to device id will result in other requests that belongs
+        // to another user to be deleted as well
+        diesel::delete(note_requests::table)
+            .filter(note_requests::device_id.eq(device_to_delete))
+            .execute(&mut conn)?;
+
+        diesel::delete(folder_requests::table)
+            .filter(folder_requests::device_id.eq(device_to_delete))
             .execute(&mut conn)?;
 
         Result::<(), HttpError>::Ok(())
@@ -186,6 +215,24 @@ pub async fn close_account(
     .await??;
 
     Ok(Json(HttpMessage::success()))
+}
+
+pub async fn listen_notifications(
+    ws_server: Data<notify::ws::AddrServer>,
+    device: UserDevice,
+    req: HttpRequest,
+    stream: Payload,
+) -> Result<HttpResponse, HttpError> {
+    notify::ws::start(
+        notify::ws::Connection::new((&**ws_server).clone(), device.user_id, device.device_id),
+        &req,
+        stream,
+    )
+    .map_err(|e| HttpError {
+        code: StatusCode::INTERNAL_SERVER_ERROR,
+        error: "failed_to_start_ws",
+        message: Some(format!("{}", e)),
+    })
 }
 
 #[cfg(test)]

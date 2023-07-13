@@ -77,7 +77,7 @@ pub(crate) async fn update_send_accounts(conn: &mut PoolConnection<Sqlite>) {
 
 pub(crate) async fn update_send_folders(conn: &mut PoolConnection<Sqlite>) {
     let sender = FOLDERS.get().unwrap();
-    // If nobody loaded the accounts, then do not load the accounts
+    // If nobody loaded the folders, then do not load the folders
     let load = match *sender.borrow() {
         State::Initial => false,
         _ => true,
@@ -222,8 +222,17 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     db::delete_account(&mut conn, account_id).await?;
 
     update_send_accounts(&mut conn).await;
-    // Instead of sending Initial, we could also remove the folders with this account_id
-    FOLDERS.get().unwrap().send_replace(State::Initial);
+    FOLDERS.get().unwrap().send_if_modified(|state| {
+        if let State::Ok(vec) = state {
+            let prev_len = vec.len();
+
+            vec.retain(|f| f.account_id != account_id);
+
+            return prev_len != vec.len();
+        }
+
+        false
+    });
 
     Ok(())
 }
@@ -246,7 +255,17 @@ pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
     db::delete_account(&mut conn, account_id).await?;
 
     update_send_accounts(&mut conn).await;
-    FOLDERS.get().unwrap().send_replace(State::Initial);
+    FOLDERS.get().unwrap().send_if_modified(|state| {
+        if let State::Ok(vec) = state {
+            let prev_len = vec.len();
+
+            vec.retain(|f| f.account_id != account_id);
+
+            return prev_len != vec.len();
+        }
+
+        false
+    });
 
     Ok(())
 }

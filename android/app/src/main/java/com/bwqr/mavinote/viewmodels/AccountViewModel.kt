@@ -3,9 +3,12 @@ package com.bwqr.mavinote.viewmodels
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.Device
 import com.bwqr.mavinote.models.Mavinote
+import com.bwqr.mavinote.models.Note
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.reax.DeList
 import com.bwqr.mavinote.reax.DeOption
 import com.bwqr.mavinote.reax.DeString
+import com.bwqr.mavinote.reax.DeUnit
 import com.bwqr.mavinote.reax.Runtime
 import kotlinx.coroutines.flow.Flow
 
@@ -54,7 +57,7 @@ class AccountViewModel {
 
         suspend fun publicKey(): String = Runtime.runOnce(DeString) { _publicKey(it) }
 
-        fun listenNotifications(accountId: Int): Flow<String> = Runtime.runStream(DeString) { _listenNotifications(it, accountId) }
+        fun listenNotifications(accountId: Int): Flow<Unit> = Runtime.runStream(DeUnit) { _listenNotifications(it, accountId) }
     }
 }
 

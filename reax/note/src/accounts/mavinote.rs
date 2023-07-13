@@ -5,8 +5,18 @@ use tokio_tungstenite::connect_async;
 
 use crate::models::RemoteId;
 
-pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest};
+pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest, CreateRequests};
 pub use responses::Device;
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all="snake_case")]
+pub enum DeviceMessage {
+    AcceptPendingDevice,
+    RefreshRequests,
+    RefreshRemote,
+    Text(String),
+    Timeout,
+}
 
 #[derive(Deserialize)]
 pub struct Token {
@@ -113,9 +123,14 @@ impl AuthClient {
         match sock.next().await {
             Some(Ok(msg)) => {
                 match msg.into_text() {
-                    Ok(msg) if msg == "accepted" => return Ok(()),
-                    Ok(msg) if msg == "timeout" => return Err(Error::Message("ws_timeout".to_string())),
-                    Ok(msg) => log::debug!("unexpected message is received, {}", msg),
+                    Ok(msg) => {
+                        match serde_json::from_str::<DeviceMessage>(&msg) {
+                            Ok(DeviceMessage::AcceptPendingDevice) => return Ok(()),
+                            Ok(DeviceMessage::Timeout) => return Err(Error::Message("ws_timeout".to_string())),
+                            Ok(msg) => log::debug!("unexpected device message is received {msg:?}"),
+                            Err(e) => log::debug!("failed to deserialize device message {e:?}"),
+                        };
+                    },
                     Err(e) => log::debug!("non text message is received, {:?}", e),
                 }
             }
@@ -405,6 +420,17 @@ impl MavinoteClient {
             .await
             .map(|_| ())
     }
+
+    pub async fn create_requests(&self, request: &CreateRequests) -> Result<(), Error> {
+        self.client
+            .post(format!("{}/note/requests", self.api_url))
+            .body(serde_json::to_string(request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
 }
 
 mod requests {
@@ -484,6 +510,12 @@ mod requests {
         pub note_id: i32,
         pub name: String,
         pub text: String,
+    }
+
+    #[derive(Default, Serialize)]
+    pub struct CreateRequests {
+        pub folder_ids: Vec<i32>,
+        pub note_ids: Vec<i32>,
     }
 }
 

@@ -15,7 +15,12 @@ struct FoldersView: View {
     @EnvironmentObject var appState: AppState
 
     var body: some View {
-        _FoldersView(accounts: $accounts)
+        _FoldersView(
+            accounts: $accounts,
+            onRefresh: {
+                let _ = await NoteViewModel.sync()
+            }
+        )
             .onAppear {
                 tasks.append(Task {
                     for await result in combineLatest(AccountViewModel.accounts(), NoteViewModel.folders()) {
@@ -42,6 +47,8 @@ struct FoldersView: View {
 private struct _FoldersView : View {
     @EnvironmentObject var appState: AppState
     @Binding var accounts: [AccountWithFolders]
+
+    let onRefresh: () async -> ()
 
     var body: some View {
         NavigationView {
@@ -70,6 +77,9 @@ private struct _FoldersView : View {
                         }
                     )
                     .padding(12)
+                }
+                .refreshable {
+                    await onRefresh()
                 }
 
                 HStack {
@@ -118,7 +128,7 @@ struct FoldersView_Preview: PreviewProvider {
             ),
         ]
 
-        _FoldersView(accounts: .constant(accounts))
+        _FoldersView(accounts: .constant(accounts), onRefresh: { })
             .environmentObject(AppState())
     }
 }

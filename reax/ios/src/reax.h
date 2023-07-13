@@ -20,6 +20,7 @@ void * reax_account_sign_up(int32_t once_id, const char * email, const char * co
 void * reax_account_remove_account(int32_t once_id, int32_t account_id);
 void * reax_account_send_account_close_code(int32_t once_id, int32_t account_id);
 void * reax_account_close_account(int32_t once_id, int32_t account_id, const char * code);
+void * reax_account_listen_notifications(int32_t stream_id, int32_t account_id);
 
 void reax_note_init();
 void * reax_note_sync(int32_t once_id);

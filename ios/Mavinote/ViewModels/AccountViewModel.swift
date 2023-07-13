@@ -60,4 +60,8 @@ class AccountViewModel {
     static func publicKey() async -> AccountResult<String> {
         return await Runtime.runOnce { reax_account_public_key($0) }
     }
+
+    static func listenNotifications(_ accountId: Int32) -> AsyncStream<AccountResult<DeUnit>> {
+        return Runtime.runStream { reax_account_listen_notifications($0, accountId) }
+    }
 }

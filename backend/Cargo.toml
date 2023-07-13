@@ -21,6 +21,7 @@ base = { path = "./base" }
 test_helpers = { path = "./test_helpers" }
 
 actix-web = "4.2.1"
+actix = "0.13"
 base64 = "0.21.0"
 chrono = { version = "0.4.19", features = ["serde"] }
 diesel = { version = "2.0.2", features = ["postgres", "r2d2", "chrono"] }
@@ -35,7 +36,7 @@ note = { path = "./note" }
 notify = { path = "./notify" }
 user = { path = "./user" }
 
-actix = "0.13"
+actix.workspace = true
 actix-web.workspace = true
 actix-cors = "0.6.1"
 dotenv = "0.15.0"

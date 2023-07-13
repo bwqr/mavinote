@@ -95,14 +95,18 @@ fun BackgroundFeatures() {
                 notificationJobs = accounts.map { account ->
                     AccountViewModel
                         .listenNotifications(account.id)
-                        .onEach {
-                            Log.i("BackgroundFeatures", "Received notification for account ${account.id}, notification $it")
-                        }
                         .catch {
-                            Log.e(
-                                "BackgroundFeatures",
-                                "Failure for account ${account.id}, cause ${it.cause}"
-                            )
+                            when (val e = it.cause) {
+                                is NoteError -> {
+                                    e.handle()
+                                }
+                                else -> {
+                                    Log.e(
+                                        "BackgroundFeatures",
+                                        "Failure for account ${account.id}, cause ${it.cause}"
+                                    )
+                                }
+                            }
                         }
                         .onCompletion {
                             Log.d(

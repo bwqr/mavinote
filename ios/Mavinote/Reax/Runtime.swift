@@ -128,7 +128,7 @@ class Runtime {
     }
 
     static func runOnceUnit(_ onStart: OnStart) async -> Result<(), NoteError> {
-        let res: Result<UnitDeserialize, NoteError> = await Self.runOnce(onStart)
+        let res: Result<DeUnit, NoteError> = await Self.runOnce(onStart)
 
         return res.map { _ in }
     }
@@ -196,12 +196,8 @@ class Runtime {
     }
 
     private func abort(_ id: Int32) {
-        let future = futures.enter { futures in
-            guard let future = futures.removeValue(forKey: id) else {
-                fatalError("Aborting an unknown future \(id)")
-            }
-
-            return future
+        guard let future = futures.enter({ futures in futures.removeValue(forKey: id) }) else {
+            return
         }
 
         future.abort()

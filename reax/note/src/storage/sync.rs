@@ -11,7 +11,7 @@ use x25519_dalek::StaticSecret;
 use super::db;
 use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
-use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest};
+use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
 use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote};
 
 struct Sync<'a> {
@@ -22,8 +22,8 @@ struct Sync<'a> {
 }
 
 impl<'a> Sync<'a> {
-    pub async fn sync(self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
-        self.devices(conn).await?;
+    pub async fn sync(mut self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
+        self.ciphers = self.devices(conn).await?;
 
         self.remote(conn).await?;
 
@@ -34,13 +34,14 @@ impl<'a> Sync<'a> {
         Ok(())
     }
 
-    async fn devices(&self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
+    async fn devices(&self, conn: &mut PoolConnection<Sqlite>) -> Result<Vec<DeviceCipher>, Error> {
         let new_devices = self.client.fetch_devices().await?;
 
-        // Verify that the pubkeys are valid
-        for new_device in &new_devices {
-            DeviceCipher::try_from_key(new_device.id, self.privkey, &new_device.pubkey)?;
-        }
+        // Verify and update the pubkeys
+        let ciphers = new_devices
+            .iter()
+            .map(|device| DeviceCipher::try_from_key(device.id, self.privkey, &device.pubkey))
+            .collect::<Result<Vec<_>, CryptoError>>()?;
 
         let old_devices = db::fetch_devices(conn, self.account_id).await?;
 
@@ -61,34 +62,52 @@ impl<'a> Sync<'a> {
             db::create_devices(conn, self.account_id, &devices_to_create).await?;
         }
 
-        Ok(())
+        Ok(ciphers)
     }
 
     async fn remote(&self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
+        let mut requests = CreateRequests::default();
+
         let remote_folders = self.client.fetch_folders().await?;
         for remote_folder in remote_folders {
-            self.remote_folder(conn, remote_folder).await?;
+            let reqs = self.remote_folder(conn, remote_folder).await?;
+            requests.folder_ids.extend(reqs.folder_ids);
+            requests.note_ids.extend(reqs.note_ids);
+        }
+
+        if !requests.folder_ids.is_empty() || !requests.note_ids.is_empty() {
+            self.client.create_requests(&requests).await?;
         }
 
         Ok(())
     }
 
-    async fn remote_folder(&self, conn: &mut PoolConnection<Sqlite>, remote_folder: crate::accounts::mavinote::responses::Folder) -> Result<(), Error> {
+    async fn remote_folder(&self, conn: &mut PoolConnection<Sqlite>, remote_folder: crate::accounts::mavinote::responses::Folder) -> Result<CreateRequests, Error> {
         if let ModelState::Deleted = remote_folder.state {
-            return db::delete_folder_by_remote_id(conn, remote_folder.id(), self.account_id).await.map_err(|e| e.into());
+            return db::delete_folder_by_remote_id(conn, remote_folder.id(), self.account_id)
+                .await
+                .map(|_| CreateRequests::default())
+                .map_err(|e| e.into());
         }
+
+        let mut requests = CreateRequests::default();
+        let commits = self.client.fetch_commits(remote_folder.id()).await?;
 
         let folder = match db::fetch_folder_by_remote_id(conn, remote_folder.id(), self.account_id).await? {
             Some(folder) => folder,
             None => {
                 let Some(device_folder) = &remote_folder.device_folder else {
-                    log::warn!("A folder with no device folder is received. Some other devices must create our device folder");
-                    return Ok(());
+                    log::debug!("A folder with no device folder is received. Some other devices must create our device folder");
+
+                    requests.folder_ids.push(remote_folder.id);
+                    requests.note_ids.extend(commits.into_iter().map(|commit| commit.note_id));
+
+                    return Ok(requests);
                 };
 
                 let Some(cipher) = self.ciphers.iter().find(|cipher| cipher.device_id == device_folder.sender_device_id) else {
                     log::warn!("A folder with unknown sender is received");
-                    return Ok(());
+                    return Ok(requests);
                 };
 
                 db::create_folder(
@@ -100,8 +119,6 @@ impl<'a> Sync<'a> {
             }
         };
 
-        let commits = self.client.fetch_commits(remote_folder.id()).await?;
-
         for commit in commits {
             match db::fetch_note_by_remote_id(conn, commit.note_id(), folder.local_id()).await? {
                 Some(note) if note.state != ModelState::Clean || note.commit >= commit.commit => { } // This case will be handled by local syncing
@@ -112,7 +129,8 @@ impl<'a> Sync<'a> {
                     };
 
                     let Some(device_note) = remote_note.device_note else {
-                        log::warn!("A note with no device note is received. Some other devices must create our device note");
+                        log::debug!("A note with no device note is received. Some other devices must create our device note");
+                        requests.note_ids.push(remote_note.id);
                         continue;
                     };
 
@@ -147,7 +165,7 @@ impl<'a> Sync<'a> {
             };
         }
 
-        Ok(())
+        Ok(requests)
     }
 
     async fn local(&self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
@@ -331,6 +349,10 @@ pub async fn sync() -> Result<(), Error> {
 
         if let Err(e) = sync.sync(&mut conn).await {
             log::error!("Failed to sync mavinote account with id {}, {e:?}", account.id);
+
+            if let Error::Mavinote(crate::accounts::mavinote::Error::DeviceDeleted(_)) = e {
+                return Err(e);
+            }
         }
     }
 
@@ -339,8 +361,8 @@ pub async fn sync() -> Result<(), Error> {
     Ok(())
 }
 
-pub async fn listen_notifications(account_id: i32) -> Result<Receiver<Result<String, Error>>, Error> {
-    let (tx, rx) = channel(Ok("initial".to_string()));
+pub async fn listen_notifications(account_id: i32) -> Result<Receiver<()>, Error> {
+    let (tx, rx) = channel(());
 
     let token = {
         let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
@@ -365,7 +387,7 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<Result<Str
 
                 tokio::time::sleep(std::time::Duration::from_secs(wait)).await;
 
-                wait = std::cmp::min(16, wait * 2);
+                wait = std::cmp::min(32, wait * 2);
 
                 continue;
             };
@@ -375,6 +397,7 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<Result<Str
             loop {
                 let stream = sock.next();
                 let close_check = tx.closed().fuse();
+
                 futures_util::pin_mut!(stream);
                 futures_util::pin_mut!(close_check);
 
@@ -400,14 +423,79 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<Result<Str
                     Ok(text) => text,
                     Err(e) => {
                         log::debug!("non text message is received, {e:?}");
-                        break;
+                        continue;
                     }
                 };
 
-                let _ = tx.send_replace(Ok(text));
+                let msg = match serde_json::from_str::<DeviceMessage>(&text) {
+                    Ok(msg) => msg,
+                    Err(e) => {
+                        log::debug!("unexpected device message is received, {e:?}");
+                        continue;
+                    },
+                };
+
+                log::debug!("message is received {msg:?}");
+
+                match msg {
+                    DeviceMessage::RefreshRequests => {
+                        if let Err(e) = refresh_respond_requests(account_id).await {
+                            log::error!("failed to refresh respond requests, {e:?}");
+                        }
+                    },
+                    DeviceMessage::RefreshRemote => {
+                        if let Err(e) = refresh_remote(account_id).await {
+                            log::error!("failed to refresh remote, {e:?}");
+                        }
+                    },
+                    DeviceMessage::Timeout => break,
+                    _ => log::debug!("message is unhandled"),
+                }
             }
         }
     });
 
     Ok(rx)
+}
+
+async fn refresh_respond_requests(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let privkey = crypto::load_privkey(&mut conn).await?;
+
+    let Some(client) = super::mavinote_client(&mut conn, account_id).await? else {
+        return Err(Error::Unreachable("Mavinote account must have a client"));
+    };
+
+    let sync = Sync {
+        account_id,
+        client,
+        privkey: &privkey,
+        ciphers: Sync::load_device_ciphers(&mut conn, &privkey, account_id).await.unwrap()
+    };
+
+    sync.respond_device_requests(&mut conn).await
+}
+
+async fn refresh_remote(account_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let privkey = crypto::load_privkey(&mut conn).await?;
+
+    let Some(client) = super::mavinote_client(&mut conn, account_id).await? else {
+        return Err(Error::Unreachable("Mavinote account must have a client"));
+    };
+
+    let sync = Sync {
+        account_id,
+        client,
+        privkey: &privkey,
+        ciphers: Sync::load_device_ciphers(&mut conn, &privkey, account_id).await.unwrap()
+    };
+
+    sync.remote(&mut conn).await?;
+
+    super::update_send_folders(&mut conn).await;
+
+    Ok(())
 }

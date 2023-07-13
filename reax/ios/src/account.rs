@@ -124,3 +124,11 @@ pub extern "C" fn reax_account_wait_verification(
 
     universal::account::wait_verification(once_id, token)
 }
+
+#[no_mangle]
+pub extern "C" fn reax_account_listen_notifications(
+    stream_id: i32,
+    account_id: i32
+) -> * mut JoinHandle<()> {
+    universal::account::listen_notifications(stream_id, account_id)
+}

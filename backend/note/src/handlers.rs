@@ -14,6 +14,7 @@ use base::{
     types::Pool,
     HttpError, HttpMessage,
 };
+use notify::ws::messages::{SendDeviceMessage, DeviceMessage};
 use user::models::UserDevice;
 
 use crate::{
@@ -423,6 +424,7 @@ pub async fn create_requests(
     pool: Data<Pool>,
     device: UserDevice,
     request: Sanitized<Json<CreateRequests>>,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     let request = request.0 .0;
 
@@ -430,7 +432,7 @@ pub async fn create_requests(
         return Err(HttpError::unprocessable_entity("no_request_specified"));
     }
 
-    block(move || {
+    block(move || -> Result<(), HttpError> {
         let mut conn = pool.get().unwrap();
 
         let folder_count = folders::table
@@ -470,14 +472,8 @@ pub async fn create_requests(
 
             diesel::insert_into(folder_requests::table)
                 .values(values)
-                .execute(conn)
-                .map_err(|e| match e {
-                    diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UniqueViolation,
-                        _,
-                    ) => HttpError::conflict("one_request_already_exists"),
-                    _ => e.into(),
-                })?;
+                .on_conflict_do_nothing()
+                .execute(conn)?;
 
             let values = request
                 .note_ids
@@ -492,15 +488,25 @@ pub async fn create_requests(
 
             diesel::insert_into(note_requests::table)
                 .values(values)
+                .on_conflict_do_nothing()
                 .execute(conn)
-                .map_err(|e| match e {
-                    diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UniqueViolation,
-                        _,
-                    ) => HttpError::conflict("one_request_already_exists"),
-                    _ => e.into(),
-                })
-        })
+        })?;
+
+        let other_devices = user_devices::table
+            .filter(user_devices::user_id.eq(device.user_id))
+            .filter(user_devices::device_id.ne(device.device_id))
+            .select(user_devices::device_id)
+            .load::<i32>(&mut conn)?;
+
+        for dev in other_devices {
+            ws_server.do_send(SendDeviceMessage {
+                user_id: device.user_id,
+                device_id: dev,
+                message: DeviceMessage::RefreshRequests,
+            });
+        }
+
+        Ok(())
     })
     .await??;
 
@@ -512,6 +518,7 @@ pub async fn respond_requests(
     pool: Data<Pool>,
     device: UserDevice,
     request: Sanitized<Json<RespondRequests>>,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     let request = request.0 .0;
 
@@ -554,7 +561,9 @@ pub async fn respond_requests(
             return Err(HttpError::unprocessable_entity("unknown_note"));
         }
 
-        conn.transaction(move |conn| {
+        let device_id = request.device_id;
+
+        conn.transaction(move |conn| -> Result<(), diesel::result::Error> {
             if requested_folder_ids.len() > 0 {
                 let values = request
                     .folders
@@ -607,7 +616,11 @@ pub async fn respond_requests(
             }
 
             Ok(())
-        })
+        })?;
+
+        ws_server.do_send(SendDeviceMessage { user_id: device.user_id, device_id, message: DeviceMessage::RefreshRemote });
+
+        Ok(())
     })
     .await??;
 

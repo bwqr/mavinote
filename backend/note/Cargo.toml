@@ -9,6 +9,7 @@ edition = "2021"
 base.workspace = true
 derive = { path = "../derive" }
 user = { path = "../user" }
+notify = { path = "../notify" }
 test_helpers.workspace = true
 
 actix-web.workspace = true

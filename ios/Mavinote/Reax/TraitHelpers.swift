@@ -5,9 +5,9 @@ protocol Deserialize {
     static func deserialize(_ deserializer: Deserializer) throws -> Self
 }
 
-struct UnitDeserialize: Deserialize {
-    static func deserialize(_ deserializer: Deserializer) throws -> UnitDeserialize {
-        return UnitDeserialize()
+struct DeUnit: Deserialize {
+    static func deserialize(_ deserializer: Deserializer) throws -> DeUnit {
+        return DeUnit()
     }
 }
 
