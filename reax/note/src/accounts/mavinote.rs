@@ -5,7 +5,7 @@ use tokio_tungstenite::connect_async;
 
 use crate::models::RemoteId;
 
-pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest};
+pub use requests::{CreateFolderRequest, CreateNoteRequest, RespondRequests, RespondFolderRequest, RespondNoteRequest, CreateRequests};
 pub use responses::Device;
 
 #[derive(Deserialize)]
@@ -405,6 +405,17 @@ impl MavinoteClient {
             .await
             .map(|_| ())
     }
+
+    pub async fn create_requests(&self, request: &CreateRequests) -> Result<(), Error> {
+        self.client
+            .post(format!("{}/note/requests", self.api_url))
+            .body(serde_json::to_string(request).unwrap())
+            .send()
+            .await
+            .map(|r| async { self.error_for_status(r).await })?
+            .await
+            .map(|_| ())
+    }
 }
 
 mod requests {
@@ -484,6 +495,12 @@ mod requests {
         pub note_id: i32,
         pub name: String,
         pub text: String,
+    }
+
+    #[derive(Default, Serialize)]
+    pub struct CreateRequests {
+        pub folder_ids: Vec<i32>,
+        pub note_ids: Vec<i32>,
     }
 }
 

@@ -470,14 +470,8 @@ pub async fn create_requests(
 
             diesel::insert_into(folder_requests::table)
                 .values(values)
-                .execute(conn)
-                .map_err(|e| match e {
-                    diesel::result::Error::DatabaseError(
-                        diesel::result::DatabaseErrorKind::UniqueViolation,
-                        _,
-                    ) => HttpError::conflict("one_request_already_exists"),
-                    _ => e.into(),
-                })?;
+                .on_conflict_do_nothing()
+                .execute(conn)?;
 
             let values = request
                 .note_ids

@@ -96,7 +96,7 @@ fun BackgroundFeatures() {
                     AccountViewModel
                         .listenNotifications(account.id)
                         .onEach {
-                            Log.i("BackgroundFeatures", "Received notification for account ${account.id}, notification $it")
+                            Log.i("BackgroundFeatures", "Received notification for account ${account.id}")
                         }
                         .catch {
                             Log.e(

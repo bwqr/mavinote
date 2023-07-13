@@ -188,15 +188,13 @@ pub fn listen_notifications(stream_id: i32, account_id: i32) -> * mut JoinHandle
             },
         };
 
-        match &*rx.borrow() {
-            Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+        if let Some(e) = &*rx.borrow() {
+            send_stream::<note::Error>(stream_id, Message::Ok(e.clone()));
         };
 
         while rx.changed().await.is_ok() {
-            match &*rx.borrow() {
-                Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+            if let Some(e) = &*rx.borrow() {
+                send_stream::<note::Error>(stream_id, Message::Ok(e.clone()));
             };
         }
 
