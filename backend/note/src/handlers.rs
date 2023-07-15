@@ -699,6 +699,7 @@ mod tests {
     use test_helpers::db::create_pool;
     use chrono::NaiveDateTime;
     use user::test::db::UserDeviceBuilder;
+    use notify::test::ws::create_server as create_notify_server;
 
     use super::create_requests;
 
@@ -757,7 +758,7 @@ mod tests {
             note_ids: Vec::new(),
         };
 
-        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request)), Data::new(create_notify_server())).await;
 
         assert_eq!(
             HttpError::unprocessable_entity("no_request_specified"),
@@ -783,7 +784,7 @@ mod tests {
             note_ids: Vec::new(),
         };
 
-        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request)), Data::new(create_notify_server())).await;
 
         assert_eq!(
             HttpError::unprocessable_entity("unknown_folder"),
@@ -809,7 +810,7 @@ mod tests {
             note_ids: vec![note.id],
         };
 
-        let res = create_requests(Data::new(pool), device, Sanitized(Json(request))).await;
+        let res = create_requests(Data::new(pool), device, Sanitized(Json(request)), Data::new(create_notify_server())).await;
 
         assert_eq!(
             HttpError::unprocessable_entity("unknown_note"),
@@ -839,6 +840,7 @@ mod tests {
             Data::new(pool.clone()),
             device.clone(),
             Sanitized(Json(request)),
+            Data::new(create_notify_server()),
         )
         .await;
 
