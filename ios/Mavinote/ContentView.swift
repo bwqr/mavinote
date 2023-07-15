@@ -57,8 +57,6 @@ struct ContentView: View {
                     for await result in AccountViewModel.accounts() {
                         switch result {
                         case .success(let accounts):
-                            print("Number of accounts \(accounts.count)")
-                            print("Number of notification tasks \(notificationTasks.count)")
                             notificationTasks.forEach { $0.cancel() }
 
                             notificationTasks = accounts

@@ -1,4 +1,4 @@
-use actix_web::web::{post, scope, ServiceConfig};
+use actix_web::web::{post, scope, ServiceConfig, get};
 use base::middlewares::auth_user::AuthUser;
 
 mod handlers;
@@ -11,6 +11,7 @@ pub fn register(config: &mut ServiceConfig) {
         scope("api/note")
             .wrap(AuthUser)
             .service(handlers::fetch_folders)
+            .route("folder/{folder_id}", get().to(handlers::fetch_folder))
             .service(handlers::create_folder)
             .service(handlers::delete_folder)
             .service(handlers::fetch_commits)

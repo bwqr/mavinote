@@ -12,7 +12,7 @@ use super::db;
 use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
-use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote};
+use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote, LocalId};
 
 struct Sync<'a> {
     account_id: i32,
@@ -120,52 +120,59 @@ impl<'a> Sync<'a> {
         };
 
         for commit in commits {
-            match db::fetch_note_by_remote_id(conn, commit.note_id(), folder.local_id()).await? {
-                Some(note) if note.state != ModelState::Clean || note.commit >= commit.commit => { } // This case will be handled by local syncing
-                opt => {
-                    let Some(remote_note) = self.client.fetch_note(commit.note_id()).await? else {
-                        log::warn!("note with remote id {} does not exist on remote", commit.note_id().0);
-                        continue;
-                    };
-
-                    let Some(device_note) = remote_note.device_note else {
-                        log::debug!("A note with no device note is received. Some other devices must create our device note");
-                        requests.note_ids.push(remote_note.id);
-                        continue;
-                    };
-
-                    let Some(cipher) = self.ciphers.iter().find(|cipher| cipher.device_id == device_note.sender_device_id) else {
-                        log::warn!("A note with no device note is received. Some other devices must create our device note");
-                        continue;
-                    };
-
-                    let name = cipher.decrypt(&device_note.name)?;
-                    let text = cipher.decrypt(&device_note.text)?;
-
-                    if let Some(note) = opt {
-                        db::update_note(
-                            conn,
-                            note.local_id(),
-                            &name,
-                            &text,
-                            remote_note.commit,
-                            ModelState::Clean,
-                        ).await?
-                    } else {
-                        db::create_note(
-                            conn,
-                            folder.local_id(),
-                            Some(commit.note_id()),
-                            name,
-                            text,
-                            remote_note.commit
-                        ).await?;
-                    }
-                },
-            };
+            if self.remote_note(conn, commit.commit, commit.note_id(), folder.local_id()).await? {
+                requests.note_ids.push(commit.note_id);
+            }
         }
 
         Ok(requests)
+    }
+
+    async fn remote_note(&self, conn: &mut PoolConnection<Sqlite>, commit: i32, note_id: RemoteId, folder_id: LocalId) -> Result<bool, Error> {
+        match db::fetch_note_by_remote_id(conn, note_id, folder_id).await? {
+            Some(note) if note.state != ModelState::Clean || note.commit >= commit => { } // This case will be handled by local syncing
+            opt => {
+                let Some(remote_note) = self.client.fetch_note(note_id).await? else {
+                    log::warn!("note with remote id {} does not exist on remote", note_id.0);
+                    return Ok(false);
+                };
+
+                let Some(device_note) = remote_note.device_note else {
+                    log::debug!("A note with no device note is received. Some other devices must create our device note");
+                    return Ok(true);
+                };
+
+                let Some(cipher) = self.ciphers.iter().find(|cipher| cipher.device_id == device_note.sender_device_id) else {
+                    log::warn!("A note with unknown sender device is received");
+                    return Ok(false);
+                };
+
+                let name = cipher.decrypt(&device_note.name)?;
+                let text = cipher.decrypt(&device_note.text)?;
+
+                if let Some(note) = opt {
+                    db::update_note(
+                        conn,
+                        note.local_id(),
+                        &name,
+                        &text,
+                        remote_note.commit,
+                        ModelState::Clean,
+                    ).await?
+                } else {
+                    db::create_note(
+                        conn,
+                        folder_id,
+                        Some(note_id),
+                        name,
+                        text,
+                        remote_note.commit
+                    ).await?;
+                }
+            },
+        }
+
+        Ok(false)
     }
 
     async fn local(&self, conn: &mut PoolConnection<Sqlite>) -> Result<(), Error> {
@@ -448,6 +455,16 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<()>, Error
                             log::error!("failed to refresh remote, {e:?}");
                         }
                     },
+                    DeviceMessage::RefreshFolder(folder_id) => {
+                        if let Err(e) = refresh_folder(account_id, folder_id).await {
+                            log::error!("failed to refresh folder, {e:?}");
+                        }
+                    },
+                    DeviceMessage::RefreshNote { folder_id, note_id } => {
+                        if let Err(e) = refresh_note(account_id, folder_id, note_id).await {
+                            log::error!("failed to refresh folder, {e:?}");
+                        }
+                    },
                     DeviceMessage::Timeout => break,
                     _ => log::debug!("message is unhandled"),
                 }
@@ -496,6 +513,70 @@ async fn refresh_remote(account_id: i32) -> Result<(), Error> {
     sync.remote(&mut conn).await?;
 
     super::update_send_folders(&mut conn).await;
+
+    Ok(())
+}
+
+async fn refresh_folder(account_id: i32, folder_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let Some(client) = super::mavinote_client(&mut conn, account_id).await? else {
+        return Err(Error::Unreachable("Mavinote account must have a client"));
+    };
+
+    let Some(remote_folder) = client.fetch_folder(RemoteId(folder_id)).await? else {
+        log::error!("Folder not found in remote while refreshing the folder");
+
+        return Ok(());
+    };
+
+    let privkey = crypto::load_privkey(&mut conn).await?;
+
+    let sync = Sync {
+        account_id,
+        client,
+        privkey: &privkey,
+        ciphers: Sync::load_device_ciphers(&mut conn, &privkey, account_id).await.unwrap()
+    };
+
+    sync.remote_folder(&mut conn, remote_folder).await?;
+
+    super::update_send_folders(&mut conn).await;
+
+    Ok(())
+}
+
+async fn refresh_note(account_id: i32, folder_id: i32, note_id: i32) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+
+    let Some(client) = super::mavinote_client(&mut conn, account_id).await? else {
+        return Err(Error::Unreachable("Mavinote account must have a client"));
+    };
+
+    let Some(remote_note) = client.fetch_note(RemoteId(note_id)).await? else {
+        log::error!("Note not found in remote while refreshing the note");
+
+        return Ok(());
+    };
+
+    let Some(folder) = db::fetch_folder_by_remote_id(&mut conn, RemoteId(folder_id), account_id).await? else {
+        log::error!("Folder belonging to note is not found");
+
+        return Ok(());
+    };
+
+    let privkey = crypto::load_privkey(&mut conn).await?;
+
+    let sync = Sync {
+        account_id,
+        client,
+        privkey: &privkey,
+        ciphers: Sync::load_device_ciphers(&mut conn, &privkey, account_id).await.unwrap()
+    };
+
+    sync.remote_note(&mut conn, remote_note.commit, remote_note.id(), folder.local_id()).await?;
+
+    super::update_send_notes(&mut conn, folder.local_id()).await;
 
     Ok(())
 }

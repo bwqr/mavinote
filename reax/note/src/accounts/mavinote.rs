@@ -14,6 +14,8 @@ pub enum DeviceMessage {
     AcceptPendingDevice,
     RefreshRequests,
     RefreshRemote,
+    RefreshFolder(i32),
+    RefreshNote { folder_id: i32, note_id: i32 },
     Text(String),
     Timeout,
 }
@@ -306,6 +308,24 @@ impl MavinoteClient {
             .json()
             .await
             .map_err(|e| e.into())
+    }
+
+    pub async fn fetch_folder(&self, folder_id: RemoteId) -> Result<Option<responses::Folder>, Error> {
+        let response = self.client
+            .get(format!("{}/note/folder/{}", self.api_url, folder_id.0))
+            .send()
+            .await?;
+
+        if response.status() == StatusCode::NOT_FOUND {
+            return Ok(None);
+        }
+
+        self.error_for_status(response)
+            .await?
+            .json()
+            .await
+            .map_err(|e| e.into())
+
     }
 
     pub async fn create_folder(&self, request: Vec<requests::CreateFolderRequest>) -> Result<responses::CreatedFolder, Error> {

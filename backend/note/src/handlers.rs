@@ -14,7 +14,7 @@ use base::{
     types::Pool,
     HttpError, HttpMessage,
 };
-use notify::ws::messages::{SendDeviceMessage, DeviceMessage};
+use notify::ws::messages::{SendDeviceMessage, DeviceMessage, SendExclusiveDeviceMessage};
 use user::models::UserDevice;
 
 use crate::{
@@ -51,11 +51,39 @@ pub async fn fetch_folders(
     Ok(Json(folders))
 }
 
+pub async fn fetch_folder(
+    pool: Data<Pool>,
+    device: UserDevice,
+    folder_id: Path<i32>,
+) -> Result<Json<Option<responses::Folder>>, HttpError> {
+    let folder = block(move || {
+        folders::table
+            .filter(folders::user_id.eq(device.user_id))
+            .filter(folders::id.eq(folder_id.into_inner()))
+            .left_join(
+                device_folders::table.on(device_folders::folder_id
+                    .eq(folders::id)
+                    .and(device_folders::receiver_device_id.eq(device.device_id))),
+            )
+            .select((
+                folders::id,
+                folders::state,
+                (device_folders::sender_device_id, device_folders::name).nullable(),
+            ))
+            .first(&mut pool.get().unwrap())
+            .optional()
+    })
+    .await??;
+
+    Ok(Json(folder))
+}
+
 #[post("folder")]
 pub async fn create_folder(
     pool: Data<Pool>,
     request: Sanitized<Json<Vec<CreateFolderRequest>>>,
     device: UserDevice,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<CreatedFolder>, HttpError> {
     let created_folder = block(move || {
         let device_folders_to_create = request.0 .0;
@@ -102,6 +130,12 @@ pub async fn create_folder(
             )
             .execute(&mut conn)?;
 
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshFolder(folder.id)
+        });
+
         Ok(CreatedFolder { id: folder.id })
     })
     .await??;
@@ -114,8 +148,9 @@ pub async fn delete_folder(
     pool: Data<Pool>,
     folder_id: Path<i32>,
     device: UserDevice,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<HttpMessage>, HttpError> {
-    block(move || {
+    block(move || -> Result<(), HttpError> {
         let mut conn = pool.get().unwrap();
 
         let folder_id = folders::table
@@ -136,7 +171,15 @@ pub async fn delete_folder(
 
         diesel::delete(device_folders::table)
             .filter(device_folders::folder_id.eq(folder_id))
-            .execute(&mut conn)
+            .execute(&mut conn)?;
+
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshFolder(folder_id)
+        });
+
+        Ok(())
     })
     .await??;
 
@@ -176,6 +219,7 @@ pub async fn create_note(
     query: Query<FolderId>,
     request: Sanitized<Json<Vec<CreateNoteRequest>>>,
     device: UserDevice,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<CreatedNote>, HttpError> {
     let note = block(move || {
         let notes_to_create = request.0 .0;
@@ -230,6 +274,12 @@ pub async fn create_note(
             )
             .execute(&mut conn)?;
 
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshNote { folder_id: note.folder_id, note_id: note.id }
+        });
+
         Ok(CreatedNote {
             id: note.id,
             commit: note.commit,
@@ -280,18 +330,19 @@ pub async fn update_note(
     note_id: Path<i32>,
     request: Sanitized<Json<UpdateNoteRequest>>,
     device: UserDevice,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<Commit>, HttpError> {
     let commit = block(move || -> Result<Commit, HttpError> {
         let mut conn = pool.get().unwrap();
 
         // TODO make incrementing commit atomic
-        let (note_id, commit) = notes::table
+        let (note_id, folder_id, commit) = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
             .filter(notes::state.eq(State::Clean))
             .filter(folders::user_id.eq(device.user_id))
             .inner_join(folders::table)
-            .select((notes::id, notes::commit))
-            .first::<(i32, i32)>(&mut conn)?;
+            .select((notes::id, notes::folder_id, notes::commit))
+            .first::<(i32, i32, i32)>(&mut conn)?;
 
         if commit != request.commit {
             return Err(HttpError::conflict("commit_not_matches"));
@@ -349,6 +400,12 @@ pub async fn update_note(
                 .execute(&mut conn)?;
         }
 
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshNote { folder_id, note_id }
+        });
+
         Ok(Commit {
             note_id,
             commit: commit + 1,
@@ -365,17 +422,18 @@ pub async fn delete_note(
     pool: Data<Pool>,
     note_id: Path<i32>,
     device: UserDevice,
+    ws_server: Data<notify::ws::AddrServer>,
 ) -> Result<Json<HttpMessage>, HttpError> {
-    block(move || {
+    block(move || -> Result<(), diesel::result::Error> {
         let mut conn = pool.get().unwrap();
 
-        let note_id = notes::table
+        let (note_id, folder_id) = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
             .filter(notes::state.eq(State::Clean))
             .filter(folders::user_id.eq(device.user_id))
             .inner_join(folders::table)
-            .select(notes::id)
-            .first::<i32>(&mut conn)?;
+            .select((notes::id, folders::id))
+            .first::<(i32, i32)>(&mut conn)?;
 
         diesel::update(notes::table)
             .filter(notes::id.eq(note_id))
@@ -384,7 +442,15 @@ pub async fn delete_note(
 
         diesel::delete(device_notes::table)
             .filter(device_notes::note_id.eq(note_id))
-            .execute(&mut conn)
+            .execute(&mut conn)?;
+
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshNote { folder_id, note_id }
+        });
+
+        Ok(())
     })
     .await??;
 
@@ -492,19 +558,11 @@ pub async fn create_requests(
                 .execute(conn)
         })?;
 
-        let other_devices = user_devices::table
-            .filter(user_devices::user_id.eq(device.user_id))
-            .filter(user_devices::device_id.ne(device.device_id))
-            .select(user_devices::device_id)
-            .load::<i32>(&mut conn)?;
-
-        for dev in other_devices {
-            ws_server.do_send(SendDeviceMessage {
-                user_id: device.user_id,
-                device_id: dev,
-                message: DeviceMessage::RefreshRequests,
-            });
-        }
+        ws_server.do_send(SendExclusiveDeviceMessage {
+            user_id: device.user_id,
+            excluded_device_id: device.device_id,
+            message: DeviceMessage::RefreshRequests,
+        });
 
         Ok(())
     })

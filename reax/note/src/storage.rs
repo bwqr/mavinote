@@ -90,6 +90,14 @@ pub(crate) async fn update_send_folders(conn: &mut PoolConnection<Sqlite>) {
     }
 }
 
+pub(crate) async fn update_send_notes(conn: &mut PoolConnection<Sqlite>, folder_id: LocalId) {
+    let notes_map = NOTES_MAP.get().unwrap();
+
+    if notes_map.contains_key(folder_id.0) {
+        notes_map.update(folder_id.0, db::fetch_notes(conn, folder_id).await.map_err(|e| e.into()).into());
+    }
+}
+
 pub async fn public_key() -> Result<String, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
@@ -386,7 +394,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
 
             vec.retain(|f| f.local_id().0 != folder_id);
 
-            return prev_len == vec.len();
+            return prev_len != vec.len();
         }
 
         false

@@ -9,13 +9,13 @@ pub type AddrServer = Addr<Server>;
 pub use actix_web_actors::ws::start;
 
 pub struct Server {
-    pending_devices: HashMap<(i32, i32), Addr<Connection>>,
+    users: HashMap<i32, HashMap<i32, Addr<Connection>>>,
 }
 
 impl Server {
     pub fn new() -> Self {
         Server {
-            pending_devices: HashMap::new(),
+            users: HashMap::new(),
         }
     }
 }
@@ -28,8 +28,8 @@ impl Handler<internal::AddConnection> for Server {
     type Result = <internal::AddConnection as Message>::Result;
 
     fn handle(&mut self, msg: internal::AddConnection, _: &mut Self::Context) -> Self::Result {
-        if let Some(addr) = self.pending_devices.insert((msg.user_id, msg.device_id), msg.conn) {
-            debug!("A pending device is added twice into connection list");
+        if let Some(addr) = self.users.entry(msg.user_id).or_insert(HashMap::new()).insert(msg.device_id, msg.conn) {
+            debug!("A device is added twice into connection list");
             addr.do_send(internal::StopConnection);
         }
     }
@@ -39,8 +39,16 @@ impl Handler<internal::RemoveConnection> for Server {
     type Result = <internal::RemoveConnection as Message>::Result;
 
     fn handle(&mut self, msg: internal::RemoveConnection, _: &mut Self::Context) -> Self::Result {
-        if self.pending_devices.remove(&(msg.user_id, msg.device_id)).is_none() {
-            debug!("An unknown pending device is removed from connection list");
+        if let Some(devices) = self.users.get_mut(&msg.user_id) {
+            if devices.remove(&msg.device_id).is_none() {
+                debug!("An unknown device is removed from connection list");
+            }
+
+            if devices.len() == 0 {
+                self.users.remove(&msg.user_id);
+            }
+        } else {
+            debug!("A device from unknown user is removed");
         }
     }
 }
@@ -49,12 +57,25 @@ impl Handler<messages::SendDeviceMessage> for Server {
     type Result = <messages::SendDeviceMessage as Message>::Result;
 
     fn handle(&mut self, msg: messages::SendDeviceMessage, _: &mut Self::Context) -> Self::Result {
-        if let Some(addr) = self.pending_devices.get(&(msg.user_id, msg.device_id)) {
+        if let Some(Some(addr)) = self.users.get(&msg.user_id).map(|devices| devices.get(&msg.device_id)) {
             addr.do_send(msg.message);
         }
     }
 }
 
+impl Handler<messages::SendExclusiveDeviceMessage> for Server {
+    type Result = <messages::SendExclusiveDeviceMessage as Message>::Result;
+
+    fn handle(&mut self, msg: messages::SendExclusiveDeviceMessage, _: &mut Self::Context) -> Self::Result {
+        if let Some(devices) = self.users.get(&msg.user_id) {
+            for (device_id, addr) in devices {
+                if *device_id != msg.excluded_device_id {
+                    addr.do_send(msg.message.clone());
+                }
+            }
+        }
+    }
+}
 
 #[derive(MessageResponse)]
 pub struct Connection {
@@ -169,12 +190,14 @@ pub mod messages {
     use actix::prelude::Message;
     use serde::Serialize;
 
-    #[derive(Serialize)]
+    #[derive(Clone, Serialize)]
     #[serde(rename_all="snake_case")]
     pub enum DeviceMessage {
         AcceptPendingDevice,
         RefreshRequests,
         RefreshRemote,
+        RefreshFolder(i32),
+        RefreshNote { folder_id: i32, note_id: i32 },
         Text(String),
         Timeout,
     }
@@ -190,6 +213,16 @@ pub mod messages {
     }
 
     impl Message for SendDeviceMessage {
+        type Result = ();
+    }
+
+    pub struct SendExclusiveDeviceMessage {
+        pub user_id: i32,
+        pub excluded_device_id: i32,
+        pub message: DeviceMessage,
+    }
+
+    impl Message for SendExclusiveDeviceMessage {
         type Result = ();
     }
 }
