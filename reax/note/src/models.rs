@@ -15,6 +15,7 @@ pub enum StoreKey {
     IdentityPrivKey,
     IdentityPubKey,
     Password,
+    WelcomeShown,
 }
 
 #[cfg_attr(feature = "storage", derive(FromRow))]

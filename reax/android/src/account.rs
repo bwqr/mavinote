@@ -1,6 +1,6 @@
 use jni::{
     objects::{JClass, JString},
-    sys::{jint, jlong},
+    sys::{jint, jlong, jboolean},
     JNIEnv,
 };
 
@@ -179,4 +179,23 @@ pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1listenN
     account_id: jint,
 ) -> jlong {
     universal::account::listen_notifications(stream_id, account_id) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1welcomeShown(
+    _: JNIEnv,
+    _: JClass,
+    once_id: jint,
+) -> jlong {
+    universal::account::welcome_shown(once_id) as jlong
+}
+
+#[no_mangle]
+pub extern "C" fn Java_com_bwqr_mavinote_viewmodels_AccountViewModelKt__1updateWelcomeShown(
+    _: JNIEnv,
+    _: JClass,
+    once_id: jint,
+    shown: jboolean,
+) -> jlong {
+    universal::account::update_welcome_shown(once_id, shown > 0) as jlong
 }

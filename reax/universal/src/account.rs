@@ -199,3 +199,23 @@ pub fn listen_notifications(stream_id: i32, account_id: i32) -> * mut JoinHandle
 
     Box::into_raw(Box::new(handle))
 }
+
+pub fn welcome_shown(once_id: i32) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let res = note::storage::welcome_shown().await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}
+
+pub fn update_welcome_shown(once_id: i32, shown: bool) -> * mut JoinHandle<()> {
+    let handle = spawn(async move {
+        let res = note::storage::update_welcome_shown(shown).await;
+
+        send_once(once_id, res);
+    });
+
+    Box::into_raw(Box::new(handle))
+}

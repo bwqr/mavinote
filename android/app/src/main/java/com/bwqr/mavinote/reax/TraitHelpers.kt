@@ -46,3 +46,9 @@ object DeInt: Deserialize<Int> {
         return deserializer.deserialize_i32()
     }
 }
+
+object DeBool: Deserialize<Boolean> {
+    override fun deserialize(deserializer: Deserializer): Boolean {
+        return deserializer.deserialize_bool()
+    }
+}

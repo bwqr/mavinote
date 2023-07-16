@@ -43,6 +43,7 @@ import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.Screen
 import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
+import com.bwqr.mavinote.ui.theme.Spacing
 import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
@@ -91,10 +92,16 @@ fun FoldersView(
 ) {
     var expanded by remember { mutableStateOf(false) }
 
-    Column(verticalArrangement = Arrangement.spacedBy(24.dp)) {
+    Column(verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp)
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(
+                    top = Spacing.ScreenPadding,
+                    start = Spacing.ScreenPadding,
+                    end = Spacing.ScreenPadding
+                )
         ) {
             Title(
                 stringResource(R.string.folders),
@@ -112,11 +119,11 @@ fun FoldersView(
             }
         }
 
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+        LazyColumn(verticalArrangement = Arrangement.spacedBy(16.dp)) {
             items(accounts) { account ->
                 Column(
-                    verticalArrangement = Arrangement.spacedBy(12.dp),
-                    modifier = Modifier.padding(horizontal = 16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.padding(horizontal = Spacing.ScreenPadding)
                 ) {
                     Row(
                         verticalAlignment = Alignment.Bottom,

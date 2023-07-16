@@ -66,6 +66,8 @@ open class Screen(val route: String) {
         object Devices : Device("devices?accountId={accountId}")
         object DeviceAdd : Device("device-add?accountId={accountId}")
     }
+
+    object Welcome : Screen("welcome")
 }
 
 @Composable
@@ -119,6 +121,12 @@ fun BackgroundFeatures() {
             }
             .launchIn(this)
 
+        if (!AccountViewModel.welcomeShown()) {
+            navController.navigate(Screen.Welcome.route) {
+                popUpTo(0)
+            }
+        }
+
         try {
             NoteViewModel.sync()
         } catch (e: NoteError) {
@@ -149,6 +157,8 @@ fun BackgroundFeatures() {
             startDestination = Screen.Note.Folders.route,
             modifier = Modifier.padding(it)
         ) {
+            composable(Screen.Welcome.route) { Welcome(navController) }
+
             composable(Screen.Account.Accounts.route) { Accounts(navController) }
             composable(
                 Screen.Account.Account.route,

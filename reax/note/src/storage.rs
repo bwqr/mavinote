@@ -98,6 +98,21 @@ pub(crate) async fn update_send_notes(conn: &mut PoolConnection<Sqlite>, folder_
     }
 }
 
+pub async fn welcome_shown() -> Result<bool, Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    db::fetch_value(&mut conn, StoreKey::WelcomeShown).await
+        .map(|opt| opt.is_some_and(|val| val.value == format!("{}", true)))
+        .map_err(|e| e.into())
+}
+
+pub async fn update_welcome_shown(shown: bool) -> Result<(), Error> {
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    db::store_value(&mut conn, StoreKey::WelcomeShown, &format!("{shown}")).await
+        .map_err(|e| e.into())
+}
+
 pub async fn public_key() -> Result<String, Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
 
