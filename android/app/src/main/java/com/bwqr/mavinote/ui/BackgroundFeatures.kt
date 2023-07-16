@@ -121,13 +121,12 @@ fun BackgroundFeatures() {
             }
             .launchIn(this)
 
-        if (!AccountViewModel.welcomeShown()) {
-            navController.navigate(Screen.Welcome.route) {
-                popUpTo(0)
-            }
-        }
-
         try {
+            if (!AccountViewModel.welcomeShown()) {
+                navController.navigate(Screen.Welcome.route) {
+                    popUpTo(0)
+                }
+            }
             NoteViewModel.sync()
         } catch (e: NoteError) {
             e.handle()

@@ -18,6 +18,7 @@ import androidx.navigation.NavController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.theme.Spacing
 import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.AccountViewModel
@@ -212,7 +213,11 @@ fun FolderAndNoteManagement(mainNavController: NavController) {
                 ),
             onClick = {
                 GlobalScope.launch {
-                    AccountViewModel.updateWelcomeShown(true)
+                    try {
+                        AccountViewModel.updateWelcomeShown(true)
+                    } catch (e: NoteError) {
+                        e.handle()
+                    }
                 }
 
                 mainNavController.navigate(Screen.Note.Folders.route) {
@@ -227,7 +232,21 @@ fun FolderAndNoteManagement(mainNavController: NavController) {
 
 @Preview(showBackground = true)
 @Composable
-fun WelcomePreview() {
+fun WelcomeMavinotePreview() {
     val navController = rememberNavController()
-    Welcome(navController)
+    WelcomeMavinote(navController)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun AccountAndDeviceManagementPreview() {
+    val navController = rememberNavController()
+    AccountAndDeviceManagement(navController)
+}
+
+@Preview(showBackground = true)
+@Composable
+fun FolderAndNoteManagementPreview() {
+    val navController = rememberNavController()
+    FolderAndNoteManagement(navController)
 }
