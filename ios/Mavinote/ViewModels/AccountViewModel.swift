@@ -64,4 +64,12 @@ class AccountViewModel {
     static func listenNotifications(_ accountId: Int32) -> AsyncStream<AccountResult<DeUnit>> {
         return Runtime.runStream { reax_account_listen_notifications($0, accountId) }
     }
+
+    static func welcomeShown() async -> AccountResult<Bool> {
+        return await Runtime.runOnce { reax_account_welcome_shown($0) }
+    }
+
+    static func updateWelcomeShown(_ shown: Bool) async -> AccountResult<DeUnit> {
+        return await Runtime.runOnce { reax_account_update_welcome_shown($0, shown) }
+    }
 }

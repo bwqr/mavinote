@@ -17,6 +17,12 @@ extension Int32: Deserialize {
     }
 }
 
+extension Bool: Deserialize {
+    static func deserialize(_ deserializer: Deserializer) throws -> Bool {
+        try deserializer.deserialize_bool()
+    }
+}
+
 extension String: Deserialize {
     static func deserialize(_ deserializer: Deserializer) throws -> String {
         try deserializer.deserialize_str()

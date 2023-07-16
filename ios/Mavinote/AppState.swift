@@ -2,6 +2,8 @@ import SwiftUI
 
 enum Route {
     case Accounts
+    case Welcome
+    case Folders
 }
 
 enum BusEvent {
@@ -9,7 +11,7 @@ enum BusEvent {
 }
 
 class AppState : ObservableObject {
-    @Published var activeRoute: Route?
+    @Published var activeRoute: Route? = .Folders
     private var eventContinuation: CheckedContinuation<BusEvent, Never>?
 
     func emit(_ event: BusEvent) {

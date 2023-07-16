@@ -29,11 +29,23 @@ struct ContentView: View {
     @State private var notificationTasks: [Task<(), Never>] = []
 
     var body: some View {
-        FoldersView()
+        NavigationView {
+            ZStack {
+                NavigationLink(
+                    destination: WelcomeView(),
+                    tag: Route.Welcome,
+                    selection: $appState.activeRoute
+                ) {
+                    EmptyView()
+                }
+
+                FoldersView()
+            }
+        }
+            .environmentObject(appState)
             .toast(isPresenting: $showToast, duration: 2.0) {
                 AlertToast(displayMode: .hud, type: .regular, title: toast)
             }
-            .environmentObject(appState)
             .onAppear {
                 tasks.append(Task {
                     while (true) {
@@ -48,6 +60,13 @@ struct ContentView: View {
                 })
 
                 tasks.append(Task {
+                    switch await AccountViewModel.welcomeShown() {
+                    case .success(false): appState.navigate(route: .Welcome)
+                    case .failure(let e): appState.handleError(e)
+                    default:
+                        break
+                    }
+
                     if case .failure(let e) = await NoteViewModel.sync() {
                         appState.handleError(e)
                     }

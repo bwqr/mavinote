@@ -12,6 +12,7 @@
 		844B32E12A4730BD00BF16E9 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844B32E02A4730BD00BF16E9 /* Device.swift */; };
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
 		8487928E2A4B209D0022ED0C /* libreax.a in Frameworks */ = {isa = PBXBuildFile; fileRef = 8487928D2A4B20700022ED0C /* libreax.a */; };
+		84A3659F2A6420BB00024B36 /* WelcomeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3659E2A6420BB00024B36 /* WelcomeView.swift */; };
 		84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13728B268820044A5D4 /* AccountsView.swift */; };
 		84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13928B269B30044A5D4 /* AccountView.swift */; };
 		84A3B13C28B294690044A5D4 /* AccountAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84A3B13B28B294690044A5D4 /* AccountAddView.swift */; };
@@ -71,6 +72,7 @@
 		844B32E02A4730BD00BF16E9 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
 		8487928D2A4B20700022ED0C /* libreax.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = libreax.a; path = "../reax/target/x86_64-apple-ios/debug/libreax.a"; sourceTree = "<group>"; };
+		84A3659E2A6420BB00024B36 /* WelcomeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WelcomeView.swift; sourceTree = "<group>"; };
 		84A3B13728B268820044A5D4 /* AccountsView.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = AccountsView.swift; sourceTree = "<group>"; };
 		84A3B13928B269B30044A5D4 /* AccountView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountView.swift; sourceTree = "<group>"; };
 		84A3B13B28B294690044A5D4 /* AccountAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountAddView.swift; sourceTree = "<group>"; };
@@ -205,6 +207,7 @@
 				84803BB82A49A2BD00508F58 /* Account */,
 				ACA8F73628AEAB4C0015F71E /* Note */,
 				84FF86E628B3A16D00CDC922 /* Input.swift */,
+				84A3659E2A6420BB00024B36 /* WelcomeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -465,6 +468,7 @@
 				AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */,
 				84BCDB4F2A4BE7C900AC2135 /* AppState.swift in Sources */,
 				84E39F152A4D86B0002B68CC /* DeviceAddView.swift in Sources */,
+				84A3659F2A6420BB00024B36 /* WelcomeView.swift in Sources */,
 				ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */,
 				ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */,
 				ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */,

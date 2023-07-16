@@ -51,57 +51,55 @@ private struct _FoldersView : View {
     let onRefresh: () async -> ()
 
     var body: some View {
-        NavigationView {
-            VStack {
-                List(accounts) { accountWithFolder in
-                    Section(
-                        content: {
-                            ForEach(accountWithFolder.folders) { folder in
-                                NavigationLink(destination: NotesView(folderName: folder.name, folderId: folder.id)) {
-                                    Text(folder.name)
-                                }
-                            }
-                        },
-                        header: {
-                            HStack {
-                                Text(accountWithFolder.account.name)
-                                Spacer()
-                                Text("\(accountWithFolder.folders.count)")
-                                    .font(.footnote)
-                            }
-                        },
-                        footer: {
-                            if accountWithFolder.folders.count == 0 {
-                                Text("There is no folder in this account")
+        VStack {
+            List(accounts) { accountWithFolder in
+                Section(
+                    content: {
+                        ForEach(accountWithFolder.folders) { folder in
+                            NavigationLink(destination: NotesView(folderName: folder.name, folderId: folder.id)) {
+                                Text(folder.name)
                             }
                         }
-                    )
-                    .padding(12)
-                }
-                .refreshable {
-                    await onRefresh()
-                }
-
-                HStack {
-                    Spacer()
-                    NavigationLink(
-                        destination: FolderCreateView()
-                    ) {
-                        Image(systemName: "folder.badge.plus")
-                            .padding(EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 24))
-                            .foregroundColor(.blue)
+                    },
+                    header: {
+                        HStack {
+                            Text(accountWithFolder.account.name)
+                            Spacer()
+                            Text("\(accountWithFolder.folders.count)")
+                                .font(.footnote)
+                        }
+                    },
+                    footer: {
+                        if accountWithFolder.folders.count == 0 {
+                            Text("There is no folder in this account")
+                        }
                     }
+                )
+                .padding(12)
+            }
+            .refreshable {
+                await onRefresh()
+            }
+
+            HStack {
+                Spacer()
+                NavigationLink(
+                    destination: FolderCreateView()
+                ) {
+                    Image(systemName: "folder.badge.plus")
+                        .padding(EdgeInsets(top: 2, leading: 12, bottom: 12, trailing: 24))
+                        .foregroundColor(.blue)
                 }
             }
-            .navigationTitle("Folders")
-            .toolbar {
-                NavigationLink(
-                    destination: AccountsView(),
-                    tag: Route.Accounts,
-                    selection: $appState.activeRoute
-                ) {
-                    Text("Accounts")
-                }
+        }
+        .navigationTitle("Folders")
+        .toolbar {
+            NavigationLink(
+                destination: AccountsView(),
+                tag: Route.Accounts,
+                selection: $appState.activeRoute
+            ) {
+                Text("Accounts")
             }
         }
     }

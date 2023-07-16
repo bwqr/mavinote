@@ -132,3 +132,18 @@ pub extern "C" fn reax_account_listen_notifications(
 ) -> * mut JoinHandle<()> {
     universal::account::listen_notifications(stream_id, account_id)
 }
+
+#[no_mangle]
+pub extern "C" fn reax_account_welcome_shown(
+    once_id: i32,
+) -> * mut JoinHandle<()> {
+    universal::account::welcome_shown(once_id)
+}
+
+#[no_mangle]
+pub extern "C" fn reax_account_update_welcome_shown(
+    once_id: i32,
+    shown: bool
+) -> * mut JoinHandle<()> {
+    universal::account::update_welcome_shown(once_id, shown)
+}
