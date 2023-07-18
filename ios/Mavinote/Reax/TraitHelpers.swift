@@ -54,9 +54,21 @@ extension Optional: Deserialize where Wrapped: Deserialize {
     }
 }
 
+extension Result: Deserialize where Success: Deserialize, Failure: Deserialize {
+    static func deserialize(_ deserializer: Deserializer) throws -> Result<Success, Failure> {
+        switch try deserializer.deserialize_variant_index() {
+        case 0: return .success(try Success.deserialize(deserializer))
+        case 1: return .failure(try Failure.deserialize(deserializer))
+        default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Result")
+        }
+    }
+}
+
 extension String: Identifiable {
     public typealias ID = Int
     public var id: Int {
         return hash
     }
 }
+
+extension String: Error { }

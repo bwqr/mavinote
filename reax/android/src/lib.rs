@@ -1,18 +1,13 @@
 #![allow(non_snake_case)]
 
-use std::{
-    str::FromStr,
-    ffi::CString,
-    sync::Arc,
-};
+use std::ffi::CString;
 
 use jni::{
-    objects::{JObject, JString, JClass, JValue},
+    objects::{JObject, JString, JClass, JValue, JByteArray},
     signature::{Primitive, ReturnType},
     JNIEnv, sys::jlong,
 };
 use libc::c_char;
-use sqlx::{sqlite::{SqliteConnectOptions, SqlitePoolOptions}, Pool, Sqlite};
 
 mod account;
 mod log;
@@ -38,13 +33,13 @@ fn capture_stderr() {
 }
 
 #[no_mangle]
-pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
-    mut env: JNIEnv,
+pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init<'a>(
+    mut env: JNIEnv<'a>,
     _: JClass,
     api_url: JString,
     ws_url: JString,
     storage_dir: JString,
-) {
+) -> JByteArray<'a> {
     capture_stderr();
 
     let api_url = env
@@ -70,29 +65,7 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1init(
 
     log::init();
 
-    universal::init(api_url, ws_url, storage_dir.clone());
-
-    let db_path = format!("sqlite:{}/app.db", storage_dir);
-    let pool = universal::block_on(async move {
-        let options = SqliteConnectOptions::from_str(db_path.as_str())
-            .unwrap()
-            .create_if_missing(true);
-
-        let pool = SqlitePoolOptions::new()
-            .max_connections(5)
-            .connect_with(options)
-            .await
-            .unwrap();
-
-        sqlx::migrate!("../migrations").run(&pool).await.unwrap();
-
-        pool
-    });
-
-    runtime::put::<Arc<Pool<Sqlite>>>(Arc::new(pool.clone()));
-
-    ::log::info!("reax is built with {} profile", if cfg!(debug_assertions) { "debug" } else { "release" });
-    ::log::info!("reax runtime is initialized");
+    bytes_to_byte_array(&env, universal::init(api_url, ws_url, storage_dir.clone()))
 }
 
 #[no_mangle]
@@ -152,9 +125,22 @@ pub extern "C" fn Java_com_bwqr_mavinote_reax_RuntimeKt__1abort(
     _: JClass,
     pointer: jlong,
 ) {
-    let handle = unsafe { Box::from_raw(pointer as * mut tokio::task::JoinHandle<()>) };
+    unsafe { universal::abort(pointer as _); }
+}
 
-    ::log::debug!("received abort, {:p}", handle);
+fn bytes_to_byte_array<'a>(env: &JNIEnv<'a>, bytes: Vec<u8>) -> JByteArray<'a> {
+    let bytes_array = env.new_byte_array(bytes.len().try_into().unwrap()).unwrap();
 
-    handle.abort();
+    env.set_byte_array_region(
+        &bytes_array,
+        0,
+        bytes
+            .into_iter()
+            .map(|byte| byte as i8)
+            .collect::<Vec<i8>>()
+            .as_slice(),
+    )
+    .unwrap();
+
+    bytes_array
 }

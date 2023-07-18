@@ -14,13 +14,13 @@ import kotlinx.coroutines.flow.Flow
 class AccountViewModel {
     companion object {
         fun accounts(): Flow<List<Account>> =
-            Runtime.runStream(DeList(Account.Companion)) { _accounts(it) }
+            Runtime.runStream(DeList(Account)) { _accounts(it) }
 
         suspend fun account(accountId: Int): Account? =
-            Runtime.runOnce(DeOption(Account.Companion)) { _account(it, accountId) }
+            Runtime.runOnce(DeOption(Account)) { _account(it, accountId) }
 
         suspend fun devices(accountId: Int): List<Device> =
-            Runtime.runOnce(DeList(Device.Companion)) { _devices(it, accountId) }
+            Runtime.runOnce(DeList(Device)) { _devices(it, accountId) }
 
         suspend fun addDevice(accountId: Int, fingerprint: String): Unit =
             Runtime.runOnceUnit { _addDevice(it, accountId, fingerprint) }
@@ -41,7 +41,7 @@ class AccountViewModel {
             Runtime.runOnceUnit { _signUp(it, email, code) }
 
         suspend fun mavinoteAccount(accountId: Int): Mavinote? =
-            Runtime.runOnce(DeOption(Mavinote.Companion)) { _mavinoteAccount(it, accountId) }
+            Runtime.runOnce(DeOption(Mavinote)) { _mavinoteAccount(it, accountId) }
 
         suspend fun addAccount(email: String) = Runtime.runOnceUnit { _addAccount(it, email) }
 

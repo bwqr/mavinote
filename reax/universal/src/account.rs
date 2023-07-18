@@ -9,7 +9,7 @@ fn send_once<T: Serialize>(once_id: i32, message: Result<T, Error>) {
     crate::send_once(once_id, message)
 }
 
-fn send_stream<T: Serialize>(stream_id: i32, message: Message<T, Error>) {
+fn send_stream<T: Serialize>(stream_id: i32, message: Message<Result<T, Error>>) {
     crate::send_stream(stream_id, message)
 }
 
@@ -18,15 +18,15 @@ pub fn accounts(stream_id: i32) -> *mut JoinHandle<()> {
         let mut rx = note::storage::accounts().await;
 
         match &*rx.borrow() {
-            State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-            State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+            State::Ok(ok) => send_stream(stream_id, Message::Value(Ok(ok))),
+            State::Err(e) => send_stream::<()>(stream_id, Message::Value(Err(e.clone()))),
             _ => {}
         };
 
         while rx.changed().await.is_ok() {
             match &*rx.borrow() {
-                State::Ok(ok) => send_stream(stream_id, Message::Ok(ok)),
-                State::Err(e) => send_stream::<()>(stream_id, Message::Err(e.clone())),
+                State::Ok(ok) => send_stream(stream_id, Message::Value(Ok(ok))),
+                State::Err(e) => send_stream::<()>(stream_id, Message::Value(Err(e.clone()))),
                 _ => {}
             };
         }
@@ -182,16 +182,16 @@ pub fn listen_notifications(stream_id: i32, account_id: i32) -> * mut JoinHandle
         let mut rx = match note::storage::sync::listen_notifications(account_id).await {
             Ok(rx) => rx,
             Err(e) => {
-                send_stream::<()>(stream_id, Message::Err(e.clone()));
+                send_stream::<()>(stream_id, Message::Value(Err(e.clone())));
                 send_stream::<()>(stream_id, Message::Complete);
                 return;
             },
         };
 
-        send_stream::<()>(stream_id, Message::Ok(rx.borrow().clone()));
+        send_stream::<()>(stream_id, Message::Value(Ok(rx.borrow().clone())));
 
         while rx.changed().await.is_ok() {
-            send_stream::<()>(stream_id, Message::Ok(rx.borrow().clone()));
+            send_stream::<()>(stream_id, Message::Value(Ok(rx.borrow().clone())));
         }
 
         send_stream::<()>(stream_id, Message::Complete);

@@ -1,7 +1,8 @@
 import Foundation
 import Serde
 
-typealias OnStart = (_ id: Int32) -> UnsafeMutableRawPointer
+typealias AsyncStart = (_ id: Int32) -> UnsafeMutableRawPointer
+typealias SyncStart = (_ deserializer: @convention(c) (UnsafePointer<UInt8>?, UInt) -> UnsafeMutableRawPointer?) -> UnsafeMutableRawPointer?
 
 protocol Future {
     // Return value indicates whether the future is completed or not
@@ -10,11 +11,11 @@ protocol Future {
     func abort()
 }
 
-class Stream<T: Deserialize, E: Deserialize>: Future where E: Error {
-    private let continuation: AsyncStream<Result<T, E>>.Continuation
+class Stream<T: Deserialize>: Future {
+    private let continuation: AsyncStream<T>.Continuation
     private var joinHandle: UnsafeMutableRawPointer?
 
-    init(continuation: AsyncStream<Result<T, E>>.Continuation) {
+    init(continuation: AsyncStream<T>.Continuation) {
         self.continuation = continuation
     }
 
@@ -24,18 +25,15 @@ class Stream<T: Deserialize, E: Deserialize>: Future where E: Error {
         do {
             switch try deserializer.deserialize_variant_index() {
             case 0:
-                continuation.yield(Result.success(try T.deserialize(deserializer)))
+                continuation.yield(try T.deserialize(deserializer))
                 return false
             case 1:
-                continuation.yield(Result.failure(try E.deserialize(deserializer)))
-                return false
-            case 2:
                 continuation.finish()
                 return true
             default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Stream Message")
             }
         } catch {
-            fatalError("failed to handle stream \(error)")
+            fatalError("failed to deserialize in Stream \(error)")
         }
     }
 
@@ -52,8 +50,8 @@ class Stream<T: Deserialize, E: Deserialize>: Future where E: Error {
     }
 }
 
-class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
-    private var continuation: CheckedContinuation<Result<T, E>, Never>?
+class Once<T: Deserialize>: Future {
+    private var continuation: CheckedContinuation<T, Never>?
     private var joinHandle: UnsafeMutableRawPointer?
 
     func handle(_ bytes: [UInt8]) -> Bool {
@@ -64,13 +62,9 @@ class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
         let deserializer = BincodeDeserializer(input: bytes)
 
         do {
-            switch try deserializer.deserialize_variant_index() {
-            case 0: continuation.resume(returning: .success(try T.deserialize(deserializer)))
-            case 1: continuation.resume(returning: .failure(try E.deserialize(deserializer)))
-            default: throw DeserializationError.invalidInput(issue: "Unknown variant index for Once Message")
-            }
+            continuation.resume(returning: try T.deserialize(deserializer))
         } catch {
-            fatalError("failed to handle once \(error)")
+            fatalError("Failed to deserialize in Once \(error)")
         }
 
         return true
@@ -89,7 +83,7 @@ class Once<T: Deserialize, E: Deserialize>: Future where E: Error {
         joinHandle = handle
     }
 
-    func setContinuation(cont: CheckedContinuation<Result<T, E>, Never>) {
+    func setContinuation(cont: CheckedContinuation<T, Never>) {
         continuation = cont
     }
 }
@@ -115,25 +109,59 @@ class Runtime {
 
     private var futures: CriticalSection<[Int32: any Future]> = CriticalSection(instance: [:])
 
-    static func initialize(storageDir: String) {
+    static func initialize(storageDir: String) -> Result<(), String> {
         if (_instance != nil) {
-            return
+            return .success(())
         }
 
-        _instance = Runtime(storageDir)
+        let result: Result<DeUnit, String> = run { reax_init(API_URL, WS_URL, storageDir, $0) }
+
+        if case .failure(let failure) = result {
+            return .failure(failure)
+        }
+
+        _instance = Runtime()
+
+        Thread
+            .init(target: _instance!, selector: #selector(initHandler), object: nil)
+            .start()
+
+        return .success(())
     }
 
-    static func runStream<T: Deserialize>(_ onStart: OnStart) -> AsyncStream<Result<T, NoteError>> {
+    static func run<T: Deserialize, E: Deserialize>(_ onStart: SyncStart) -> Result<T, E> {
+        let ptr = onStart { bytes, byteLen in
+            let array = Array(UnsafeBufferPointer(start: bytes, count: Int(byteLen)))
+
+            return UnsafeMutableRawPointer(Unmanaged.passRetained(BincodeDeserializer(input: array)).toOpaque())
+        }
+
+        let deserializer = Unmanaged<BincodeDeserializer>.fromOpaque(ptr!).takeRetainedValue()
+
+        do {
+            let index = try deserializer.deserialize_variant_index()
+
+            switch index {
+            case 0: return .success(try T.deserialize(deserializer))
+            case 1: return .failure(try E.deserialize(deserializer))
+            default: throw DeserializationError.invalidInput(issue: "Unknown variant for Result \(index)")
+            }
+        } catch {
+            fatalError("Failed to deserialize sync function \(error)")
+        }
+    }
+
+    static func runStream<T: Deserialize>(_ onStart: AsyncStart) -> AsyncStream<Result<T, NoteError>> {
         return Self.instance().runStream(onStart)
     }
 
-    static func runOnceUnit(_ onStart: OnStart) async -> Result<(), NoteError> {
+    static func runOnceUnit(_ onStart: AsyncStart) async -> Result<(), NoteError> {
         let res: Result<DeUnit, NoteError> = await Self.runOnce(onStart)
 
         return res.map { _ in }
     }
 
-    static func runOnce<T: Deserialize>(_ onStart: OnStart) async -> Result<T, NoteError> {
+    static func runOnce<T: Deserialize>(_ onStart: AsyncStart) async -> Result<T, NoteError> {
         return await Self.instance().runOnce(onStart)
     }
 
@@ -141,17 +169,9 @@ class Runtime {
         _instance!
     }
 
-    private init(_ storageDir: String) {
-       Thread
-            .init(target: self, selector: #selector(initHandler), object: nil)
-            .start()
-
-        reax_init(API_URL, WS_URL, storageDir)
-    }
-
-    private func runStream<T: Deserialize>(_ onStart: OnStart) -> AsyncStream<Result<T, NoteError>> {
+    private func runStream<T: Deserialize>(_ onStart: AsyncStart) -> AsyncStream<T> {
         return AsyncStream { continuation in
-            let stream = Stream<T, NoteError>(continuation: continuation)
+            let stream = Stream<T>(continuation: continuation)
             let id = insertFuture(future: stream)
 
             stream.setJoinHandle(handle: onStart(id))
@@ -162,16 +182,12 @@ class Runtime {
         }
     }
 
-    private func runOnce<T: Deserialize>(_ onStart: OnStart) async -> Result<T, NoteError> {
-        let once = Once<T, NoteError>()
+    private func runOnce<T: Deserialize>(_ onStart: AsyncStart) async -> T {
+        let once = Once<T>()
         let id = insertFuture(future: once)
 
         return await withTaskCancellationHandler(
             operation: {
-                if case .failure(_) = Result(catching: { try Task.checkCancellation() }) {
-                    return .failure(.TaskCancellation)
-                }
-
                 return await withCheckedContinuation { cont in
                     once.setContinuation(cont: cont)
                     once.setJoinHandle(handle: onStart(id))

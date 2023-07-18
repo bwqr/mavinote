@@ -15,10 +15,10 @@ class NoteViewModel {
         suspend fun sync(): Unit = Runtime.runOnceUnit { _sync(it) }
 
         fun folders(): Flow<List<Folder>> =
-            Runtime.runStream(DeList(Folder.Companion)) { _folders(it) }
+            Runtime.runStream(DeList(Folder)) { _folders(it) }
 
         suspend fun folder(folderId: Int): Folder? =
-            Runtime.runOnce(DeOption(Folder.Companion)) { _folder(it, folderId) }
+            Runtime.runOnce(DeOption(Folder)) { _folder(it, folderId) }
 
         suspend fun createFolder(accountId: Int, name: String): Unit =
             Runtime.runOnceUnit { _createFolder(it, accountId, name) }
@@ -27,10 +27,10 @@ class NoteViewModel {
             Runtime.runOnceUnit { _deleteFolder(it, folderId) }
 
         fun notes(folderId: Int): Flow<List<Note>> =
-            Runtime.runStream(DeList(Note.Companion)) { _noteSummaries(it, folderId) }
+            Runtime.runStream(DeList(Note)) { _noteSummaries(it, folderId) }
 
         suspend fun note(noteId: Int): Note? =
-            Runtime.runOnce(DeOption(Note.Companion)) { _note(it, noteId) }
+            Runtime.runOnce(DeOption(Note)) { _note(it, noteId) }
 
         suspend fun createNote(folderId: Int, text: String): Int =
             Runtime.runOnce(DeInt) { _createNote(it, folderId, text) }

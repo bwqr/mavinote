@@ -18,7 +18,8 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 import kotlin.random.Random
 
-typealias OnStart = (Int) -> Long
+typealias AsyncStart = (Int) -> Long
+typealias SyncStart = () -> ByteArray
 
 interface Future {
     // Return value indicates whether the future is completed or not
@@ -27,10 +28,9 @@ interface Future {
     fun abort()
 }
 
-class Stream<T, E : Error> constructor(
+class Stream<T> constructor(
     private val scope: ProducerScope<T>,
-    private val ok: Deserialize<T>,
-    private val err: Deserialize<E>
+    private val deserialize: Deserialize<T>,
 ) : Future {
     private var joinHandle: Long? = null
 
@@ -39,16 +39,15 @@ class Stream<T, E : Error> constructor(
 
         return when (deserializer.deserialize_variant_index()) {
             0 -> {
-                scope.trySend(ok.deserialize(deserializer))
+                when (val either = Either.Deserialize(deserialize, NoteError).deserialize(deserializer)) {
+                    is Either.Success -> scope.trySend(either.value)
+                    is Either.Failure -> scope.cancel("", either.value)
+                }
+
                 false
             }
 
             1 -> {
-                scope.cancel("", err.deserialize(deserializer))
-                false
-            }
-
-            2 -> {
                 scope.close()
                 true
             }
@@ -68,25 +67,22 @@ class Stream<T, E : Error> constructor(
     }
 }
 
-class Once<T, E : Error> constructor(
+class Once<T> constructor(
     private val continuation: CancellableContinuation<T>,
-    private val ok: Deserialize<T>,
-    private val err: Deserialize<E>
+    private val deserialize: Deserialize<T>,
 ) : Future {
     private var joinHandle: Long? = null
 
     override fun handle(bytes: ByteArray): Boolean {
         val deserializer = BincodeDeserializer(bytes)
 
-        when (deserializer.deserialize_variant_index()) {
-            0 -> continuation.resume(ok.deserialize(deserializer))
-            1 -> continuation.resumeWithException(err.deserialize(deserializer))
-            else -> throw DeserializationError("Unknown variant index for Once")
+        when (val either = Either.Deserialize(deserialize, NoteError).deserialize(deserializer)) {
+            is Either.Success -> continuation.resume(either.value)
+            is Either.Failure -> continuation.resumeWithException(either.value)
         }
 
         return true
     }
-
 
     override fun abort() {
         val joinHandle = joinHandle ?: throw Error("A Once without a joinHandle is being aborted")
@@ -102,7 +98,7 @@ class Once<T, E : Error> constructor(
 private class CriticalSection<T> constructor(private val instance: T) {
     private val semaphore: Semaphore = Semaphore(1)
 
-    fun<R> enter(callback: (T) -> R): R {
+    fun <R> enter(callback: (T) -> R): R {
         semaphore.acquire()
         val res = callback(instance)
         semaphore.release()
@@ -111,51 +107,70 @@ private class CriticalSection<T> constructor(private val instance: T) {
     }
 }
 
-class Runtime private constructor(filesDir: String) {
+class Runtime private constructor() {
     private var futures: CriticalSection<HashMap<Int, Future>> = CriticalSection(HashMap())
 
     companion object {
         private lateinit var instance: Runtime
 
-        fun init(filesDir: String) {
-            if (!this::instance.isInitialized) {
-                instance = Runtime(filesDir)
+        // Return value indicates if the Runtime is already initialized
+        fun init(filesDir: String): Either<Boolean, String> {
+            if (this::instance.isInitialized) {
+                return Either.Success(true)
             }
+
+            System.loadLibrary("reax")
+
+            val either = run(Either.Deserialize(DeUnit, DeString)) {
+                _init(
+                    BuildConfig.API_URL,
+                    BuildConfig.WS_URL,
+                    filesDir
+                )
+            }
+
+            if (either is Either.Failure) {
+                return Either.Failure(either.value)
+            }
+
+            instance = Runtime()
+
+            thread {
+                _initHandler { id, bytes ->
+                    Log.d(
+                        "Runtime",
+                        "received message with id:$id byteLength:${bytes.size}"
+                    )
+
+                    val future = instance.futures.enter { futures ->
+                        futures[id] ?: throw Error("A message with unknown id is received $id")
+                    }
+
+                    if (future.handle(bytes)) {
+                        instance.abort(id)
+                    }
+                }
+            }
+
+            return Either.Success(false)
         }
 
-        fun <T> runStream(deserialize: Deserialize<T>, onStart: OnStart): Flow<T> =
+        fun <T> runStream(deserialize: Deserialize<T>, onStart: AsyncStart): Flow<T> =
             instance.runStream(deserialize, onStart)
 
-        suspend fun runOnceUnit(onStart: OnStart) = instance.runOnce(DeUnit, onStart)
+        suspend fun runOnceUnit(onStart: AsyncStart) = instance.runOnce(DeUnit, onStart)
 
-        suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnStart): T =
+        suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: AsyncStart): T =
             instance.runOnce(deserialize, onStart)
-    }
 
-    init {
-        _init(BuildConfig.API_URL, BuildConfig.WS_URL, filesDir)
-
-        thread {
-            _initHandler { id, bytes ->
-                Log.d(
-                    "Runtime",
-                    "received message with id:$id byteLength:${bytes.size}"
-                )
-
-                val future = futures.enter { futures ->
-                    futures[id] ?: throw Error("A message with unknown id is received $id")
-                }
-
-                if (future.handle(bytes)) {
-                    abort(id)
-                }
-            }
+        fun <T> run(deserialize: Deserialize<T>, onStart: SyncStart): T {
+            return deserialize.deserialize(BincodeDeserializer(onStart()))
         }
     }
 
-    private fun <T> runStream(deserialize: Deserialize<T>, onStart: OnStart): Flow<T> =
+    private fun <T> runStream(deserialize: Deserialize<T>, onStart: AsyncStart): Flow<T> =
         callbackFlow {
-            val stream = Stream(this, deserialize, NoteError.Companion)
+            val stream = Stream(this, deserialize)
 
             val id = insertFuture(stream)
 
@@ -166,9 +181,9 @@ class Runtime private constructor(filesDir: String) {
             }
         }
 
-    private suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: OnStart): T =
+    private suspend fun <T> runOnce(deserialize: Deserialize<T>, onStart: AsyncStart): T =
         suspendCancellableCoroutine { cont ->
-            val once = Once(cont, deserialize, NoteError.Companion)
+            val once = Once(cont, deserialize)
 
             val id = insertFuture(once)
 
@@ -202,6 +217,6 @@ class Runtime private constructor(filesDir: String) {
     }
 }
 
-private external fun _init(apiUrl: String, wsUrl: String, storageDir: String)
+private external fun _init(apiUrl: String, wsUrl: String, storageDir: String): ByteArray
 private external fun _initHandler(callback: (streamId: Int, bytes: ByteArray) -> Unit)
 private external fun _abort(joinHandle: Long)

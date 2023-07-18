@@ -1,7 +1,9 @@
 #include <stdint.h>
 #include <stdbool.h>
 
-void reax_init(const char * api_url, const char * ws_url, const char * storage_dir);
+typedef void * (*DeserializeHandler)(const uint8_t *bytes, uintptr_t bytes_len);
+
+void * reax_init(const char * api_url, const char * ws_url, const char * storage_dir, const DeserializeHandler handler);
 void reax_init_handler(void * ptr, void (*callback)(int32_t id, const uint8_t *bytes, uintptr_t bytes_len, void * ptr));
 void reax_abort(void * handle);
 

@@ -52,3 +52,9 @@ object DeBool: Deserialize<Boolean> {
         return deserializer.deserialize_bool()
     }
 }
+
+object DeError: Deserialize<Error> {
+    override fun deserialize(deserializer: Deserializer): Error {
+        return Error(deserializer.deserialize_str())
+    }
+}
