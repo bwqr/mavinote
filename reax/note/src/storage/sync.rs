@@ -1,10 +1,12 @@
 use std::collections::{HashSet, HashMap};
 use std::sync::Arc;
+use std::time::Duration;
 
 use base::Config;
-use futures_util::{StreamExt, FutureExt};
+use futures_util::{StreamExt, FutureExt, SinkExt};
 use sqlx::{Pool, Sqlite, pool::PoolConnection};
 use tokio::sync::watch::{channel, Receiver};
+use tokio::time::Instant;
 use tokio_tungstenite::connect_async;
 use x25519_dalek::StaticSecret;
 
@@ -13,6 +15,8 @@ use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, Error as MavinoteError, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
 use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote, LocalId};
+
+const PING_INTERVAL: u64 = 30;
 
 struct Sync<'a> {
     account_id: i32,
@@ -407,16 +411,27 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<()>, Error
 
             wait = 2;
 
+            let mut instant = Instant::now();
             loop {
-                let stream = sock.next();
+                if Instant::now().duration_since(instant).as_secs() > PING_INTERVAL {
+                    instant = Instant::now();
+                    if let Err(e) = sock.send("ping".into()).await {
+                        log::error!("failed to ping over socket, {e:?}");
+                    }
+                }
+
+                let stream = tokio::time::timeout_at(instant + Duration::from_secs(PING_INTERVAL), sock.next()).fuse();
                 let close_check = tx.closed().fuse();
 
                 futures_util::pin_mut!(stream);
                 futures_util::pin_mut!(close_check);
 
-                let res = futures_util::select! {
+                let Ok(res) = futures_util::select! {
                     res = stream => res,
                     _ = close_check => return,
+                } else {
+                    // continue to next loop to send a ping message
+                    continue
                 };
 
                 let Some(frame) = res else {
