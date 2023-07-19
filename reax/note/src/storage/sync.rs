@@ -470,6 +470,24 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<()>, Error
     Ok(rx)
 }
 
+pub(crate) async fn sync_devices(conn: &mut PoolConnection<Sqlite>, account_id: i32) -> Result<(), Error> {
+    let privkey = crypto::load_privkey(conn).await?;
+
+    let Some(client) = super::mavinote_client(conn, account_id).await? else {
+        return Err(Error::Unreachable("Mavinote account must have a client"));
+    };
+
+    let sync = Sync {
+        account_id,
+        client,
+        privkey: &privkey,
+        ciphers: Vec::new()
+    };
+
+    sync.devices(conn).await
+        .map(|_| ())
+}
+
 async fn handle_message(msg: &DeviceMessage, account_id: i32) -> Result<bool, Error> {
     match msg {
         DeviceMessage::RefreshRequests => refresh_respond_requests(account_id).await?,

@@ -1,5 +1,4 @@
 use std::sync::Arc;
-use std::future::Future;
 
 use base64ct::{Base64, Encoding};
 use rand::{Rng, thread_rng, distributions::Alphanumeric, rngs::OsRng};
@@ -10,7 +9,7 @@ use x25519_dalek::{StaticSecret, PublicKey};
 
 use base::{State, observable_map::{ObservableMap, Receiver}, Config};
 
-use crate::{Error, StorageError, models::{StoreKey, Device}, crypto, accounts::mavinote::{AuthClient, Token}};
+use crate::{Error, StorageError, models::{StoreKey, Device}, crypto, accounts::mavinote::{Error as MavinoteError, AuthClient, Token}};
 use crate::accounts::mavinote::{MavinoteClient, CreateFolderRequest, CreateNoteRequest};
 use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
@@ -382,6 +381,10 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
         let dev_ref = device_folders.as_slice();
         match client.login_on_unauthorized(|client| async move { client.create_folder(dev_ref).await }, &login).await {
             Ok(folder) => Some(folder.id()),
+            Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
+                sync::sync_devices(&mut conn, account_id).await?;
+                None
+            },
             Err(e) => {
                 log::error!("failed to create folder in remote {e:?}");
                 None
@@ -484,6 +487,10 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
             let dev_ref = device_notes.as_ref();
             match mavinote.login_on_unauthorized(|client| async move { client.create_note(remote_id, dev_ref).await }, &login).await {
                 Ok(note) => Some(note),
+                Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
+                    sync::sync_devices(&mut conn, folder.account_id).await?;
+                    None
+                },
                 Err(e) => {
                     log::debug!("failed to create note in remote, {e:?}");
                     None
@@ -545,6 +552,10 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
         let commit = note.commit;
         match mavinote.login_on_unauthorized(|client| async move { client.update_note(remote_id, commit, dev_ref).await }, &login).await {
             Ok(commit) => (commit.commit, ModelState::Clean),
+            Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
+                sync::sync_devices(&mut conn, folder.account_id).await?;
+                (note.commit, ModelState::Modified)
+            },
             Err(e) => {
                 log::debug!("failed to update note with id {note_id}, {e:?}");
                 (note.commit, ModelState::Modified)
