@@ -1,4 +1,5 @@
 use std::sync::Arc;
+use std::future::Future;
 
 use base64ct::{Base64, Encoding};
 use rand::{Rng, thread_rng, distributions::Alphanumeric, rngs::OsRng};
@@ -9,7 +10,7 @@ use x25519_dalek::{StaticSecret, PublicKey};
 
 use base::{State, observable_map::{ObservableMap, Receiver}, Config};
 
-use crate::{Error, StorageError, models::{StoreKey, Device}, crypto, accounts::mavinote::AuthClient};
+use crate::{Error, StorageError, models::{StoreKey, Device}, crypto, accounts::mavinote::{AuthClient, Token}};
 use crate::accounts::mavinote::{MavinoteClient, CreateFolderRequest, CreateNoteRequest};
 use crate::models::{Folder, Note, State as ModelState, LocalId, Account, AccountKind, Mavinote};
 
@@ -24,6 +25,24 @@ const NOTE_NOT_FOUND: Error = Error::Unreachable("NoteNotFound");
 static ACCOUNTS: OnceCell<Sender<State<Vec<Account>, Error>>> = OnceCell::new();
 pub(crate) static FOLDERS: OnceCell<Sender<State<Vec<Folder>, Error>>> = OnceCell::new();
 static NOTES_MAP: OnceCell<Arc<ObservableMap<State<Vec<Note>, Error>>>> = OnceCell::new();
+
+pub(crate) async fn login(account_id: i32) -> Result<Token, Error> {
+    let config = runtime::get::<Arc<Config>>().unwrap();
+    let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await.unwrap();
+
+    let mavinote = db::fetch_account_data::<Mavinote>(&mut conn, account_id).await?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?;
+    let identity_public_key = db::fetch_value(&mut conn, StoreKey::IdentityPubKey).await?.unwrap().value;
+    let password = db::fetch_value(&mut conn, StoreKey::Password).await?.unwrap().value;
+
+    let token = AuthClient::new(config.api_url.clone())
+        .login(&mavinote.email, &identity_public_key, &password)
+        .await?;
+
+    db::update_account_data(&mut conn, account_id, Some(Json(Mavinote { email: mavinote.email, token: token.token.clone() }))).await?;
+
+    Ok(token)
+}
 
 pub async fn init() -> Result<(), Error> {
     ACCOUNTS.set(channel(State::default()).0).unwrap();
@@ -231,10 +250,10 @@ pub async fn sign_up(email: String, code: String) -> Result<(), Error> {
 pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-    match mavinote_client(&mut conn, account_id).await?
-        .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .delete_device(None)
-        .await {
+    let client = mavinote_client(&mut conn, account_id).await?
+        .ok_or(NOT_MAVINOTE_ACCOUNT)?;
+
+    match client.login_on_unauthorized(|client| async move { client.delete_device(None).await }, &login).await {
         Ok(_) | Err(crate::accounts::mavinote::Error::DeviceDeleted(_)) => {
             // Since DeviceDeleted means our device for this account is already removed,
             // receiving a DeviceDeleted while trying to remove the account is not important
@@ -264,15 +283,17 @@ pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .send_account_close_code().await
+        .login_on_unauthorized(|client| async move { client.send_account_close_code().await }, &login)
+        .await
         .map_err(|e| e.into())
 }
 
 pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
+    let code_ref = &code;
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .close_account(&code)
+        .login_on_unauthorized(|client| async move { client.close_account(code_ref).await }, &login)
         .await?;
 
     db::delete_account(&mut conn, account_id).await?;
@@ -305,7 +326,7 @@ pub async fn delete_device(account_id: i32, device_id: i32) -> Result<(), Error>
 
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .delete_device(Some(device_id))
+        .login_on_unauthorized(|client| async move { client.delete_device(Some(device_id)).await }, &login)
         .await?;
 
     db::delete_devices(&mut conn, account_id, &[device_id]).await.map_err(|e| e.into())
@@ -314,9 +335,10 @@ pub async fn delete_device(account_id: i32, device_id: i32) -> Result<(), Error>
 pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
+    let pub_ref = &pubkey;
     let device = mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .add_device(pubkey).await?;
+        .login_on_unauthorized(|client| { async move { client.add_device(pub_ref).await } }, &login).await?;
 
     db::create_devices(&mut conn, account_id, &[device]).await.map_err(|e| e.into())
 }
@@ -347,7 +369,7 @@ pub async fn folder(folder_id: i32) -> Result<Option<Folder>, Error> {
 pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
-    let remote_id = if let Some(mavinote) = mavinote_client(&mut conn, account_id).await? {
+    let remote_id = if let Some(client) = mavinote_client(&mut conn, account_id).await? {
         let devices = db::fetch_devices(&mut conn, account_id).await?;
         let privkey = crypto::load_privkey(&mut conn).await?;
 
@@ -357,7 +379,8 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
             device_folders.push(CreateFolderRequest { device_id: device.id, name: cipher.encrypt(&name)? });
         }
 
-        match mavinote.create_folder(device_folders).await {
+        let dev_ref = device_folders.as_slice();
+        match client.login_on_unauthorized(|client| async move { client.create_folder(dev_ref).await }, &login).await {
             Ok(folder) => Some(folder.id()),
             Err(e) => {
                 log::error!("failed to create folder in remote {e:?}");
@@ -389,7 +412,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
 
     if let Some(remote_id) = folder.remote_id() {
         if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
-            if let Err(e) = mavinote.delete_folder(remote_id).await {
+            if let Err(e) = mavinote.login_on_unauthorized(|client| async move { client.delete_folder(remote_id).await }, &login).await {
                 log::debug!("failed to delete folder in remote, {e:?}");
 
                 delete = false;
@@ -458,7 +481,8 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
                 device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
             }
 
-            match mavinote.create_note(remote_id, device_notes).await {
+            let dev_ref = device_notes.as_ref();
+            match mavinote.login_on_unauthorized(|client| async move { client.create_note(remote_id, dev_ref).await }, &login).await {
                 Ok(note) => Some(note),
                 Err(e) => {
                     log::debug!("failed to create note in remote, {e:?}");
@@ -517,7 +541,9 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
             device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
         }
 
-        match mavinote.update_note(remote_id, note.commit, device_notes).await {
+        let dev_ref = device_notes.as_slice();
+        let commit = note.commit;
+        match mavinote.login_on_unauthorized(|client| async move { client.update_note(remote_id, commit, dev_ref).await }, &login).await {
             Ok(commit) => (commit.commit, ModelState::Clean),
             Err(e) => {
                 log::debug!("failed to update note with id {note_id}, {e:?}");
@@ -554,7 +580,7 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     if let Some(remote_id) = note.remote_id() {
         let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
         if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
-            if let Err(e) = mavinote.delete_note(remote_id).await {
+            if let Err(e) = mavinote.login_on_unauthorized(|client| async move { client.delete_note(remote_id).await }, &login).await {
                 log::debug!("failed to delete note in remote, {e:?}");
 
                 delete = false;

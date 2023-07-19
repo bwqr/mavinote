@@ -11,7 +11,7 @@ use x25519_dalek::StaticSecret;
 use super::db;
 use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
-use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
+use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, Error as MavinoteError, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
 use crate::models::{AccountKind, State as ModelState, RemoteId, Note, Mavinote, LocalId};
 
 struct Sync<'a> {
@@ -203,7 +203,7 @@ impl<'a> Sync<'a> {
                     request.push(CreateFolderRequest{ device_id: cipher.device_id, name: cipher.encrypt(&local_folder.name)? });
                 }
 
-                let remote_folder = self.client.create_folder(request).await?;
+                let remote_folder = self.client.create_folder(&request).await?;
 
                 db::update_folder_remote_id(conn, local_folder.local_id(), remote_folder.id()).await?;
 
@@ -233,7 +233,7 @@ impl<'a> Sync<'a> {
                         });
                     }
 
-                    let commit = self.client.update_note(remote_id, local_note.commit, device_notes).await?;
+                    let commit = self.client.update_note(remote_id, local_note.commit, &device_notes).await?;
 
                     db::update_commit(conn, local_note.local_id(), commit.commit).await?
                 }
@@ -247,7 +247,7 @@ impl<'a> Sync<'a> {
                         });
                     }
 
-                    let remote_note = self.client.create_note(remote_folder_id, device_notes).await?;
+                    let remote_note = self.client.create_note(remote_folder_id, &device_notes).await?;
                     sqlx::query("update notes set remote_id = ?, 'commit' = ? where id = ?")
                         .bind(remote_note.id)
                         .bind(remote_note.commit)
@@ -355,10 +355,16 @@ pub async fn sync() -> Result<(), Error> {
         };
 
         if let Err(e) = sync.sync(&mut conn).await {
-            log::error!("Failed to sync mavinote account with id {}, {e:?}", account.id);
+            match e {
+                Error::Mavinote(MavinoteError::DeviceDeleted(_)) => return Err(e),
+                Error::Mavinote(MavinoteError::Unauthorized(_)) => {
+                    log::error!("Sync is failed due to unauthorized error");
 
-            if let Error::Mavinote(crate::accounts::mavinote::Error::DeviceDeleted(_)) = e {
-                return Err(e);
+                    if let Err(e) = super::login(account.id).await {
+                        log::debug!("Unable to login after unauthorized error while syncing, {e:?}");
+                    }
+                }
+                e => log::error!("Failed to sync mavinote account with id {}, {e:?}", account.id),
             }
         }
     }
@@ -444,35 +450,37 @@ pub async fn listen_notifications(account_id: i32) -> Result<Receiver<()>, Error
 
                 log::debug!("message is received {msg:?}");
 
-                match msg {
-                    DeviceMessage::RefreshRequests => {
-                        if let Err(e) = refresh_respond_requests(account_id).await {
-                            log::error!("failed to refresh respond requests, {e:?}");
+                match handle_message(&msg, account_id).await {
+                    Err(Error::Mavinote(crate::accounts::mavinote::Error::Unauthorized(_))) => {
+                        if let Err(e) = super::login(account_id).await {
+                            log::debug!("Unable to login after unauthorized error, {e:?}");
                         }
-                    },
-                    DeviceMessage::RefreshRemote => {
-                        if let Err(e) = refresh_remote(account_id).await {
-                            log::error!("failed to refresh remote, {e:?}");
+
+                        if let Err(e) = handle_message(&msg, account_id).await {
+                            log::debug!("Failed to retry handling message, {e:?}");
                         }
-                    },
-                    DeviceMessage::RefreshFolder(folder_id) => {
-                        if let Err(e) = refresh_folder(account_id, folder_id).await {
-                            log::error!("failed to refresh folder, {e:?}");
-                        }
-                    },
-                    DeviceMessage::RefreshNote { folder_id, note_id } => {
-                        if let Err(e) = refresh_note(account_id, folder_id, note_id).await {
-                            log::error!("failed to refresh folder, {e:?}");
-                        }
-                    },
-                    DeviceMessage::Timeout => break,
-                    _ => log::debug!("message is unhandled"),
+                    }
+                    Err(e) => log::debug!("failed to handle message, {e:?}"),
+                    _ => { },
                 }
             }
         }
     });
 
     Ok(rx)
+}
+
+async fn handle_message(msg: &DeviceMessage, account_id: i32) -> Result<bool, Error> {
+    match msg {
+        DeviceMessage::RefreshRequests => refresh_respond_requests(account_id).await?,
+        DeviceMessage::RefreshRemote => refresh_remote(account_id).await?,
+        DeviceMessage::RefreshFolder(folder_id) => refresh_folder(account_id, *folder_id).await?,
+        DeviceMessage::RefreshNote { folder_id, note_id } => refresh_note(account_id, *folder_id, *note_id).await?,
+        DeviceMessage::Timeout => return Ok(true),
+        _ => log::debug!("message is unhandled"),
+    };
+
+    Ok(false)
 }
 
 async fn refresh_respond_requests(account_id: i32) -> Result<(), Error> {

@@ -1,3 +1,5 @@
+use std::future::Future;
+
 use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}, StatusCode};
 use serde::{Deserialize, Serialize};
 use futures_util::StreamExt;
@@ -231,6 +233,35 @@ impl MavinoteClient {
 
         Err(Error::Message(error))
     }
+
+    pub async fn login_on_unauthorized<F, T, R, L>(
+        self,
+        future_callback: F,
+        login: &(dyn Sync + Fn(i32) -> L)
+    ) -> Result<T, Error>
+    where
+        F: Fn(Self) -> R,
+        R: Future<Output = Result<T, Error>>,
+        L: Future<Output = Result<Token, crate::Error>>,
+    {
+        let (account_id, api_url) = (self.account_id, self.api_url.clone());
+
+        let token = match future_callback(self).await {
+            Err(Error::Unauthorized(Some(account_id))) => {
+                match login(account_id).await {
+                    Ok(token) => token.token,
+                    Err(e) => {
+                        log::debug!("Failed to login after receiving unauthorized response, {e:?}");
+
+                        return Err(Error::Unauthorized(Some(account_id)))
+                    }
+                }
+            }
+            result => return result,
+        };
+
+        future_callback(MavinoteClient::new(account_id, api_url, token)).await
+    }
 }
 
 impl MavinoteClient {
@@ -267,7 +298,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn add_device(&self, pubkey: String) -> Result<responses::Device, Error> {
+    pub async fn add_device(&self, pubkey: &str) -> Result<responses::Device, Error> {
         let request = requests::AddDevice { pubkey };
 
         self.client
@@ -328,10 +359,10 @@ impl MavinoteClient {
 
     }
 
-    pub async fn create_folder(&self, request: Vec<requests::CreateFolderRequest>) -> Result<responses::CreatedFolder, Error> {
+    pub async fn create_folder(&self, request: &[requests::CreateFolderRequest]) -> Result<responses::CreatedFolder, Error> {
         self.client
             .post(format!("{}/note/folder", self.api_url))
-            .body(serde_json::to_string(&request).unwrap())
+            .body(serde_json::to_string(request).unwrap())
             .send()
             .await
             .map(|r| async { self.error_for_status(r).await })?
@@ -368,7 +399,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn create_note(&self, folder_id: RemoteId, device_notes: Vec<requests::CreateNoteRequest>) -> Result<responses::CreatedNote, Error> {
+    pub async fn create_note(&self, folder_id: RemoteId, device_notes: &[requests::CreateNoteRequest]) -> Result<responses::CreatedNote, Error> {
         self.client
             .post(format!("{}/note/note?folder_id={}", self.api_url, folder_id.0))
             .body(serde_json::to_string(&device_notes).unwrap())
@@ -381,7 +412,7 @@ impl MavinoteClient {
             .map_err(|e| e.into())
     }
 
-    pub async fn update_note(&self, note_id: RemoteId, commit: i32, device_notes: Vec<requests::CreateNoteRequest>) -> Result<responses::Commit, Error> {
+    pub async fn update_note(&self, note_id: RemoteId, commit: i32, device_notes: &[requests::CreateNoteRequest]) -> Result<responses::Commit, Error> {
         let request = requests::UpdateNoteRequest { commit,  device_notes };
 
         self.client
@@ -482,9 +513,9 @@ mod requests {
     }
 
     #[derive(Serialize)]
-    pub struct UpdateNoteRequest {
+    pub struct UpdateNoteRequest<'a> {
         pub commit: i32,
-        pub device_notes: Vec<CreateNoteRequest>,
+        pub device_notes: &'a [CreateNoteRequest],
     }
 
     #[derive(Serialize)]
@@ -508,8 +539,8 @@ mod requests {
     }
 
     #[derive(Serialize)]
-    pub struct AddDevice {
-        pub pubkey: String,
+    pub struct AddDevice<'a> {
+        pub pubkey: &'a str,
     }
 
     #[derive(Serialize)]
