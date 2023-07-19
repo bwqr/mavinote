@@ -1,8 +1,10 @@
-use std::{collections::HashMap, time::Duration};
+use std::{collections::HashMap, time::{Duration, Instant}};
 
 use actix::prelude::*;
 use actix_web_actors::ws::{Message as WebSocketMessage, ProtocolError, WebsocketContext};
 use log::debug;
+
+const TIMEOUT: u64 = 60;
 
 pub type AddrServer = Addr<Server>;
 
@@ -82,11 +84,12 @@ pub struct Connection {
     server: Addr<Server>,
     user_id: i32,
     device_id: i32,
+    hb: Instant,
 }
 
 impl Connection {
     pub fn new(server: Addr<Server>, user_id: i32, device_id: i32) -> Self {
-        Connection { server, user_id, device_id }
+        Connection { server, user_id, device_id, hb: Instant::now() }
     }
 }
 
@@ -104,10 +107,12 @@ impl Actor for Connection {
             .then(|_, _, _| fut::ready(()))
             .wait(ctx);
 
-        // Close connection after 5 minutes.
-        ctx.run_later(Duration::from_secs(60 * 5), |_, ctx| {
-            ctx.text(serde_json::to_string(&messages::DeviceMessage::Timeout).unwrap());
-            ctx.stop()
+        // Check heartbeat every 1 minute.
+        ctx.run_interval(Duration::from_secs(TIMEOUT), |conn, ctx| {
+            if Instant::now().duration_since(conn.hb).as_secs() > TIMEOUT {
+                ctx.text(serde_json::to_string(&messages::DeviceMessage::Timeout).unwrap());
+                ctx.stop()
+            }
         });
     }
 
@@ -127,11 +132,14 @@ impl StreamHandler<Result<WebSocketMessage, ProtocolError>> for Connection {
 
         match msg {
             WebSocketMessage::Ping(msg) => {
+                self.hb = Instant::now();
                 ctx.pong(&msg);
             }
             WebSocketMessage::Pong(_) => { },
             WebSocketMessage::Text(text) => {
-                ctx.text(text);
+                if text == "ping" {
+                    self.hb = Instant::now();
+                }
             }
             WebSocketMessage::Close(_) => ctx.stop(),
             _ => {}
