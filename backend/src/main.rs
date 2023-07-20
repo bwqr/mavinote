@@ -7,7 +7,7 @@ use diesel::{
 };
 
 use base::{crypto::Crypto, types::Pool};
-use notify::ws::Server;
+use notify::{ws::Server as WsServer, mail::{Server as MailServer, MailRecipient}};
 
 fn setup_database() -> Pool {
     let conn_info = std::env::var("DATABASE_URL").expect("DATABASE_URL is not provided in env");
@@ -31,7 +31,14 @@ async fn main() -> std::io::Result<()> {
             .as_str(),
     );
 
-    let notify_server = Server::new().start();
+    let notify_server = WsServer::new().start();
+    let mail_server: MailRecipient = MailServer::new(
+            std::env::var("MAIL_ADDRESS").expect("MAIL_ADDRESS is not provided in env"),
+            std::env::var("MAILGUN_ENDPOINT").expect("MAILGUN_ENDPOINT is not provided in env"),
+            std::env::var("MAILGUN_KEY").expect("MAILGUN_KEY is not provided in env"),
+        )
+        .start()
+        .recipient();
 
     HttpServer::new(move || {
         let cors = Cors::default()
@@ -54,6 +61,7 @@ async fn main() -> std::io::Result<()> {
             .app_data(Data::new(pool.clone()))
             .app_data(Data::new(crypto.clone()))
             .app_data(Data::new(notify_server.clone()))
+            .app_data(Data::new(mail_server.clone()))
             .wrap(Logger::default())
             .configure(auth::register)
             .configure(note::register)

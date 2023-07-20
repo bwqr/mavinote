@@ -5,6 +5,7 @@ use actix_web::web::{delete, get, post, put, scope, ServiceConfig};
 mod handlers;
 pub mod models;
 mod requests;
+mod templates;
 pub mod test;
 
 use serde::Deserialize;

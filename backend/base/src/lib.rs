@@ -147,3 +147,15 @@ impl From<jsonwebtoken::errors::Error> for HttpError {
         }
     }
 }
+
+impl From<askama::Error> for HttpError {
+    fn from(e: askama::Error) -> Self {
+        log::error!("Askama error {e:?}");
+
+        HttpError {
+            code: StatusCode::INTERNAL_SERVER_ERROR,
+            error: "template_error",
+            message: None,
+        }
+    }
+}

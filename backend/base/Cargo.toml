@@ -14,6 +14,7 @@ ring = "0.16.20"
 log.workspace = true
 
 actix-web.workspace = true
+askama.workspace = true
 chrono.workspace = true
 diesel.workspace = true
 serde.workspace = true

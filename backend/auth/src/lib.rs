@@ -4,6 +4,7 @@ mod handlers;
 mod models;
 mod requests;
 mod responses;
+mod templates;
 
 pub fn register(config: &mut ServiceConfig) {
     config.service(

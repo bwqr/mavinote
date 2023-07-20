@@ -12,6 +12,7 @@ notify = { path = "../notify" }
 test_helpers.workspace = true
 
 actix-web.workspace = true
+askama.workspace = true
 base64.workspace = true
 chrono.workspace = true
 diesel.workspace = true

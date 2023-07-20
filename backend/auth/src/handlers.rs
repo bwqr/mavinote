@@ -8,12 +8,14 @@ use base::{
     types::Pool,
     HttpError, HttpMessage,
 };
+use notify::mail::{MailRecipient, messages::SendMail};
 
 use actix_web::{
     http::StatusCode,
     web::{block, Data, Json, Payload, Query},
     HttpRequest, HttpResponse,
 };
+use askama::Template;
 use base64::prelude::{Engine, BASE64_STANDARD};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
@@ -22,7 +24,7 @@ use rand::seq::SliceRandom;
 use crate::{
     models::PendingUser,
     requests::{CreatePendingDevice, Login, SendCode, SignUp},
-    responses,
+    responses, templates::VerifyEmail,
 };
 
 pub async fn login(
@@ -148,6 +150,7 @@ pub async fn sign_up(
 pub async fn send_code(
     pool: Data<Pool>,
     request: Sanitized<Json<SendCode>>,
+    mail_recipient: Data<MailRecipient>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || -> Result<(), HttpError> {
         let mut conn = pool.get().unwrap();
@@ -175,6 +178,12 @@ pub async fn send_code(
             .do_update()
             .set(pending_users::code.eq(&code))
             .execute(&mut conn)?;
+
+        mail_recipient.do_send(SendMail {
+            to: request.email.clone(),
+            subject: "Verify your email to create Mavinote account".to_string(),
+            html: VerifyEmail { code: &code }.render()?,
+        });
 
         Ok(())
     })

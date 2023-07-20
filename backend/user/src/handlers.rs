@@ -1,3 +1,4 @@
+use askama::Template;
 use actix_web::{web::{self, block, Data, Json, Payload}, HttpRequest, HttpResponse, http::StatusCode};
 use chrono::{NaiveDateTime, Utc};
 use diesel::prelude::*;
@@ -10,10 +11,12 @@ use base::{
     types::Pool,
     HttpError, HttpMessage
 };
+use notify::mail::{MailRecipient, messages::SendMail};
 
 use crate::{
     models::{Device, DEVICE_COLUMNS, UserDevice},
     requests::{AddDevice, CloseAccount, DeleteDevice},
+    templates::CloseAccount as CloseAccountTemplate,
 };
 
 pub async fn fetch_devices(
@@ -160,19 +163,35 @@ pub async fn delete_device(
 pub async fn send_close_account_code(
     pool: Data<Pool>,
     device: UserDevice,
+    mail_recipient: Data<MailRecipient>,
 ) -> Result<Json<HttpMessage>, HttpError> {
     block(move || {
+        let mut conn = pool.get().unwrap();
+
         let code: String = b"0123456789"
             .choose_multiple(&mut rand::thread_rng(), 8)
             .map(|num| char::from(*num))
             .collect();
+
+        let email = users::table
+            .filter(users::id.eq(device.user_id))
+            .select(users::email)
+            .first::<String>(&mut conn)?;
 
         diesel::insert_into(pending_delete_users::table)
             .values((pending_delete_users::user_id.eq(device.user_id), pending_delete_users::code.eq(&code)))
             .on_conflict(pending_delete_users::user_id)
             .do_update()
             .set(pending_delete_users::code.eq(&code))
-            .execute(&mut pool.get().unwrap())
+            .execute(&mut conn)?;
+
+        mail_recipient.do_send(SendMail {
+            to: email,
+            subject: "Confirm to close your Mavinote account".to_string(),
+            html: CloseAccountTemplate { code: &code }.render()?,
+        });
+
+        Result::<(), HttpError>::Ok(())
     })
     .await??;
 
