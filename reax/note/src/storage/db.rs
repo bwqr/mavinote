@@ -301,3 +301,36 @@ pub async fn delete_note_local(conn: &mut PoolConnection<Sqlite>, local_id: Loca
         .await
         .map(|_| ())
 }
+
+pub async fn unique_nonces(conn: &mut PoolConnection<Sqlite>, device_ids: &[i32]) -> Result<Vec<[u8; 12]>, Error> {
+    let (_, nonce_id): (String, String) = sqlx::query_as("insert into store (key, value) values (?, ?) on conflict (key) do update set value = cast(cast(value as integer) + ? as text) returning *")
+        .bind(StoreKey::NonceId)
+        .bind(device_ids.len() as i32)
+        .bind(device_ids.len() as i32)
+        .fetch_one(conn)
+        .await?;
+
+    let nonce_id: i32 = nonce_id.parse().unwrap_or_else(|e| {
+        log::error!("Failed to parse nonce_id as i32, {e:?}");
+        device_ids.len() as i32
+    });
+
+    let random: i32 = rand::random();
+
+    let nonce_ids = device_ids
+        .iter()
+        .enumerate()
+        .map(|(idx, device_id)| {
+            let mut bytes = [0u8; 12];
+            bytes[..4].copy_from_slice(&random.to_le_bytes());
+            bytes[4..8].copy_from_slice(&device_id.to_le_bytes());
+            bytes[8..].copy_from_slice(&(nonce_id - idx as i32).to_le_bytes());
+
+            bytes
+        })
+        .collect::<Vec<_>>();
+
+    log::debug!("nonces, {nonce_ids:?}");
+
+    Ok(nonce_ids)
+}

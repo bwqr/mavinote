@@ -370,12 +370,13 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
 
     let remote_id = if let Some(client) = mavinote_client(&mut conn, account_id).await? {
         let devices = db::fetch_devices(&mut conn, account_id).await?;
+        let nonces = db::unique_nonces(&mut conn, &devices.iter().map(|d| d.id).collect::<Vec<_>>()).await?;
         let privkey = crypto::load_privkey(&mut conn).await?;
 
         let mut device_folders = vec![];
-        for device in devices {
+        for (device, nonce) in devices.into_iter().zip(nonces) {
             let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
-            device_folders.push(CreateFolderRequest { device_id: device.id, name: cipher.encrypt(&name)? });
+            device_folders.push(CreateFolderRequest { device_id: device.id, name: cipher.encrypt(&name, nonce)? });
         }
 
         let dev_ref = device_folders.as_slice();
@@ -476,12 +477,15 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
     let remote_note = if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
         if let Some(remote_id) = folder.remote_id() {
             let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
+            let name_nonces = db::unique_nonces(&mut conn, &devices.iter().map(|d| d.id).collect::<Vec<_>>()).await?;
+            let text_nonces = db::unique_nonces(&mut conn, &devices.iter().map(|d| d.id).collect::<Vec<_>>()).await?;
+
             let privkey = crypto::load_privkey(&mut conn).await?;
 
             let mut device_notes = vec![];
-            for device in devices {
+            for (device, (name_nonce, text_nonce)) in devices.into_iter().zip(name_nonces.into_iter().zip(text_nonces)) {
                 let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
-                device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
+                device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name, name_nonce)?, text: cipher.encrypt(&text, text_nonce)? });
             }
 
             let dev_ref = device_notes.as_ref();
@@ -540,12 +544,15 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
         };
 
         let devices = db::fetch_devices(&mut conn, folder.account_id).await?;
+        let name_nonces = db::unique_nonces(&mut conn, &devices.iter().map(|d| d.id).collect::<Vec<_>>()).await?;
+        let text_nonces = db::unique_nonces(&mut conn, &devices.iter().map(|d| d.id).collect::<Vec<_>>()).await?;
+
         let privkey = crypto::load_privkey(&mut conn).await?;
 
         let mut device_notes = vec![];
-        for device in devices {
+        for (device, (name_nonce, text_nonce)) in devices.into_iter().zip(name_nonces.into_iter().zip(text_nonces)) {
             let cipher = crypto::DeviceCipher::try_from_key(device.id, &privkey, &device.pubkey)?;
-            device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name)?, text: cipher.encrypt(&text)? });
+            device_notes.push(CreateNoteRequest{ device_id: device.id, name: cipher.encrypt(&name, name_nonce)?, text: cipher.encrypt(&text, text_nonce)? });
         }
 
         let dev_ref = device_notes.as_slice();

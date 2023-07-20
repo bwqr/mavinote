@@ -1,4 +1,4 @@
-use aes_gcm_siv::{Aes256GcmSiv, KeyInit, Nonce, aead::Aead};
+use aes_gcm_siv::{Aes256GcmSiv, KeyInit, aead::Aead};
 use base64ct::{Base64, Encoding};
 use serde::Serialize;
 use sqlx::{Sqlite, pool::PoolConnection};
@@ -42,21 +42,28 @@ impl DeviceCipher {
         Ok(DeviceCipher { device_id, cipher })
     }
 
-    pub fn encrypt(&self, message: &str) -> Result<String, Error> {
-        let nonce = Nonce::from_slice(b"unique nonce");
-
-        let ciphertext = self.cipher.encrypt(nonce, message.as_bytes())
+    pub fn encrypt(&self, message: &str, nonce: [u8; 12]) -> Result<String, Error> {
+        // TODO reduce the allocations and encrypt plain text into the vec instead of returning vec.
+        let ciphertext = self.cipher.encrypt(&nonce.into(), message.as_bytes())
             .map_err(|_| Error::Encrypt)?;
 
-        Ok(Base64::encode_string(ciphertext.as_slice()))
+        let mut bytes = nonce.to_vec();
+        bytes.extend_from_slice(ciphertext.as_slice());
+
+        Ok(Base64::encode_string(&bytes))
     }
 
     pub fn decrypt(&self, encoded: &str) -> Result<String, Error> {
-        let nonce = Nonce::from_slice(b"unique nonce");
-
         let bytes = Base64::decode_vec(encoded)
             .map_err(|_| Error::Base64Decode)?;
-        let bytes = self.cipher.decrypt(nonce, bytes.as_slice())
+
+        // Encoded string must also contain the nonce
+        if bytes.len() < 12 {
+            return Err(Error::Decrypt);
+        }
+
+        let (nonce, bytes) = bytes.split_at(12);
+        let bytes = self.cipher.decrypt(nonce.into(), bytes)
             .map_err(|_| Error::Decrypt)?;
 
         String::from_utf8(bytes)

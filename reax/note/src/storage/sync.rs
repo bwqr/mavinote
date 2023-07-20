@@ -203,8 +203,9 @@ impl<'a> Sync<'a> {
             Some(id) => id,
             None => {
                 let mut request = vec![];
-                for cipher in &self.ciphers {
-                    request.push(CreateFolderRequest{ device_id: cipher.device_id, name: cipher.encrypt(&local_folder.name)? });
+                let nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+                for (cipher, nonce) in self.ciphers.iter().zip(nonces) {
+                    request.push(CreateFolderRequest{ device_id: cipher.device_id, name: cipher.encrypt(&local_folder.name, nonce)? });
                 }
 
                 let remote_folder = self.client.create_folder(&request).await?;
@@ -229,11 +230,14 @@ impl<'a> Sync<'a> {
             match local_note.remote_id() {
                 Some(remote_id) if local_note.state == ModelState::Modified => {
                     let mut device_notes = vec![];
-                    for cipher in &self.ciphers {
+                    let name_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+                    let text_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+
+                    for (cipher, (name_nonce, text_nonce)) in self.ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
                         device_notes.push(CreateNoteRequest{
                             device_id: cipher.device_id,
-                            name: cipher.encrypt(&local_note.name)?,
-                            text: cipher.encrypt(&local_note.text)?
+                            name: cipher.encrypt(&local_note.name, name_nonce)?,
+                            text: cipher.encrypt(&local_note.text, text_nonce)?
                         });
                     }
 
@@ -243,11 +247,14 @@ impl<'a> Sync<'a> {
                 }
                 None => {
                     let mut device_notes = vec![];
-                    for cipher in &self.ciphers {
+                    let name_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+                    let text_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+
+                    for (cipher, (name_nonce, text_nonce)) in self.ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
                         device_notes.push(CreateNoteRequest{
                             device_id: cipher.device_id,
-                            name: cipher.encrypt(&local_note.name)?,
-                            text: cipher.encrypt(&local_note.text)?
+                            name: cipher.encrypt(&local_note.name, name_nonce)?,
+                            text: cipher.encrypt(&local_note.text, text_nonce)?
                         });
                     }
 
@@ -290,12 +297,14 @@ impl<'a> Sync<'a> {
             let folder = db::fetch_folder_by_remote_id(conn, RemoteId(folder_id), self.account_id).await?;
 
             if let Some(folder) = folder {
-                for cipher in ciphers {
+                let nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+
+                for (cipher, nonce) in ciphers.into_iter().zip(nonces) {
                     device_responses
                         .entry(cipher.device_id)
                         .or_insert(RespondRequests { device_id: cipher.device_id, folders: Vec::new(), notes: Vec::new() })
                         .folders
-                        .push(RespondFolderRequest { folder_id, name: cipher.encrypt(&folder.name)? });
+                        .push(RespondFolderRequest { folder_id, name: cipher.encrypt(&folder.name, nonce)? });
                 }
             }
         }
@@ -308,12 +317,15 @@ impl<'a> Sync<'a> {
                 .await?;
 
             if let Some(note) = note {
-                for cipher in ciphers {
+                let name_nonces = db::unique_nonces(conn, &ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+                let text_nonces = db::unique_nonces(conn, &ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+
+                for (cipher, (name_nonce, text_nonce)) in ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
                     device_responses
                         .entry(cipher.device_id)
                         .or_insert(RespondRequests { device_id: cipher.device_id, folders: Vec::new(), notes: Vec::new() })
                         .notes
-                        .push(RespondNoteRequest { note_id, name: cipher.encrypt(&note.name)?, text: cipher.encrypt(&note.text)? });
+                        .push(RespondNoteRequest { note_id, name: cipher.encrypt(&note.name, name_nonce)?, text: cipher.encrypt(&note.text, text_nonce)? });
                 }
             }
         }
