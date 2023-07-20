@@ -1,3 +1,5 @@
+use std::time::{Instant, Duration};
+
 use base::{
     crypto::Crypto,
     models::{Token, TokenKind, UNEXPECTED_TOKEN_KIND},
@@ -242,7 +244,8 @@ pub async fn request_verification(
                 pending_devices::device_id.eq(&device_id),
             ))
             .on_conflict((pending_devices::user_id, pending_devices::device_id))
-            .do_nothing()
+            .do_update()
+            .set(pending_devices::updated_at.eq(Utc::now().naive_utc()))
             .execute(&mut conn)?;
 
         crypto
@@ -278,7 +281,7 @@ pub async fn wait_verification(
     .await??;
 
     notify::ws::start(
-        notify::ws::Connection::new((&**ws_server).clone(), user_id, device_id),
+        notify::ws::Connection::with_timeout((&**ws_server).clone(), user_id, device_id, Instant::now() + Duration::from_secs(60 * 5)),
         &req,
         stream,
     )

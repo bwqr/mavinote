@@ -4,7 +4,7 @@ use actix::prelude::*;
 use actix_web_actors::ws::{Message as WebSocketMessage, ProtocolError, WebsocketContext};
 use log::debug;
 
-const TIMEOUT: u64 = 60;
+const HEARTBEAT_TIMEOUT: u64 = 60;
 
 pub type AddrServer = Addr<Server>;
 
@@ -84,12 +84,17 @@ pub struct Connection {
     server: Addr<Server>,
     user_id: i32,
     device_id: i32,
+    timeout: Option<Instant>,
     hb: Instant,
 }
 
 impl Connection {
     pub fn new(server: Addr<Server>, user_id: i32, device_id: i32) -> Self {
-        Connection { server, user_id, device_id, hb: Instant::now() }
+        Connection { server, user_id, device_id, timeout: None, hb: Instant::now() }
+    }
+
+    pub fn with_timeout(server: Addr<Server>, user_id: i32, device_id: i32, timeout: Instant) -> Self {
+        Connection { server, user_id, device_id, timeout: Some(timeout - Duration::from_secs(1)), hb: Instant::now() }
     }
 }
 
@@ -108,8 +113,14 @@ impl Actor for Connection {
             .wait(ctx);
 
         // Check heartbeat every 1 minute.
-        ctx.run_interval(Duration::from_secs(TIMEOUT), |conn, ctx| {
-            if Instant::now().duration_since(conn.hb).as_secs() > TIMEOUT {
+        ctx.run_interval(Duration::from_secs(HEARTBEAT_TIMEOUT), |conn, ctx| {
+            let now = Instant::now();
+            let conn_timeout = conn.timeout.map(|t| now > t).unwrap_or(false);
+            // Subtracting 1 second from TIMEOUT is just to eliminate small amount of variation in
+            // the time
+            let hb_timeout = now.duration_since(conn.hb).as_secs() > HEARTBEAT_TIMEOUT - 1;
+
+            if hb_timeout || conn_timeout {
                 ctx.text(serde_json::to_string(&messages::DeviceMessage::Timeout).unwrap());
                 ctx.stop()
             }

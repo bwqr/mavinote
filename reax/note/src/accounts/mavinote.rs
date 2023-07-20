@@ -1,8 +1,9 @@
-use std::future::Future;
+use std::{future::Future, time::Duration};
 
 use reqwest::{Client, ClientBuilder, header::{HeaderMap, HeaderValue}, StatusCode};
 use serde::{Deserialize, Serialize};
-use futures_util::StreamExt;
+use futures_util::{StreamExt, SinkExt};
+use tokio::time::Instant;
 use tokio_tungstenite::connect_async;
 
 use crate::models::RemoteId;
@@ -124,25 +125,41 @@ impl AuthClient {
                 ws_failed()
             })?;
 
-        match sock.next().await {
-            Some(Ok(msg)) => {
-                match msg.into_text() {
-                    Ok(msg) => {
-                        match serde_json::from_str::<DeviceMessage>(&msg) {
-                            Ok(DeviceMessage::AcceptPendingDevice) => return Ok(()),
-                            Ok(DeviceMessage::Timeout) => return Err(Error::Message("ws_timeout".to_string())),
-                            Ok(msg) => log::debug!("unexpected device message is received {msg:?}"),
-                            Err(e) => log::debug!("failed to deserialize device message {e:?}"),
-                        };
-                    },
-                    Err(e) => log::debug!("non text message is received, {:?}", e),
+        let mut instant = Instant::now();
+
+        const PING_INTERVAL: u64 = 30;
+        loop {
+            if Instant::now().duration_since(instant).as_secs() > PING_INTERVAL {
+                instant = Instant::now();
+                if let Err(e) = sock.send("ping".into()).await {
+                    log::error!("failed to ping over socket, {e:?}");
                 }
             }
-            Some(Err(e)) => log::debug!("failed to receive message, {:?}", e),
-            None => log::debug!("no message is received"),
-        }
 
-        Err(ws_failed())
+            let Ok(frame) = tokio::time::timeout_at(instant + Duration::from_secs(PING_INTERVAL), sock.next()).await else {
+                continue;
+            };
+
+            match frame {
+                Some(Ok(msg)) => {
+                    match msg.into_text() {
+                        Ok(msg) => {
+                            match serde_json::from_str::<DeviceMessage>(&msg) {
+                                Ok(DeviceMessage::AcceptPendingDevice) => return Ok(()),
+                                Ok(DeviceMessage::Timeout) => return Err(Error::Message("ws_timeout".to_string())),
+                                Ok(msg) => log::debug!("unexpected device message is received {msg:?}"),
+                                Err(e) => log::debug!("failed to deserialize device message {e:?}"),
+                            };
+                        },
+                        Err(e) => log::debug!("non text message is received, {:?}", e),
+                    }
+                }
+                Some(Err(e)) => log::debug!("failed to receive message, {:?}", e),
+                None => log::debug!("no message is received"),
+            }
+
+            return Err(ws_failed());
+        }
     }
 
     pub async fn request_verification(&self, email: &str, pubkey: &str, password: &str) -> Result<Token, Error> {
