@@ -251,13 +251,12 @@ impl MavinoteClient {
         Err(Error::Message(error))
     }
 
-    pub async fn login_on_unauthorized<F, T, R, L>(
+    pub async fn login_on_unauthorized<T, R, L>(
         self,
-        future_callback: F,
+        future_callback: &(dyn Sync + Fn(Self) -> R),
         login: &(dyn Sync + Fn(i32) -> L)
     ) -> Result<T, Error>
     where
-        F: Fn(Self) -> R,
         R: Future<Output = Result<T, Error>>,
         L: Future<Output = Result<Token, crate::Error>>,
     {

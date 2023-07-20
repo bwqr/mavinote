@@ -252,7 +252,7 @@ pub async fn remove_account(account_id: i32) -> Result<(), Error> {
     let client = mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?;
 
-    match client.login_on_unauthorized(|client| async move { client.delete_device(None).await }, &login).await {
+    match client.login_on_unauthorized(&|client| async move { client.delete_device(None).await }, &login).await {
         Ok(_) | Err(crate::accounts::mavinote::Error::DeviceDeleted(_)) => {
             // Since DeviceDeleted means our device for this account is already removed,
             // receiving a DeviceDeleted while trying to remove the account is not important
@@ -282,7 +282,7 @@ pub async fn send_account_close_code(account_id: i32) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .login_on_unauthorized(|client| async move { client.send_account_close_code().await }, &login)
+        .login_on_unauthorized(&|client| async move { client.send_account_close_code().await }, &login)
         .await
         .map_err(|e| e.into())
 }
@@ -292,7 +292,7 @@ pub async fn close_account(account_id: i32, code: String) -> Result<(), Error> {
     let code_ref = &code;
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .login_on_unauthorized(|client| async move { client.close_account(code_ref).await }, &login)
+        .login_on_unauthorized(&|client| async move { client.close_account(code_ref).await }, &login)
         .await?;
 
     db::delete_account(&mut conn, account_id).await?;
@@ -325,7 +325,7 @@ pub async fn delete_device(account_id: i32, device_id: i32) -> Result<(), Error>
 
     mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .login_on_unauthorized(|client| async move { client.delete_device(Some(device_id)).await }, &login)
+        .login_on_unauthorized(&|client| async move { client.delete_device(Some(device_id)).await }, &login)
         .await?;
 
     db::delete_devices(&mut conn, account_id, &[device_id]).await.map_err(|e| e.into())
@@ -337,7 +337,7 @@ pub async fn add_device(account_id: i32, pubkey: String) -> Result<(), Error> {
     let pub_ref = &pubkey;
     let device = mavinote_client(&mut conn, account_id).await?
         .ok_or(NOT_MAVINOTE_ACCOUNT)?
-        .login_on_unauthorized(|client| { async move { client.add_device(pub_ref).await } }, &login).await?;
+        .login_on_unauthorized(&|client| { async move { client.add_device(pub_ref).await } }, &login).await?;
 
     db::create_devices(&mut conn, account_id, &[device]).await.map_err(|e| e.into())
 }
@@ -379,7 +379,7 @@ pub async fn create_folder(account_id: i32, name: String) -> Result<(), Error> {
         }
 
         let dev_ref = device_folders.as_slice();
-        match client.login_on_unauthorized(|client| async move { client.create_folder(dev_ref).await }, &login).await {
+        match client.login_on_unauthorized(&|client| async move { client.create_folder(dev_ref).await }, &login).await {
             Ok(folder) => Some(folder.id()),
             Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
                 sync::sync_devices(&mut conn, account_id).await?;
@@ -415,7 +415,7 @@ pub async fn delete_folder(folder_id: i32) -> Result<(), Error> {
 
     if let Some(remote_id) = folder.remote_id() {
         if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
-            if let Err(e) = mavinote.login_on_unauthorized(|client| async move { client.delete_folder(remote_id).await }, &login).await {
+            if let Err(e) = mavinote.login_on_unauthorized(&|client| async move { client.delete_folder(remote_id).await }, &login).await {
                 log::debug!("failed to delete folder in remote, {e:?}");
 
                 delete = false;
@@ -485,7 +485,7 @@ pub async fn create_note(folder_id: i32, text: String) -> Result<i32, Error> {
             }
 
             let dev_ref = device_notes.as_ref();
-            match mavinote.login_on_unauthorized(|client| async move { client.create_note(remote_id, dev_ref).await }, &login).await {
+            match mavinote.login_on_unauthorized(&|client| async move { client.create_note(remote_id, dev_ref).await }, &login).await {
                 Ok(note) => Some(note),
                 Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
                     sync::sync_devices(&mut conn, folder.account_id).await?;
@@ -550,7 +550,7 @@ pub async fn update_note(note_id: i32, text: String) -> Result<(), Error> {
 
         let dev_ref = device_notes.as_slice();
         let commit = note.commit;
-        match mavinote.login_on_unauthorized(|client| async move { client.update_note(remote_id, commit, dev_ref).await }, &login).await {
+        match mavinote.login_on_unauthorized(&|client| async move { client.update_note(remote_id, commit, dev_ref).await }, &login).await {
             Ok(commit) => (commit.commit, ModelState::Clean),
             Err(MavinoteError::Message(msg)) if msg == "devices_mismatch" => {
                 sync::sync_devices(&mut conn, folder.account_id).await?;
@@ -591,7 +591,7 @@ pub async fn delete_note(note_id: i32) -> Result<(), Error> {
     if let Some(remote_id) = note.remote_id() {
         let folder = db::fetch_folder(&mut conn, LocalId(note.folder_id)).await?.unwrap();
         if let Some(mavinote) = mavinote_client(&mut conn, folder.account_id).await? {
-            if let Err(e) = mavinote.login_on_unauthorized(|client| async move { client.delete_note(remote_id).await }, &login).await {
+            if let Err(e) = mavinote.login_on_unauthorized(&|client| async move { client.delete_note(remote_id).await }, &login).await {
                 log::debug!("failed to delete note in remote, {e:?}");
 
                 delete = false;
