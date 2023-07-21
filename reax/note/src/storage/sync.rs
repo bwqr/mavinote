@@ -133,47 +133,57 @@ impl<'a> Sync<'a> {
     }
 
     async fn remote_note(&self, conn: &mut PoolConnection<Sqlite>, commit: i32, note_id: RemoteId, folder_id: LocalId) -> Result<bool, Error> {
-        match db::fetch_note_by_remote_id(conn, note_id, folder_id).await? {
-            Some(note) if note.state != ModelState::Clean || note.commit >= commit => { } // This case will be handled by local syncing
-            opt => {
-                let Some(remote_note) = self.client.fetch_note(note_id).await? else {
-                    log::warn!("note with remote id {} does not exist on remote", note_id.0);
-                    return Ok(false);
-                };
+        let local_note = db::fetch_note_by_remote_id(conn, note_id, folder_id).await?;
 
-                let Some(device_note) = remote_note.device_note else {
-                    log::debug!("A note with no device note is received. Some other devices must create our device note");
-                    return Ok(true);
-                };
+        if let Some(note) = &local_note {
+            // Having same commit means there is no need to pull fresh note from the server.
+            // Deleted state will be handled by local sync
+            if note.state == ModelState::Deleted || note.commit >= commit {
+                return Ok(false);
+            }
+        }
+        let Some(remote_note) = self.client.fetch_note(note_id).await? else {
+            log::warn!("note with remote id {} does not exist on remote", note_id.0);
+            return Ok(false);
+        };
 
-                let Some(cipher) = self.ciphers.iter().find(|cipher| cipher.device_id == device_note.sender_device_id) else {
-                    log::warn!("A note with unknown sender device is received");
-                    return Ok(false);
-                };
+        let Some(device_note) = remote_note.device_note else {
+            log::debug!("A note with no device note is received. Some other devices must create our device note");
+            return Ok(true);
+        };
 
-                let name = cipher.decrypt(&device_note.name)?;
-                let text = cipher.decrypt(&device_note.text)?;
+        let Some(cipher) = self.ciphers.iter().find(|cipher| cipher.device_id == device_note.sender_device_id) else {
+            log::warn!("A note with unknown sender device is received");
+            return Ok(false);
+        };
 
-                if let Some(note) = opt {
-                    db::update_note(
-                        conn,
-                        note.local_id(),
-                        &name,
-                        &text,
-                        remote_note.commit,
-                        ModelState::Clean,
-                    ).await?
-                } else {
-                    db::create_note(
-                        conn,
-                        folder_id,
-                        Some(note_id),
-                        name,
-                        text,
-                        remote_note.commit
-                    ).await?;
-                }
-            },
+        let name = cipher.decrypt(&device_note.name)?;
+        let mut text = cipher.decrypt(&device_note.text)?;
+
+        if let Some(note) = local_note {
+            // Merge local and remote text to resolve the conflict
+            if note.state == ModelState::Modified {
+                text += "\n___CONFLICT_RESOLVING___\n";
+                text += &note.text;
+            }
+
+            db::update_note(
+                conn,
+                note.local_id(),
+                &name,
+                &text,
+                remote_note.commit,
+                note.state,
+            ).await?
+        } else {
+            db::create_note(
+                conn,
+                folder_id,
+                Some(note_id),
+                name,
+                text,
+                remote_note.commit
+            ).await?;
         }
 
         Ok(false)
@@ -223,51 +233,42 @@ impl<'a> Sync<'a> {
                 let Some(remote_id) = local_note.remote_id() else {
                     return Err(Error::Unreachable("Deleted note without a remote id cannot exist"));
                 };
+
                 self.client.delete_note(remote_id).await?;
-                return db::delete_note(conn, local_note.local_id()).await.map_err(|e| e.into());
+
+                db::delete_note(conn, local_note.local_id()).await?;
+
+                continue;
             }
 
-            match local_note.remote_id() {
-                Some(remote_id) if local_note.state == ModelState::Modified => {
-                    let mut device_notes = vec![];
-                    let name_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
-                    let text_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+            // This state does not need sync
+            if local_note.state != ModelState::Modified && local_note.remote_id().is_some() {
+                continue;
+            }
+            let mut device_notes = vec![];
+            let name_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
+            let text_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
 
-                    for (cipher, (name_nonce, text_nonce)) in self.ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
-                        device_notes.push(CreateNoteRequest{
-                            device_id: cipher.device_id,
-                            name: cipher.encrypt(&local_note.name, name_nonce)?,
-                            text: cipher.encrypt(&local_note.text, text_nonce)?
-                        });
-                    }
+            for (cipher, (name_nonce, text_nonce)) in self.ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
+                device_notes.push(CreateNoteRequest{
+                    device_id: cipher.device_id,
+                    name: cipher.encrypt(&local_note.name, name_nonce)?,
+                    text: cipher.encrypt(&local_note.text, text_nonce)?
+                });
+            }
 
-                    let commit = self.client.update_note(remote_id, local_note.commit, &device_notes).await?;
-
-                    db::update_commit(conn, local_note.local_id(), commit.commit).await?
-                }
-                None => {
-                    let mut device_notes = vec![];
-                    let name_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
-                    let text_nonces = db::unique_nonces(conn, &self.ciphers.iter().map(|c| c.device_id).collect::<Vec<_>>()).await?;
-
-                    for (cipher, (name_nonce, text_nonce)) in self.ciphers.iter().zip(name_nonces.into_iter().zip(text_nonces)) {
-                        device_notes.push(CreateNoteRequest{
-                            device_id: cipher.device_id,
-                            name: cipher.encrypt(&local_note.name, name_nonce)?,
-                            text: cipher.encrypt(&local_note.text, text_nonce)?
-                        });
-                    }
-
-                    let remote_note = self.client.create_note(remote_folder_id, &device_notes).await?;
-                    sqlx::query("update notes set remote_id = ?, 'commit' = ? where id = ?")
-                        .bind(remote_note.id)
-                        .bind(remote_note.commit)
-                        .bind(local_note.id)
-                        .execute(&mut *conn)
-                        .await?;
-                }
-                _ => { }, // This case does not need syncing
-            };
+            if let Some(remote_id) = local_note.remote_id() {
+                let commit = self.client.update_note(remote_id, local_note.commit, &device_notes).await?;
+                db::update_commit(conn, local_note.local_id(), commit.commit).await?;
+            } else {
+                let remote_note = self.client.create_note(remote_folder_id, &device_notes).await?;
+                sqlx::query("update notes set remote_id = ?, 'commit' = ? where id = ?")
+                    .bind(remote_note.id)
+                    .bind(remote_note.commit)
+                    .bind(local_note.id)
+                    .execute(&mut *conn)
+                    .await?;
+            }
         }
 
         Ok(())

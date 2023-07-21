@@ -345,7 +345,7 @@ pub async fn update_note(
             .first::<(i32, i32, i32)>(&mut conn)?;
 
         if commit != request.commit {
-            return Err(HttpError::conflict("commit_not_matches"));
+            return Err(HttpError::conflict("commit_mismatch"));
         }
 
         let device_notes = request.0 .0.device_notes;
@@ -393,10 +393,10 @@ pub async fn update_note(
                 ))
                 .execute(&mut conn)?;
 
-            // Remove old senders since we have updated all of the receiver with this sender
+            // Remove this device notes since it updated the note
             diesel::delete(device_notes::table)
                 .filter(device_notes::note_id.eq(note_id))
-                .filter(device_notes::sender_device_id.ne(device.device_id))
+                .filter(device_notes::receiver_device_id.eq(device.device_id))
                 .execute(&mut conn)?;
         }
 

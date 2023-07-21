@@ -276,7 +276,7 @@ pub async fn update_note(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, na
 }
 
 pub async fn update_commit(conn: &mut PoolConnection<Sqlite>, note_id: LocalId, commit: i32) -> Result<(), Error> {
-    sqlx::query("update notes set commit=?, state=? where id=?")
+    sqlx::query("update notes set 'commit' = ?, state = ? where id = ?")
         .bind(commit)
         .bind(State::Clean)
         .bind(note_id.0)
