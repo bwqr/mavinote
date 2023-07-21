@@ -216,7 +216,7 @@ pub mod messages {
         RefreshRequests,
         RefreshRemote,
         RefreshFolder(i32),
-        RefreshNote { folder_id: i32, note_id: i32 },
+        RefreshNote { folder_id: i32, note_id: i32, commit: i32, deleted: bool },
         Text(String),
         Timeout,
     }

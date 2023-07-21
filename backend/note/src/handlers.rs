@@ -23,7 +23,7 @@ use crate::{
         CreateFolderRequest, CreateNoteRequest, CreateRequests, FolderId, RespondRequests,
         UpdateNoteRequest,
     },
-    responses::{self, Commit, CreatedFolder, CreatedNote, FolderRequest, NoteRequest, Requests},
+    responses::{self, Commit, CreatedFolder, CreatedNote, FolderRequest, NoteRequest, Requests, DeviceFolder},
 };
 
 #[get("folders")]
@@ -32,7 +32,9 @@ pub async fn fetch_folders(
     device: UserDevice,
 ) -> Result<Json<Vec<responses::Folder>>, HttpError> {
     let folders = block(move || {
-        folders::table
+        let mut conn = pool.get().unwrap();
+
+        let folders = folders::table
             .filter(folders::user_id.eq(device.user_id))
             .left_join(
                 device_folders::table.on(device_folders::folder_id
@@ -44,7 +46,33 @@ pub async fn fetch_folders(
                 folders::state,
                 (device_folders::sender_device_id, device_folders::name).nullable(),
             ))
-            .load(&mut pool.get().unwrap())
+            .load::<(i32, State, Option<DeviceFolder>)>(&mut conn)?;
+
+        let commits = notes::table
+            .filter(notes::folder_id.eq_any(folders.iter().map(|f| f.0)))
+            .order(notes::id.desc())
+            .select((notes::id, notes::folder_id, notes::commit, notes::state))
+            .load::<(i32, i32, i32, State)>(&mut conn)?;
+
+        let folders_with_commits = folders
+            .into_iter()
+            .map(|folder| {
+                let folder_commits = commits
+                    .iter()
+                    .filter(|c| c.1 == folder.0)
+                    .map(|c| Commit { note_id: c.0, commit: c.2, state: c.3.clone() })
+                    .collect();
+
+                responses::Folder {
+                    id: folder.0,
+                    state: folder.1,
+                    device_folder: folder.2,
+                    commits: folder_commits,
+                }
+            })
+            .collect();
+
+        Result::<Vec<responses::Folder>, HttpError>::Ok(folders_with_commits)
     })
     .await??;
 
@@ -57,7 +85,9 @@ pub async fn fetch_folder(
     folder_id: Path<i32>,
 ) -> Result<Json<Option<responses::Folder>>, HttpError> {
     let folder = block(move || {
-        folders::table
+        let mut conn = pool.get().unwrap();
+
+        let Some(folder) = folders::table
             .filter(folders::user_id.eq(device.user_id))
             .filter(folders::id.eq(folder_id.into_inner()))
             .left_join(
@@ -70,8 +100,23 @@ pub async fn fetch_folder(
                 folders::state,
                 (device_folders::sender_device_id, device_folders::name).nullable(),
             ))
-            .first(&mut pool.get().unwrap())
-            .optional()
+            .first::<(i32, State, Option<DeviceFolder>)>(&mut conn)
+            .optional()? else {
+                return Result::<Option<responses::Folder>, HttpError>::Ok(None);
+            };
+
+        let commits = notes::table
+            .filter(notes::folder_id.eq(folder.0))
+            .order(notes::id.desc())
+            .select((notes::id, notes::commit, notes::state))
+            .load::<Commit>(&mut conn)?;
+
+        Ok(Some(responses::Folder {
+            id: folder.0,
+            state: folder.1,
+            device_folder: folder.2,
+            commits,
+        }))
     })
     .await??;
 
@@ -186,33 +231,6 @@ pub async fn delete_folder(
     Ok(Json(HttpMessage::success()))
 }
 
-#[get("folder/{folder_id}/commits")]
-pub async fn fetch_commits(
-    pool: Data<Pool>,
-    folder_id: Path<i32>,
-    device: UserDevice,
-) -> Result<Json<Vec<Commit>>, HttpError> {
-    let commits = block(move || {
-        let mut conn = pool.get().unwrap();
-
-        let folder_id = folders::table
-            .filter(folders::id.eq(folder_id.into_inner()))
-            .filter(folders::state.eq(State::Clean))
-            .filter(folders::user_id.eq(device.user_id))
-            .select(folders::id)
-            .first::<i32>(&mut conn)?;
-
-        notes::table
-            .filter(notes::folder_id.eq(folder_id))
-            .order(notes::id.desc())
-            .select((notes::id, notes::commit, notes::state))
-            .load(&mut conn)
-    })
-    .await??;
-
-    Ok(Json(commits))
-}
-
 #[post("/note")]
 pub async fn create_note(
     pool: Data<Pool>,
@@ -277,7 +295,7 @@ pub async fn create_note(
         ws_server.do_send(SendExclusiveDeviceMessage {
             user_id: device.user_id,
             excluded_device_id: device.device_id,
-            message: DeviceMessage::RefreshNote { folder_id: note.folder_id, note_id: note.id }
+            message: DeviceMessage::RefreshNote { folder_id: note.folder_id, note_id: note.id, commit: note.commit, deleted: false }
         });
 
         Ok(CreatedNote {
@@ -403,7 +421,7 @@ pub async fn update_note(
         ws_server.do_send(SendExclusiveDeviceMessage {
             user_id: device.user_id,
             excluded_device_id: device.device_id,
-            message: DeviceMessage::RefreshNote { folder_id, note_id }
+            message: DeviceMessage::RefreshNote { folder_id, note_id, commit: commit + 1, deleted: false }
         });
 
         Ok(Commit {
@@ -427,13 +445,13 @@ pub async fn delete_note(
     block(move || -> Result<(), diesel::result::Error> {
         let mut conn = pool.get().unwrap();
 
-        let (note_id, folder_id) = notes::table
+        let (note_id, folder_id, commit) = notes::table
             .filter(notes::id.eq(note_id.into_inner()))
             .filter(notes::state.eq(State::Clean))
             .filter(folders::user_id.eq(device.user_id))
             .inner_join(folders::table)
-            .select((notes::id, folders::id))
-            .first::<(i32, i32)>(&mut conn)?;
+            .select((notes::id, folders::id, notes::commit))
+            .first::<(i32, i32, i32)>(&mut conn)?;
 
         diesel::update(notes::table)
             .filter(notes::id.eq(note_id))
@@ -447,7 +465,7 @@ pub async fn delete_note(
         ws_server.do_send(SendExclusiveDeviceMessage {
             user_id: device.user_id,
             excluded_device_id: device.device_id,
-            message: DeviceMessage::RefreshNote { folder_id, note_id }
+            message: DeviceMessage::RefreshNote { folder_id, note_id, commit, deleted: true }
         });
 
         Ok(())

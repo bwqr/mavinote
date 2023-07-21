@@ -11,6 +11,7 @@ use tokio_tungstenite::connect_async;
 use x25519_dalek::StaticSecret;
 
 use super::db;
+use crate::accounts::mavinote::responses::Commit;
 use crate::crypto::{DeviceCipher, Error as CryptoError};
 use crate::{Error, crypto};
 use crate::accounts::mavinote::{CreateFolderRequest, CreateNoteRequest, MavinoteClient, Error as MavinoteError, RespondFolderRequest, RespondRequests, RespondNoteRequest, CreateRequests, DeviceMessage};
@@ -95,7 +96,6 @@ impl<'a> Sync<'a> {
         }
 
         let mut requests = CreateRequests::default();
-        let commits = self.client.fetch_commits(remote_folder.id()).await?;
 
         let folder = match db::fetch_folder_by_remote_id(conn, remote_folder.id(), self.account_id).await? {
             Some(folder) => folder,
@@ -104,7 +104,7 @@ impl<'a> Sync<'a> {
                     log::debug!("A folder with no device folder is received. Some other devices must create our device folder");
 
                     requests.folder_ids.push(remote_folder.id);
-                    requests.note_ids.extend(commits.into_iter().map(|commit| commit.note_id));
+                    requests.note_ids.extend(remote_folder.commits.into_iter().map(|commit| commit.note_id));
 
                     return Ok(requests);
                 };
@@ -123,27 +123,37 @@ impl<'a> Sync<'a> {
             }
         };
 
-        for commit in commits {
-            if self.remote_note(conn, commit.commit, commit.note_id(), folder.local_id()).await? {
-                requests.note_ids.push(commit.note_id);
+        for commit in remote_folder.commits {
+            let note_id = commit.note_id;
+            if self.remote_note(conn, commit, folder.local_id()).await? {
+                requests.note_ids.push(note_id);
             }
         }
 
         Ok(requests)
     }
 
-    async fn remote_note(&self, conn: &mut PoolConnection<Sqlite>, commit: i32, note_id: RemoteId, folder_id: LocalId) -> Result<bool, Error> {
-        let local_note = db::fetch_note_by_remote_id(conn, note_id, folder_id).await?;
+    async fn remote_note(&self, conn: &mut PoolConnection<Sqlite>, commit: Commit, folder_id: LocalId) -> Result<bool, Error> {
+        let local_note = db::fetch_note_by_remote_id(conn, RemoteId(commit.note_id), folder_id).await?;
+
+        if commit.state == ModelState::Deleted {
+            if let Some(note) = &local_note {
+                db::delete_note(conn, note.local_id()).await?;
+            }
+
+            return Ok(false);
+        }
 
         if let Some(note) = &local_note {
             // Having same commit means there is no need to pull fresh note from the server.
             // Deleted state will be handled by local sync
-            if note.state == ModelState::Deleted || note.commit >= commit {
+            if note.state == ModelState::Deleted || note.commit >= commit.commit {
                 return Ok(false);
             }
         }
-        let Some(remote_note) = self.client.fetch_note(note_id).await? else {
-            log::warn!("note with remote id {} does not exist on remote", note_id.0);
+
+        let Some(remote_note) = self.client.fetch_note(RemoteId(commit.note_id)).await? else {
+            log::warn!("note with remote id {} does not exist on remote", commit.note_id);
             return Ok(false);
         };
 
@@ -179,7 +189,7 @@ impl<'a> Sync<'a> {
             db::create_note(
                 conn,
                 folder_id,
-                Some(note_id),
+                Some(RemoteId(commit.note_id)),
                 name,
                 text,
                 remote_note.commit
@@ -521,7 +531,7 @@ async fn handle_message(msg: &DeviceMessage, account_id: i32) -> Result<bool, Er
         DeviceMessage::RefreshRequests => refresh_respond_requests(account_id).await?,
         DeviceMessage::RefreshRemote => refresh_remote(account_id).await?,
         DeviceMessage::RefreshFolder(folder_id) => refresh_folder(account_id, *folder_id).await?,
-        DeviceMessage::RefreshNote { folder_id, note_id } => refresh_note(account_id, *folder_id, *note_id).await?,
+        DeviceMessage::RefreshNote { folder_id, note_id, commit, deleted } => refresh_note(account_id, *folder_id, *note_id, *commit, *deleted).await?,
         DeviceMessage::Timeout => return Ok(true),
         _ => log::debug!("message is unhandled"),
     };
@@ -600,17 +610,11 @@ async fn refresh_folder(account_id: i32, folder_id: i32) -> Result<(), Error> {
     Ok(())
 }
 
-async fn refresh_note(account_id: i32, folder_id: i32, note_id: i32) -> Result<(), Error> {
+async fn refresh_note(account_id: i32, folder_id: i32, note_id: i32, commit: i32, deleted: bool) -> Result<(), Error> {
     let mut conn = runtime::get::<Arc<Pool<Sqlite>>>().unwrap().acquire().await?;
 
     let Some(client) = super::mavinote_client(&mut conn, account_id).await? else {
         return Err(Error::Unreachable("Mavinote account must have a client"));
-    };
-
-    let Some(remote_note) = client.fetch_note(RemoteId(note_id)).await? else {
-        log::error!("Note not found in remote while refreshing the note");
-
-        return Ok(());
     };
 
     let Some(folder) = db::fetch_folder_by_remote_id(&mut conn, RemoteId(folder_id), account_id).await? else {
@@ -628,7 +632,9 @@ async fn refresh_note(account_id: i32, folder_id: i32, note_id: i32) -> Result<(
         ciphers: Sync::load_device_ciphers(&mut conn, &privkey, account_id).await.unwrap()
     };
 
-    sync.remote_note(&mut conn, remote_note.commit, remote_note.id(), folder.local_id()).await?;
+    let state = if deleted { ModelState::Deleted } else { ModelState::Clean };
+
+    sync.remote_note(&mut conn, Commit { note_id, commit, state }, folder.local_id()).await?;
 
     super::update_send_notes(&mut conn, folder.local_id()).await;
 

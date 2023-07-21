@@ -97,7 +97,7 @@ impl Note {
     }
 }
 
-#[derive(Debug, Deserialize, Serialize, PartialEq)]
+#[derive(Clone, Debug, Deserialize, Serialize, PartialEq)]
 #[cfg_attr(feature = "storage", derive(Type))]
 pub enum State {
     Clean,

@@ -26,6 +26,7 @@ pub struct Folder {
     pub id: i32,
     pub state: State,
     pub device_folder: Option<DeviceFolder>,
+    pub commits: Vec<Commit>,
 }
 
 #[derive(Queryable, Serialize)]

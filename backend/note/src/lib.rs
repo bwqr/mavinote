@@ -14,7 +14,6 @@ pub fn register(config: &mut ServiceConfig) {
             .route("folder/{folder_id}", get().to(handlers::fetch_folder))
             .service(handlers::create_folder)
             .service(handlers::delete_folder)
-            .service(handlers::fetch_commits)
             .service(handlers::fetch_note)
             .service(handlers::create_note)
             .service(handlers::update_note)

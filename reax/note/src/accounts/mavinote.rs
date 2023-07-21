@@ -18,7 +18,7 @@ pub enum DeviceMessage {
     RefreshRequests,
     RefreshRemote,
     RefreshFolder(i32),
-    RefreshNote { folder_id: i32, note_id: i32 },
+    RefreshNote { folder_id: i32, note_id: i32, commit: i32, deleted: bool },
     Text(String),
     Timeout,
 }
@@ -453,18 +453,6 @@ impl MavinoteClient {
             .map(|_| ())
     }
 
-    pub async fn fetch_commits(&self, folder_id: RemoteId) -> Result<Vec<responses::Commit>, Error> {
-        self.client
-            .get(format!("{}/note/folder/{}/commits", self.api_url, folder_id.0))
-            .send()
-            .await
-            .map(|r| async { self.error_for_status(r).await })?
-            .await?
-            .json()
-            .await
-            .map_err(|e| e.into())
-    }
-
     pub async fn fetch_requests(&self) -> Result<responses::Requests, Error> {
         self.client
             .get(format!("{}/note/requests", self.api_url))
@@ -615,6 +603,7 @@ pub mod responses {
         pub id: i32,
         pub state: State,
         pub device_folder: Option<DeviceFolder>,
+        pub commits: Vec<Commit>,
     }
     impl Folder {
         pub fn id(&self) -> RemoteId {
@@ -661,7 +650,7 @@ pub mod responses {
         pub text: String,
     }
 
-    #[derive(Deserialize)]
+    #[derive(Clone, Debug, Deserialize)]
     pub struct Commit {
         pub note_id: i32,
         pub commit: i32,

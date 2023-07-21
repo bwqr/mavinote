@@ -27,7 +27,7 @@ pub struct Note {
     pub updated_at: NaiveDateTime,
 }
 
-#[derive(AsExpression, Debug, FromSqlRow, Serialize)]
+#[derive(AsExpression, Clone, Debug, FromSqlRow, Serialize)]
 #[diesel(sql_type = base::schema::sql_types::State)]
 pub enum State {
     Clean,
