@@ -1,0 +1,14 @@
+This is the second release of the Mavinote application.
+There are lots of things changed compared to previous release.
+
+START PRECAUTION, if you are a v0.1.0 user and want to use the new release,
+please perform a clean installation instead of update. Due to significant
+changes in the database, upgrading from v0.1.0 is not supported. If you
+want it to be supported, please open an issue in the repository.
+END PRECAUTION.
+
+Main highlights of the release:
+
+* From now on, all notes and folders are stored in the server as encrypted.
+* Passwords are no longer required. You can create a Mavinote account with a simple code.
+* Helpful Welcome page and Help page are added. Welcome page will be shown for the first time you open the application.

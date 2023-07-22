@@ -1,13 +1,9 @@
-<p>Mavinote lets you create and edit notes.
-It also lets you structure your notes by placing them in folders.</p>
+<p>Simple, secure and open source note-taking application.</p>
 
-<p>You can create a <b>Mavinote</b> account to synchronize your notes
-across your devices.
-Even after adding Mavinote account, you can still create folders and notes
-that reside only in your device by creating them in <b>Local</b> account.
-Anything created in Local account will not be available outside the device.
-Local account will be automatically created when you launch the application
-for the first time.</p>
+<p>You can take notes that reside only in your device or use
+a Mavinote account to synchronize your notes across your devices.
+All notes belonging to Mavinote account are stored as encrypted
+on the servers and can only be decrypted by your devices.
+</p>
 
-<p>For more information about Mavinote,
-you can look at the project's repository.</p>
+<p>For more information about Mavinote, you can look at the project's repository.</p>
