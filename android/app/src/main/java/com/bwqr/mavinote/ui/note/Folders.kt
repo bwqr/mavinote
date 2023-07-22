@@ -11,10 +11,8 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.KeyboardArrowRight
-import androidx.compose.material.icons.filled.MoreVert
+import androidx.compose.material.icons.outlined.Settings
 import androidx.compose.material3.Card
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -41,10 +39,10 @@ import com.bwqr.mavinote.models.Folder
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.models.State
 import com.bwqr.mavinote.ui.Screen
-import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
 import com.bwqr.mavinote.ui.theme.Spacing
 import com.bwqr.mavinote.ui.theme.Typography
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch
@@ -90,8 +88,6 @@ fun FoldersView(
     navController: NavController,
     accounts: List<AccountWithFolders>,
 ) {
-    var expanded by remember { mutableStateOf(false) }
-
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)) {
         Row(
             verticalAlignment = Alignment.CenterVertically,
@@ -108,14 +104,8 @@ fun FoldersView(
                 modifier = Modifier
                     .weight(1f)
             )
-            IconButton(onClick = { expanded = true }) {
-                Icon(imageVector = Icons.Filled.MoreVert, contentDescription = null)
-                DropdownMenu(expanded, onDismissRequest = { expanded = false }) {
-                    DropdownMenuItem(
-                        onClick = { navController.navigate(Screen.Account.Accounts.route) },
-                        text = { Text(text = stringResource(R.string.manage_accounts)) }
-                    )
-                }
+            IconButton(onClick = { navController.navigate(Screen.Misc.Navigations.route) }) {
+                Icon(imageVector = Icons.Outlined.Settings, contentDescription = null)
             }
         }
 

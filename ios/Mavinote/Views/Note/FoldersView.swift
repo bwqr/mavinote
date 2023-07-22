@@ -94,12 +94,9 @@ private struct _FoldersView : View {
         }
         .navigationTitle("Folders")
         .toolbar {
-            NavigationLink(
-                destination: AccountsView(),
-                tag: Route.Accounts,
-                selection: $appState.activeRoute
-            ) {
-                Text("Accounts")
+            NavigationLink(destination: NavigationsView()) {
+                Image(systemName: "gear")
+                    .foregroundColor(.blue)
             }
         }
     }

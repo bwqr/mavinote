@@ -31,8 +31,8 @@ import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.ui.Screen
-import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.flow.catch
 import kotlinx.coroutines.flow.launchIn

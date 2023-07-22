@@ -30,6 +30,9 @@ import com.bwqr.mavinote.ui.account.AccountsFab
 import com.bwqr.mavinote.ui.device.DeviceAdd
 import com.bwqr.mavinote.ui.device.Devices
 import com.bwqr.mavinote.ui.device.DevicesFab
+import com.bwqr.mavinote.ui.misc.Help
+import com.bwqr.mavinote.ui.misc.Navigations
+import com.bwqr.mavinote.ui.misc.Welcome
 import com.bwqr.mavinote.ui.note.FolderCreate
 import com.bwqr.mavinote.ui.note.Folders
 import com.bwqr.mavinote.ui.note.FoldersFab
@@ -67,7 +70,11 @@ open class Screen(val route: String) {
         object DeviceAdd : Device("device-add?accountId={accountId}")
     }
 
-    object Welcome : Screen("welcome")
+    sealed class Misc(route: String) : Screen(route) {
+        object Help : Screen("misc/help")
+        object Navigations : Screen("misc/navigations")
+        object Welcome : Screen("misc/welcome")
+    }
 }
 
 @Composable
@@ -123,7 +130,7 @@ fun BackgroundFeatures() {
 
         try {
             if (!AccountViewModel.welcomeShown()) {
-                navController.navigate(Screen.Welcome.route) {
+                navController.navigate(Screen.Misc.Welcome.route) {
                     popUpTo(0)
                 }
             }
@@ -156,7 +163,9 @@ fun BackgroundFeatures() {
             startDestination = Screen.Note.Folders.route,
             modifier = Modifier.padding(it)
         ) {
-            composable(Screen.Welcome.route) { Welcome(navController) }
+            composable(Screen.Misc.Help.route) { Help() }
+            composable(Screen.Misc.Welcome.route) { Welcome(navController) }
+            composable(Screen.Misc.Navigations.route) { Navigations(navController) }
 
             composable(Screen.Account.Accounts.route) { Accounts(navController) }
             composable(

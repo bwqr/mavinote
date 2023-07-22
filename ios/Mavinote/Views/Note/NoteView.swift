@@ -94,7 +94,9 @@ private struct _NoteView : View {
         TextView() {
             $0.text = text
             $0.font = UIFont.systemFont(ofSize: 18)
-            $0.backgroundColor = UIColor(InputBackground)
+            $0.layer.borderColor = CGColor(gray: 0.5, alpha: 1.0)
+            $0.layer.borderWidth = 0.5
+            $0.layer.cornerRadius = 8.0
             $0.textContainerInset = UIEdgeInsets(top: 16, left: 8, bottom: 8, right: 8)
             $0.delegate = textViewDelegate
         }

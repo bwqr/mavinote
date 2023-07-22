@@ -30,8 +30,7 @@ struct DeviceAddView: View {
 
                         TextField("Public Key", text: $publicKey)
                             .textInputAutocapitalization(.never)
-                            .padding(12)
-                            .background(InputBackground)
+                            .textFieldStyle(.roundedBorder)
                             .cornerRadius(8)
 
                         if validationErrors.contains(.InvalidPublicKey) {

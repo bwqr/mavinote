@@ -30,7 +30,7 @@ import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.Account
 import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.flow.catch

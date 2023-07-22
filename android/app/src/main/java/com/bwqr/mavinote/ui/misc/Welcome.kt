@@ -1,4 +1,4 @@
-package com.bwqr.mavinote.ui
+package com.bwqr.mavinote.ui.misc
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +10,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.compose.ui.text.style.TextDecoration
@@ -19,11 +20,10 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
 import com.bwqr.mavinote.models.NoteError
+import com.bwqr.mavinote.ui.Screen
 import com.bwqr.mavinote.ui.theme.Spacing
 import com.bwqr.mavinote.ui.theme.Typography
 import com.bwqr.mavinote.viewmodels.AccountViewModel
-import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
 
 sealed class WelcomeScreen(route: String) : Screen(route) {
@@ -83,11 +83,16 @@ fun WelcomeMavinote(navController: NavController) {
 
             Text("You can take notes that reside only on your device, or create a Mavinote account to store them in the cloud.")
 
-            Text("You can access your notes from other devices as well by adding your existing account into them.")
+            Text(
+                "You can access your notes from other devices by adding your existing account into them." +
+                        " All the notes stored in the cloud are encrypted and only readable by your devices."
+            )
 
-            Text("All the notes stored in the cloud are encrypted and only readable by your devices.")
-
-            Text("Did we say that Mavinote is open-source. You can reach out the source code under the repository written below.")
+            Text(
+                "Please note that Mavinote is in beta stage, meaning, it is not fully stable yet and subject to frequent changes." +
+                        " Any suggestions for improvement are welcome. You can state your suggestions in the Mavinote repository as an issue or discussion." +
+                        " You can find the repository in the link below."
+            )
 
             Text(
                 "https://github.com/bwqr/mavinote",
@@ -164,9 +169,9 @@ fun AccountAndDeviceManagement(navController: NavController) {
     }
 }
 
-@OptIn(DelicateCoroutinesApi::class)
 @Composable
 fun FolderAndNoteManagement(mainNavController: NavController) {
+    val coroutineScope = rememberCoroutineScope()
     val scrollState = rememberScrollState()
 
     Column(verticalArrangement = Arrangement.spacedBy(Spacing.SectionSpacing)) {
@@ -212,17 +217,18 @@ fun FolderAndNoteManagement(mainNavController: NavController) {
                     bottom = Spacing.ScreenPadding
                 ),
             onClick = {
-                GlobalScope.launch {
+                coroutineScope.launch {
                     try {
                         AccountViewModel.updateWelcomeShown(true)
+
+                        mainNavController.navigate(Screen.Note.Folders.route) {
+                            popUpTo(0)
+                        }
                     } catch (e: NoteError) {
                         e.handle()
                     }
                 }
 
-                mainNavController.navigate(Screen.Note.Folders.route) {
-                    popUpTo(0)
-                }
             }
         ) {
             Text("Start Using Mavinote")

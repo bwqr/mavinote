@@ -15,11 +15,16 @@ private struct WelcomeMavinote: View {
 
                     Text("You can take notes that reside only on your device, or create a Mavinote account to store them in the cloud.")
 
-                    Text("You can access your notes from other devices as well by adding your existing account into them.")
+                    Text(
+                        "You can access your notes from other devices by adding your existing account into them." +
+                        " All the notes stored in the cloud are encrypted and only readable by your devices."
+                    )
 
-                    Text("All the notes stored in the cloud are encrypted and only readable by your devices.")
-
-                    Text("Did we say that Mavinote is open-source. You can reach out the source code under the repository written below.")
+                    Text(
+                        "Please note that Mavinote is in beta stage, meaning, it is not fully stable yet and subject to frequent changes." +
+                        " Any suggestions for improvement are welcome. You can state your suggestions in the Mavinote repository as an issue or discussion." +
+                        " You can find the repository in the link below."
+                    )
 
                     Text("https://github.com/bwqr/mavinote")
                 }
@@ -108,9 +113,9 @@ private struct FolderAndNote: View {
                     if case .failure(let e) = await AccountViewModel.updateWelcomeShown(true) {
                         appState.handleError(e)
                     }
-                }
 
-                appState.navigate(route: .Folders)
+                    appState.navigate(route: .Folders)
+                }
             }) {
                 Text("Start Using Mavinote")
                     .frame(maxWidth: .infinity)

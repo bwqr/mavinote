@@ -8,6 +8,8 @@
 
 /* Begin PBXBuildFile section */
 		8423A2822A4B75DA00BDDA5C /* AlertToast in Frameworks */ = {isa = PBXBuildFile; productRef = 8423A2812A4B75DA00BDDA5C /* AlertToast */; };
+		843C10CE2A6BDEE600123545 /* NavigationsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843C10CD2A6BDEE600123545 /* NavigationsView.swift */; };
+		843C10D02A6BDF0600123545 /* HelpView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 843C10CF2A6BDF0600123545 /* HelpView.swift */; };
 		844B32DF2A471C6500BF16E9 /* AccountViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844B32DE2A471C6500BF16E9 /* AccountViewModel.swift */; };
 		844B32E12A4730BD00BF16E9 /* Device.swift in Sources */ = {isa = PBXBuildFile; fileRef = 844B32E02A4730BD00BF16E9 /* Device.swift */; };
 		84858B0728AF9FDD001D7F4B /* Account.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84858B0628AF9FDD001D7F4B /* Account.swift */; };
@@ -21,7 +23,6 @@
 		84BCDB522A4C8C9900AC2135 /* DevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84BCDB512A4C8C9900AC2135 /* DevicesView.swift */; };
 		84E39F152A4D86B0002B68CC /* DeviceAddView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E39F142A4D86B0002B68CC /* DeviceAddView.swift */; };
 		84E39F172A4D8D4F002B68CC /* AccountCloseView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84E39F162A4D8D4F002B68CC /* AccountCloseView.swift */; };
-		84FF86E728B3A16D00CDC922 /* Input.swift in Sources */ = {isa = PBXBuildFile; fileRef = 84FF86E628B3A16D00CDC922 /* Input.swift */; };
 		AC46C86B28B1325200387A72 /* AsyncAlgorithms in Frameworks */ = {isa = PBXBuildFile; productRef = AC46C86A28B1325200387A72 /* AsyncAlgorithms */; };
 		AC6CAA5528AD1C17005F2A15 /* Error.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5128AD1C17005F2A15 /* Error.swift */; };
 		AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */ = {isa = PBXBuildFile; fileRef = AC6CAA5228AD1C17005F2A15 /* Folder.swift */; };
@@ -68,6 +69,8 @@
 /* End PBXContainerItemProxy section */
 
 /* Begin PBXFileReference section */
+		843C10CD2A6BDEE600123545 /* NavigationsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NavigationsView.swift; sourceTree = "<group>"; };
+		843C10CF2A6BDF0600123545 /* HelpView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HelpView.swift; sourceTree = "<group>"; };
 		844B32DE2A471C6500BF16E9 /* AccountViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountViewModel.swift; sourceTree = "<group>"; };
 		844B32E02A4730BD00BF16E9 /* Device.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Device.swift; sourceTree = "<group>"; };
 		84858B0628AF9FDD001D7F4B /* Account.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Account.swift; sourceTree = "<group>"; };
@@ -81,7 +84,6 @@
 		84BCDB512A4C8C9900AC2135 /* DevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DevicesView.swift; sourceTree = "<group>"; };
 		84E39F142A4D86B0002B68CC /* DeviceAddView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceAddView.swift; sourceTree = "<group>"; };
 		84E39F162A4D8D4F002B68CC /* AccountCloseView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCloseView.swift; sourceTree = "<group>"; };
-		84FF86E628B3A16D00CDC922 /* Input.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Input.swift; sourceTree = "<group>"; };
 		AC6CAA5128AD1C17005F2A15 /* Error.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Error.swift; sourceTree = "<group>"; };
 		AC6CAA5228AD1C17005F2A15 /* Folder.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Folder.swift; sourceTree = "<group>"; };
 		AC6CAA5328AD1C17005F2A15 /* Note.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Note.swift; sourceTree = "<group>"; };
@@ -141,6 +143,16 @@
 				AC6CAA5428AD1C17005F2A15 /* TraitHelpers.swift */,
 			);
 			path = Reax;
+			sourceTree = "<group>";
+		};
+		843C10CB2A6BDE3300123545 /* Misc */ = {
+			isa = PBXGroup;
+			children = (
+				84A3659E2A6420BB00024B36 /* WelcomeView.swift */,
+				843C10CD2A6BDEE600123545 /* NavigationsView.swift */,
+				843C10CF2A6BDF0600123545 /* HelpView.swift */,
+			);
+			path = Misc;
 			sourceTree = "<group>";
 		};
 		84803BB82A49A2BD00508F58 /* Account */ = {
@@ -203,11 +215,10 @@
 		ACA8F73528AEAB4C0015F71E /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				843C10CB2A6BDE3300123545 /* Misc */,
 				84BCDB502A4C8C8700AC2135 /* Device */,
 				84803BB82A49A2BD00508F58 /* Account */,
 				ACA8F73628AEAB4C0015F71E /* Note */,
-				84FF86E628B3A16D00CDC922 /* Input.swift */,
-				84A3659E2A6420BB00024B36 /* WelcomeView.swift */,
 			);
 			path = Views;
 			sourceTree = "<group>";
@@ -453,7 +464,6 @@
 				ACA8F74128AEAB4C0015F71E /* NotesView.swift in Sources */,
 				84A3B13A28B269B30044A5D4 /* AccountView.swift in Sources */,
 				ACC07BA028AD197700305FC6 /* ContentView.swift in Sources */,
-				84FF86E728B3A16D00CDC922 /* Input.swift in Sources */,
 				844B32DF2A471C6500BF16E9 /* AccountViewModel.swift in Sources */,
 				84E39F172A4D8D4F002B68CC /* AccountCloseView.swift in Sources */,
 				84A3B13828B268820044A5D4 /* AccountsView.swift in Sources */,
@@ -466,9 +476,11 @@
 				AC6CAA5828AD1C17005F2A15 /* TraitHelpers.swift in Sources */,
 				84BCDB522A4C8C9900AC2135 /* DevicesView.swift in Sources */,
 				AC6CAA5628AD1C17005F2A15 /* Folder.swift in Sources */,
+				843C10CE2A6BDEE600123545 /* NavigationsView.swift in Sources */,
 				84BCDB4F2A4BE7C900AC2135 /* AppState.swift in Sources */,
 				84E39F152A4D86B0002B68CC /* DeviceAddView.swift in Sources */,
 				84A3659F2A6420BB00024B36 /* WelcomeView.swift in Sources */,
+				843C10D02A6BDF0600123545 /* HelpView.swift in Sources */,
 				ACA8F74028AEAB4C0015F71E /* FoldersView.swift in Sources */,
 				ACA8F73F28AEAB4C0015F71E /* FolderCreateView.swift in Sources */,
 				ACA8F73E28AEAB4C0015F71E /* NoteView.swift in Sources */,

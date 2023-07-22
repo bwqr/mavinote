@@ -86,8 +86,7 @@ private struct _FolderCreateView: View {
                         .padding(.top, 16)
 
                     TextField("Name", text: $name)
-                        .padding(10)
-                        .background(InputBackground)
+                        .textFieldStyle(.roundedBorder)
                         .cornerRadius(5)
                         .padding(.bottom, 16)
 

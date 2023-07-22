@@ -111,8 +111,7 @@ private struct VerifyCodeView: View {
                             .textInputAutocapitalization(.never)
                             .textContentType(.oneTimeCode)
                             .keyboardType(.numberPad)
-                            .padding(12)
-                            .background(InputBackground)
+                            .textFieldStyle(.roundedBorder)
                             .cornerRadius(8)
 
                         if validationErrors.contains(.InvalidCode) {

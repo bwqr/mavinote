@@ -39,8 +39,8 @@ import androidx.navigation.NavController
 import com.bwqr.mavinote.Bus
 import com.bwqr.mavinote.BusEvent
 import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.NoteViewModel
 import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch

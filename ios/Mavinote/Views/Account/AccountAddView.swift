@@ -83,8 +83,7 @@ private struct EnterAccountInfoView: View {
                             .textInputAutocapitalization(.never)
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
-                            .padding(12)
-                            .background(InputBackground)
+                            .textFieldStyle(.roundedBorder)
                             .cornerRadius(8)
 
                         if validationErrors.contains(.InvalidEmail) {
@@ -259,8 +258,7 @@ private struct SendVerificationCodeView: View {
                             .textInputAutocapitalization(.never)
                             .textContentType(.emailAddress)
                             .keyboardType(.emailAddress)
-                            .padding(12)
-                            .background(InputBackground)
+                            .textFieldStyle(.roundedBorder)
                             .cornerRadius(8)
 
                         if validationErrors.contains(.InvalidEmail) {
@@ -358,8 +356,7 @@ private struct VerifyCodeView: View {
                             .textInputAutocapitalization(.never)
                             .textContentType(.oneTimeCode)
                             .keyboardType(.numberPad)
-                            .padding(12)
-                            .background(InputBackground)
+                            .textFieldStyle(.roundedBorder)
                             .cornerRadius(8)
 
                         if validationErrors.contains(.InvalidCode) {

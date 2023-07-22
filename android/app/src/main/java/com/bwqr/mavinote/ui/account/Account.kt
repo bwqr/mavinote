@@ -39,8 +39,8 @@ import com.bwqr.mavinote.models.AccountKind
 import com.bwqr.mavinote.models.Mavinote
 import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.Typography
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 

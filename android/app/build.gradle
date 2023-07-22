@@ -35,8 +35,9 @@ android {
         release {
             minifyEnabled false
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
-            buildConfigField 'String', ApiUrl, '"http://ec2-3-70-235-190.eu-central-1.compute.amazonaws.com/api"'
-            buildConfigField 'String', WsUrl, '"ws://ec2-3-70-235-190.eu-central-1.compute.amazonaws.com/api/notify/connect"'
+            buildConfigField 'String', ApiUrl, '"https://mavinote.org/api"'
+            buildConfigField 'String', WsUrl, '"wss://mavinote.org/api"'
+            signingConfig signingConfigs.debug
         }
 
         debug {

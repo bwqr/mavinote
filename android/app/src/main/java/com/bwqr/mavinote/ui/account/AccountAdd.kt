@@ -38,10 +38,10 @@ import com.bwqr.mavinote.R
 import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
 import com.bwqr.mavinote.models.StorageError
-import com.bwqr.mavinote.ui.ErrorText
 import com.bwqr.mavinote.ui.Screen
-import com.bwqr.mavinote.ui.Title
 import com.bwqr.mavinote.ui.theme.MavinoteTheme
+import com.bwqr.mavinote.ui.util.ErrorText
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 

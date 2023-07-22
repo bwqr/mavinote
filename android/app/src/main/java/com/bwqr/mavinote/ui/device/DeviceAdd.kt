@@ -22,8 +22,8 @@ import androidx.compose.ui.unit.dp
 import androidx.navigation.NavController
 import com.bwqr.mavinote.models.MavinoteError
 import com.bwqr.mavinote.models.NoteError
-import com.bwqr.mavinote.ui.ErrorText
-import com.bwqr.mavinote.ui.Title
+import com.bwqr.mavinote.ui.util.ErrorText
+import com.bwqr.mavinote.ui.util.Title
 import com.bwqr.mavinote.viewmodels.AccountViewModel
 import kotlinx.coroutines.launch
 
