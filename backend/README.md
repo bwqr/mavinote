@@ -42,6 +42,9 @@ A general overview of configurations
 * **RUST_LOG**: specifies the log level of application. You can learn more about this variable from [here](https://docs.rs/env_logger/*/env_logger/index.html#enabling-logging).
 * **BIND_ADDRESS**: the address that backend listens for tcp connections.
 * **SECRET_KEY**: This is backend's secret key. It is used for cryptographic operations.
+* **MAIL_ADDRESS**: The default mail address to send emails from.
+* **MAILGUN_ENDPOINT**: Backend uses Mailgun to send emails. This configuration specifies the mailgun endpoint.
+* **MAILGUN_KEY**: Mailgun API key.
 
 ## Running
 

@@ -1,25 +1,36 @@
-# TODO resturcture this doc wrt svelte/README.md
-
 # Mavinote Android
 
-Android application of Mavinote. This project depends on the **reax** library. **Reax** will be automatically build when you build the android project. However you need to complete the **android prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
+Android application of Mavinote. It provides all of the functionalities of the Mavinote project.
 
-After completing the prerequisites, you can build the android project from command line or from Android Studio (be sure that **cargo** and **rustc** are accessible via **PATH** environment variable).
+## Prerequisites
+Before starting the build, you need to do:
 
-If you want to have your own custom backend service running and want the built application to connect your service, you need to modify the predefined endpoint in [app/build.gradle](https://github.com/bwqr/mavinote/blob/main/android/app/build.gradle).
-These configurations are defined as **buildConfigField**. You can change **ApiUrl** defined in **release** section as you wish.
+* Complete **android prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
+* If you want synchronization, run the [backend](https://github.com/bwqr/mavinote/tree/main/reax) project.
+* Make sure that **cargo** and **rustc** are accessible via **PATH** environment variable.
+* Install the Android NDK version specified in the [app/build.gradle](https://github.com/bwqr/mavinote/blob/main/android/app/build.gradle) file as **ndkVersion**.
 
-Note that backend service is only required if you want to use Mavinote account and want to synchronize notes.
+## Configuration
+Project has its own configurations defined in the [app/build.gradle](https://github.com/bwqr/mavinote/blob/main/android/app/build.gradle) as **buildConfigField** for both **release** and **debug** variants.
+These configurations are:
 
-### Development
+* **ApiUrl**: This variable contains the URL of backend service.
+* **WsUrl**: This is websocket variant of the **ApiUrl**.
 
-If you want to develop Mavinote application locally, you need to modify file to define your own configuration. Debug builds read the **ApiUrl** variable from this file. The **local.properties** file needs to have content similar to this
+This project reads these configurations from **local.properties** for the debug variant. While building the project for the debug variant please make sure that you have entries similar to the ones below.
 
 ```
 endpoint.apiUrl=<url-of-your-backend-service>
+endpoint.wsUrl=<url-of-your-backend-service>
 ```
 
-An example would be
+When developing with Android Emulator, you can access your loopback with these configs
+
 ```
 endpoint.apiUrl=http://10.0.2.2:8050/api
+endpoint.wsUrl=ws://10.0.2.2:8050/api
 ```
+
+## Development
+
+After completing the configurations for debug variant, you can open the project in Android Studio and start the development.

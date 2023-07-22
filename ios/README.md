@@ -1,34 +1,22 @@
 # Mavinote iOS
 
-**### Current Xcode project is configured to be built for x86_64 iOS Simulator. Extra configurations are required to get an arm64 build like configuring Library Search Paths.**
 
-iOS application of Mavinote. This project depends on the **reax** library. Prior to building the project, you need to complete the **ios prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
+iOS application of Mavinote. It provides all of the functionalities of the Mavinote project.
 
-After completing the reax prerequisites, you need to create some build time configurations. You can create configuration file by copying `BuildConfs.swift.example` file to `BuildConfs.swift`.
-``` bash
-# Current working directory should be /PATH-TO-REPO/ios
-cp Mavinote/BuildConfs.swift.example Mavinote/BuildConfs.swift
-```
-This configuration file defines build type dependent variables like **backend** project's **BIND_ADDRESS** configuration as **API_URL** variable for **release** and **debug** build types.
+## Prerequisites
+Before starting the build, you need to do:
 
-Now you can open the project with Xcode and build the application.
+* Complete **android prerequisites** described in [reax](https://github.com/bwqr/mavinote/tree/main/reax) project.
+* If you want synchronization, run the [backend](https://github.com/bwqr/mavinote/tree/main/reax) project.
+* Make sure that **cargo** and **rustc** are accessible via **PATH** environment variable.
 
-If you want to have your own custom backend service running and want the built application to connect your service, you need to modify the predefined **API_URL** variable defined between `#elseif` and `#endif` blocks in `BuildCons.swift` file.
-This block contains the **release** build type configurations.
+## Configuration
+Project has its own configurations defined in the `BuildConfs.swift` for both **release** and **debug** variants.
+However, this file does not exist in the git history. You can create it by copying `BuildConfs.swift.example` file to `BuildConfs.swift` in the same directory.
+The configurations specified in the file are:
 
-Note that backend service is only required if you want to use Mavinote account and want to synchronize notes.
+* **API_URL**: This variable contains the URL of backend service.
+* **WS_URL**: This is websocket variant of the **ApiUrl**.
 
 ### Development
-
-If you want to develop Mavinote application locally, you can modify **debug** build type configurations like **API_URL** defined between `#if DEBUG` and `#elseif` blocks in `BuildConfs.swift` file.
-An example of `BuildConfs.swift` file's content
-
-```swift
-#if DEBUG
-// debug build type configurations
-let API_URL="http://127.0.0.1:8050/api"
-#elseif
-// release build type configurations
-// ...
-#endif
-```
+After completing the configurations for the debug variant, you can open the project in Xcode and start the development.
