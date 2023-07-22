@@ -16,8 +16,8 @@ android {
         applicationId "com.bwqr.mavinote"
         minSdk 21
         targetSdk 32
-        versionCode 100
-        versionName "0.1.0"
+        versionCode 200
+        versionName "0.2.0"
 
         manifestPlaceholders.versionCode = versionCode
         manifestPlaceholders.versionName = versionName

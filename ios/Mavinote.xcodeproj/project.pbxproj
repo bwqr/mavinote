@@ -676,7 +676,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
 				DEVELOPMENT_TEAM = 2FQV425TS4;
 				ENABLE_PREVIEWS = YES;
@@ -703,7 +703,7 @@
 					"$(inherited)",
 					"$(CARGO_TARGET_DIR)/x86_64-apple-ios/debug",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
@@ -720,7 +720,7 @@
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CARGO_TARGET_DIR = "$(PROJECT_DIR)/../reax/target";
 				CODE_SIGN_STYLE = Automatic;
-				CURRENT_PROJECT_VERSION = 1;
+				CURRENT_PROJECT_VERSION = 2;
 				DEVELOPMENT_ASSET_PATHS = "\"Mavinote/Preview Content\"";
 				DEVELOPMENT_TEAM = 2FQV425TS4;
 				ENABLE_PREVIEWS = YES;
@@ -747,7 +747,7 @@
 					"$(inherited)",
 					"$(CARGO_TARGET_DIR)/x86_64-apple-ios/release",
 				);
-				MARKETING_VERSION = 0.1.0;
+				MARKETING_VERSION = 0.2.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.bwqr.Mavinote;
 				PRODUCT_NAME = "$(TARGET_NAME)";
 				SWIFT_EMIT_LOC_STRINGS = YES;
