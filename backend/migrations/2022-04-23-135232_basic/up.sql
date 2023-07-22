@@ -39,8 +39,8 @@ create table user_devices(
     device_id   int not null,
     created_at  timestamp   not null default current_timestamp,
     primary key (user_id, device_id),
-    constraint  fk_user_devices_user_id foreign key (user_id) references users (id) on delete no action on update no action,
-    constraint  fk_user_devices_device_id foreign key (device_id) references devices (id) on delete no action on update no action
+    constraint  fk_user_devices_user_id foreign key (user_id) references users (id) on delete cascade on update no action,
+    constraint  fk_user_devices_device_id foreign key (device_id) references devices (id) on delete cascade on update no action
 );
 
 create table pending_devices(
@@ -57,7 +57,7 @@ create table folders(
     user_id     int         not null,
     state       State       not null default 'Clean',
     created_at  timestamp   not null default current_timestamp,
-    constraint  fk_folders_user_id foreign key (user_id) references users (id) on delete no action on update no action
+    constraint  fk_folders_user_id foreign key (user_id) references users (id) on delete cascade on update no action
 );
 
 create table notes(
@@ -67,7 +67,7 @@ create table notes(
     state       State           not null default 'Clean',
     created_at  timestamp       not null default current_timestamp,
     updated_at  timestamp       not null default current_timestamp,
-    constraint  fk_notes_folder_id foreign key (folder_id) references folders (id) on delete no action on update no action
+    constraint  fk_notes_folder_id foreign key (folder_id) references folders (id) on delete cascade on update no action
 );
 
 create table device_folders(
