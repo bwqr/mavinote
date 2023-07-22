@@ -25,7 +25,7 @@ x25519-dalek = "1.2.0"
 rand = { version = "0.7.3", features = ["getrandom"] }
 base64ct = {version = "1.5.3", features = ["alloc"] }
 futures-util = "0.3.21"
-tokio-tungstenite = "0.17.1"
+tokio-tungstenite = { version = "0.17.1", features = ["rustls-tls-webpki-roots"] }
 
 [features]
 storage = ["dep:sqlx"]
